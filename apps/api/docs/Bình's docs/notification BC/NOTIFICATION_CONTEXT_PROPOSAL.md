@@ -2,7 +2,7 @@
 
 > **Document Type:** Living Design Document (Code-Verified)
 > **Author Role:** Senior Software Architect
-> **Status:** Phase N-1 through N-7 — Pending Implementation 🔲
+> **Status:** Phase N-1 ✅ Implemented | Phase N-2 through N-7 — Pending Implementation 🔲
 > **Target Project:** `SoLi-Food-Order-and-Deliver-App` / `apps/api`
 > **Depends On:** Phase 5 (Order Lifecycle), Phase 6 (Downstream Event Stubs), Phase 8 (Payment Context)
 > **Verified Against:** Full codebase audit — all facts cross-checked with source files
@@ -1895,9 +1895,11 @@ src/module/notification/
 
 ---
 
-### Phase N-1: Foundation — Event Stubs + Module Skeleton
+### Phase N-1: Foundation — Event Stubs + Module Skeleton ✅ Implemented
 
 **Goal:** Create the Notification BC module, wire it into `AppModule`, and register stub event handlers for all 6 upstream events. Verify that domain events flow correctly from Ordering and Payment into Notification handlers.
+
+> **Implementation note (completed):** All deliverables below are implemented. TypeScript compilation passes with 0 errors (`tsc --noEmit`). The 5-table migration is in `src/drizzle/out/0012_notification_bc.sql`. Seed data added for `notification_preferences` (3 rows) and `notification_restaurant_snapshots` (5 rows). `CORS_ORIGIN` env var added to `env.schema.ts`. `NotificationModule` registered in `AppModule`.
 
 > **Relationship to Phase 6:** `PHASE_6_DOWNSTREAM_EVENTS_PROPOSAL.md` describes stub handlers for Notification, Delivery, and Payment BCs. If Phase 6 was already implemented, the stub `@EventsHandler` classes in Notification BC already exist. Phase N-1 **replaces** those stubs with the full module skeleton. The Phase 6 stubs are scaffolding only — they are superseded by this implementation.
 

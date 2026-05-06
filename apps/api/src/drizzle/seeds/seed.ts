@@ -65,6 +65,9 @@ import { appSettings } from '../../module/ordering/common/app-settings.schema';
 import { orderingRestaurantSnapshots } from '../../module/ordering/acl/schemas/restaurant-snapshot.schema';
 import { orderingMenuItemSnapshots } from '../../module/ordering/acl/schemas/menu-item-snapshot.schema';
 import { orderingDeliveryZoneSnapshots } from '../../module/ordering/acl/schemas/delivery-zone-snapshot.schema';
+import { notificationPreferences } from '../../module/notification/domain/notification-preference.schema';
+import { notificationRestaurantSnapshots } from '../../module/notification/acl/notification-restaurant-snapshot.schema';
+import type { NotificationType } from '../../module/notification/domain/notification.schema';
 
 const db = drizzle(process.env.DATABASE_URL!);
 
@@ -294,6 +297,16 @@ const IDS = {
 } as const;
 
 // ─── Delete functions (reverse insert order to respect foreign keys) ──────────
+
+async function deleteNotificationRestaurantSnapshots() {
+  await db.delete(notificationRestaurantSnapshots);
+  console.log('🗑️  notification_restaurant_snapshots cleared');
+}
+
+async function deleteNotificationPreferences() {
+  await db.delete(notificationPreferences);
+  console.log('🗑️  notification_preferences cleared');
+}
 
 async function deleteOrderingDeliveryZoneSnapshots() {
   await db.delete(orderingDeliveryZoneSnapshots);
@@ -2516,12 +2529,105 @@ async function seedOrderingDeliveryZoneSnapshots() {
   );
 }
 
+// ─── Notification BC seeds ────────────────────────────────────────────────────
+
+/**
+ * Seed notification_preferences for the 3 test users.
+ * Covers a variety of preference configurations for manual testing:
+ *  - Customer: all channels on, no quiet hours (permissive — standard)
+ *  - Owner 1:  in_app + push, quiet hours 22:00–07:00, timezone Asia/Ho_Chi_Minh
+ *  - Owner 2:  in_app only, email disabled
+ */
+async function seedNotificationPreferences() {
+  const rows = [
+    {
+      userId: IDS.customerUserId,
+      pushEnabled: true,
+      inAppEnabled: true,
+      emailEnabled: true,
+      smsEnabled: false,
+      quietHoursStart: null,
+      quietHoursEnd: null,
+      mutedTypes: [],
+      email: 'customer@test.com',
+      timezone: 'Asia/Ho_Chi_Minh',
+    },
+    {
+      userId: IDS.ownerUserId,
+      pushEnabled: true,
+      inAppEnabled: true,
+      emailEnabled: true,
+      smsEnabled: false,
+      quietHoursStart: 22,
+      quietHoursEnd: 7,
+      mutedTypes: [],
+      email: 'owner1@test.com',
+      timezone: 'Asia/Ho_Chi_Minh',
+    },
+    {
+      userId: IDS.owner2UserId,
+      pushEnabled: false,
+      inAppEnabled: true,
+      emailEnabled: false,
+      smsEnabled: false,
+      quietHoursStart: null,
+      quietHoursEnd: null,
+      mutedTypes: ['system_announcement'] as NotificationType[],
+      email: 'owner2@test.com',
+      timezone: 'Asia/Ho_Chi_Minh',
+    },
+  ];
+  await db.insert(notificationPreferences).values(rows);
+  console.log('✅ notification_preferences seeded (3 rows)');
+}
+
+/**
+ * Seed notification_restaurant_snapshots (ACL projection) for all 5 restaurants.
+ * Pre-populates the snapshot so OrderPlacedNotificationHandler can resolve
+ * restaurantId → ownerId without waiting for RestaurantUpdatedEvent.
+ * (In production this is populated by the event projector; this seed provides
+ * a development baseline.)
+ */
+async function seedNotificationRestaurantSnapshots() {
+  const rows = [
+    {
+      restaurantId: IDS.restaurant1,
+      ownerId: IDS.ownerUserId,
+      name: 'Phở Bắc',
+    },
+    {
+      restaurantId: IDS.restaurant2,
+      ownerId: IDS.ownerUserId,
+      name: 'Bếp Đóng Cửa',
+    },
+    {
+      restaurantId: IDS.restaurant3,
+      ownerId: IDS.ownerUserId,
+      name: 'Cơm Tấm Sài Gòn',
+    },
+    {
+      restaurantId: IDS.restaurant4,
+      ownerId: IDS.owner2UserId,
+      name: 'Seoul BBQ & More',
+    },
+    {
+      restaurantId: IDS.restaurant5,
+      ownerId: IDS.owner2UserId,
+      name: 'Sushi Hana',
+    },
+  ];
+  await db.insert(notificationRestaurantSnapshots).values(rows);
+  console.log('✅ notification_restaurant_snapshots seeded (5 rows)');
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log('🌱 Starting seed...\n');
 
   console.log('🗑️  Clearing old data...\n');
+  await deleteNotificationRestaurantSnapshots();
+  await deleteNotificationPreferences();
   await deleteOrderingDeliveryZoneSnapshots();
   await deleteOrderingMenuItemSnapshots();
   await deleteOrderingRestaurantSnapshots();
@@ -2546,6 +2652,8 @@ async function main() {
   await seedOrderingRestaurantSnapshots(); // 5 rows
   await seedOrderingMenuItemSnapshots(); // 19 rows
   await seedOrderingDeliveryZoneSnapshots(); // 7 rows
+  await seedNotificationPreferences(); // 3 rows
+  await seedNotificationRestaurantSnapshots(); // 5 rows
 
   console.log('\n✅ All tables seeded successfully.');
   process.exit(0);
