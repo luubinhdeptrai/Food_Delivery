@@ -1,6 +1,6 @@
-import { useRouter } from "expo-router";
-import { SignInScreen } from "@/src/features/auth";
-import type { SignInFormData } from "@/src/features/auth";
+import { useRouter } from 'expo-router';
+import { SignInScreen } from '@/src/features/auth';
+import type { SignInFormData } from '@/src/features/auth';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -11,21 +11,22 @@ export default function SignInPage() {
 
   const handleSignIn = (data: SignInFormData) => {
     // TODO: Implement sign-in logic with better-auth
-    console.log("Sign-in data:", data);
+    console.log('Sign-in data:', data);
+    router.push('/(customer)');
   };
 
   const handleForgotPassword = () => {
     // TODO: Navigate to Forgot Password screen
-    console.log("Forgot Password pressed");
+    console.log('Forgot Password pressed');
   };
 
   const handleGoogleSignIn = () => {
     // TODO: Implement Google OAuth with better-auth
-    console.log("Google Sign-In pressed");
+    console.log('Google Sign-In pressed');
   };
 
   const handleSignUp = () => {
-    router.push("/(auth)/sign-up");
+    router.push('/(auth)/sign-up');
   };
 
   return (
