@@ -17,12 +17,11 @@ export function ProductDetailTopBar({
 }: ProductDetailTopBarProps) {
   return (
     <View
-      className="absolute top-0 left-0 right-0 z-50 flex-row items-center justify-between px-4 bg-surface-container-lowest/80"
+      className="absolute top-0 left-0 right-0 z-50 flex-row items-center justify-between px-4 bg-surface-container-lowest"
       style={{
         paddingTop: insetsTop + 8,
         paddingBottom: 12,
-        backdropFilter: "blur(20px)",
-        shadowColor: "#1a1c1c",
+        shadowColor: '#1a1c1c',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.04,
         shadowRadius: 4,
@@ -39,7 +38,7 @@ export function ProductDetailTopBar({
 
       <Text
         className="text-lg text-primary"
-        style={{ fontFamily: "PlusJakartaSans_700Bold" }}
+        style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
       >
         Fresh Market
       </Text>
@@ -52,7 +51,7 @@ export function ProductDetailTopBar({
         <Heart
           size={24}
           color="#0d631b"
-          fill={isFavorited ? "#0d631b" : "none"}
+          fill={isFavorited ? '#0d631b' : 'none'}
         />
       </TouchableOpacity>
     </View>

@@ -36,7 +36,7 @@ export default function AppLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack />
+      <Stack screenOptions={{ headerShown: false }} />
     </QueryClientProvider>
   );
 }

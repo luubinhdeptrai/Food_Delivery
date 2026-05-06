@@ -12,6 +12,7 @@ interface TrendingProductCardProps {
   price: number;
   originalPrice?: number;
   onAdd?: () => void;
+  onPress?: () => void;
 }
 
 export function TrendingProductCard({
@@ -23,11 +24,17 @@ export function TrendingProductCard({
   price,
   originalPrice,
   onAdd,
+  onPress,
 }: TrendingProductCardProps) {
   return (
-    <View className="w-[48%] bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm">
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={!onPress}
+      activeOpacity={0.92}
+      className="w-[48%] bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm"
+    >
       <View className="h-40 bg-surface-container overflow-hidden">
-        <Image 
+        <Image
           source={{ uri: imageUrl }}
           className="w-full h-full"
           contentFit="cover"
@@ -39,17 +46,25 @@ export function TrendingProductCard({
         )}
       </View>
       <View className="p-4 flex-col gap-1 flex-1">
-        <Text className="text-[10px] text-outline font-bold uppercase">{category}</Text>
-        <Text className="font-jakarta-sans font-bold text-sm text-on-surface">{name}</Text>
+        <Text className="text-[10px] text-outline font-bold uppercase">
+          {category}
+        </Text>
+        <Text className="font-jakarta-sans font-bold text-sm text-on-surface">
+          {name}
+        </Text>
         <Text className="text-[10px] text-outline">{unit}</Text>
         <View className="mt-auto pt-3 flex-row items-center justify-between">
           <View className="flex-col">
-            <Text className="text-secondary font-bold text-base">${price.toFixed(2)}</Text>
+            <Text className="text-secondary font-bold text-base">
+              ${price.toFixed(2)}
+            </Text>
             {originalPrice && (
-              <Text className="text-[10px] text-outline line-through">${originalPrice.toFixed(2)}</Text>
+              <Text className="text-[10px] text-outline line-through">
+                ${originalPrice.toFixed(2)}
+              </Text>
             )}
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={onAdd}
             className="bg-primary w-10 h-10 rounded-2xl items-center justify-center active:scale-90"
           >
@@ -57,6 +72,6 @@ export function TrendingProductCard({
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
