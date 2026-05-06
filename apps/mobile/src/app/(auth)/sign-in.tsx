@@ -12,6 +12,7 @@ export default function SignInPage() {
   const handleSignIn = (data: SignInFormData) => {
     // TODO: Implement sign-in logic with better-auth
     console.log("Sign-in data:", data);
+    router.replace("/(customer)");
   };
 
   const handleForgotPassword = () => {
