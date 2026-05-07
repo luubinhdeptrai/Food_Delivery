@@ -18,7 +18,7 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { TrendingProductCard, BottomNav, HomeTopBar } from '../components';
+import { TrendingProductCard, HomeTopBar } from '../components';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -51,7 +51,7 @@ export function HomeScreen() {
         className="flex-1"
         contentContainerStyle={{
           paddingTop: insets.top + 70,
-          paddingBottom: insets.bottom + 100,
+          paddingBottom: 24,
           paddingHorizontal: 16,
         }}
         showsVerticalScrollIndicator={false}
@@ -239,7 +239,6 @@ export function HomeScreen() {
         </View>
       </ScrollView>
 
-      <BottomNav insetBottom={insets.bottom} activeTab="home" transparent />
     </View>
   );
 }
