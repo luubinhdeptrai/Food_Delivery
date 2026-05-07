@@ -8,18 +8,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, ArrowRight, MapPinPlus, Pencil } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
+import { MapPinPlus } from 'lucide-react-native';
+import {
+  CheckoutHeader,
+  CheckoutFooter,
+  CheckoutProgress,
+  ShippingAddressCard,
+  OrderSummaryPreview,
+} from '../components';
 import type { ShippingAddressScreenProps } from '../types';
-
-interface ShippingAddressOption {
-  id: string;
-  label: string;
-  isDefault?: boolean;
-  lines: string[];
-  phone: string;
-}
+import type { ShippingAddressOption } from '../components/shipping-address-card';
 
 const ADDRESS_OPTIONS: ShippingAddressOption[] = [
   {
@@ -43,87 +41,6 @@ const ORDER_PREVIEW_IMAGES = [
 ];
 
 const ORDER_TOTAL = 42.85;
-
-function AddressCard({
-  address,
-  selected,
-  onSelect,
-  onEdit,
-}: {
-  address: ShippingAddressOption;
-  selected: boolean;
-  onSelect: () => void;
-  onEdit?: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={onSelect}
-      className={
-        selected
-          ? 'bg-primary-fixed/10 border-2 border-primary/30 rounded-[20px]'
-          : 'bg-surface-container-lowest border-2 border-transparent rounded-[20px]'
-      }
-    >
-      <View className="p-5">
-        <View className="flex-row justify-between items-start">
-          <View className="flex-row items-start gap-4 flex-1">
-            <View
-              className={
-                selected
-                  ? 'mt-1 w-5 h-5 rounded-full border-2 border-primary items-center justify-center'
-                  : 'mt-1 w-5 h-5 rounded-full border-2 border-outline-variant items-center justify-center'
-              }
-            >
-              {selected ? (
-                <View className="w-2.5 h-2.5 rounded-full bg-primary" />
-              ) : null}
-            </View>
-            <View className="flex-1">
-              <View className="flex-row items-center gap-2 mb-1 flex-wrap">
-                <Text
-                  className="text-on-surface text-base"
-                  style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-                >
-                  {address.label}
-                </Text>
-                {address.isDefault ? (
-                  <View className="bg-primary-fixed rounded-full px-2 py-0.5">
-                    <Text
-                      className="text-[10px]"
-                      style={{ fontFamily: 'Inter_700Bold', color: '#002204' }}
-                    >
-                      DEFAULT
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-              <Text
-                className="text-on-surface-variant text-sm leading-relaxed"
-                style={{ fontFamily: 'Inter_400Regular' }}
-              >
-                {address.lines.join('\n')}
-              </Text>
-              <Text
-                className="text-on-surface-variant text-xs mt-2"
-                style={{ fontFamily: 'Inter_600SemiBold' }}
-              >
-                Phone: {address.phone}
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            onPress={onEdit}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Pencil size={18} color="#707a6c" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 export function ShippingAddressScreen({
   onBack,
@@ -168,33 +85,7 @@ export function ShippingAddressScreen({
         barStyle="dark-content"
       />
 
-      {/* ── Floating Header ─────────────────────────────────────────────── */}
-      <View
-        className="absolute top-0 left-0 right-0 z-50 bg-surface/80"
-        style={{
-          paddingTop: insets.top,
-          shadowColor: '#1a1c1c',
-          shadowOpacity: 0.04,
-          shadowRadius: 12,
-        }}
-      >
-        <View className="flex-row items-center px-4 h-16">
-          <TouchableOpacity
-            onPress={handleBack}
-            activeOpacity={0.7}
-            className="w-10 h-10 rounded-full bg-surface-container items-center justify-center"
-          >
-            <ArrowLeft size={20} color="#0d631b" />
-          </TouchableOpacity>
-          <Text
-            className="ml-2 text-primary text-lg"
-            style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-          >
-            Checkout
-          </Text>
-        </View>
-        <View className="h-px bg-surface-container-high" />
-      </View>
+      <CheckoutHeader onBack={handleBack} />
 
       <ScrollView
         className="flex-1"
@@ -206,30 +97,11 @@ export function ShippingAddressScreen({
           gap: 18,
         }}
       >
-        {/* ── Progress Indicator ─────────────────────────────────────────── */}
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text
-              className="text-primary text-sm tracking-wide"
-              style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-            >
-              Step 1 of 3
-            </Text>
-            <Text
-              className="text-on-surface-variant text-xs"
-              style={{ fontFamily: 'Inter_500Medium' }}
-            >
-              Shipping Address
-            </Text>
-          </View>
-          <View className="flex-row gap-2">
-            <View className="h-1.5 flex-1 rounded-full bg-primary" />
-            <View className="h-1.5 flex-1 rounded-full bg-surface-container-high" />
-            <View className="h-1.5 flex-1 rounded-full bg-surface-container-high" />
-          </View>
-        </View>
+        <CheckoutProgress
+          currentStep={1}
+          stepName="Shipping Address"
+        />
 
-        {/* ── Section Title ─────────────────────────────────────────────── */}
         <View className="gap-2">
           <Text
             className="text-on-surface text-2xl"
@@ -245,10 +117,9 @@ export function ShippingAddressScreen({
           </Text>
         </View>
 
-        {/* ── Address Cards ─────────────────────────────────────────────── */}
         <View className="gap-4">
           {ADDRESS_OPTIONS.map((address) => (
-            <AddressCard
+            <ShippingAddressCard
               key={address.id}
               address={address}
               selected={selectedId === address.id}
@@ -275,113 +146,17 @@ export function ShippingAddressScreen({
           </TouchableOpacity>
         </View>
 
-        {/* ── Order Summary Preview ─────────────────────────────────────── */}
-        <View className="mt-6 rounded-[24px] bg-surface-container-low/70 p-5">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              {ORDER_PREVIEW_IMAGES.map((uri, index) => (
-                <View
-                  key={uri}
-                  className="w-10 h-10 rounded-full border-4 border-surface-container-low overflow-hidden"
-                  style={{ marginLeft: index === 0 ? 0 : -12 }}
-                >
-                  <Image
-                    source={{ uri }}
-                    className="w-full h-full"
-                    contentFit="cover"
-                  />
-                </View>
-              ))}
-              <View
-                className="w-10 h-10 rounded-full border-4 border-surface-container-low bg-primary-fixed-dim items-center justify-center"
-                style={{ marginLeft: -12 }}
-              >
-                <Text
-                  className="text-[10px]"
-                  style={{ fontFamily: 'Inter_700Bold', color: '#002204' }}
-                >
-                  +4
-                </Text>
-              </View>
-            </View>
-            <View className="items-end">
-              <Text
-                className="text-on-surface-variant text-[10px] tracking-widest"
-                style={{ fontFamily: 'Inter_700Bold' }}
-              >
-                EST. DELIVERY
-              </Text>
-              <Text
-                className="text-primary text-sm"
-                style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-              >
-                Today, 4pm - 6pm
-              </Text>
-            </View>
-          </View>
-        </View>
+        <OrderSummaryPreview
+          previewImages={ORDER_PREVIEW_IMAGES}
+          remainingCount={4}
+        />
       </ScrollView>
 
-      {/* ── Bottom Action Bar ───────────────────────────────────────────── */}
-      <View
-        className="absolute bottom-0 left-0 right-0 bg-surface/90 px-4 pt-4"
-        style={{
-          paddingBottom: footerInset,
-          shadowColor: '#1a1c1c',
-          shadowOpacity: 0.06,
-          shadowRadius: 24,
-          shadowOffset: { width: 0, height: -4 },
-        }}
-      >
-        <View className="flex-row items-center justify-between mb-4 px-2">
-          <Text
-            className="text-on-surface-variant text-sm"
-            style={{ fontFamily: 'Inter_500Medium' }}
-          >
-            Order Total
-          </Text>
-          <Text
-            className="text-secondary text-xl"
-            style={{ fontFamily: 'PlusJakartaSans_800ExtraBold' }}
-          >
-            ${ORDER_TOTAL.toFixed(2)}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          onPress={handleContinue}
-          activeOpacity={0.88}
-          className="rounded-full overflow-hidden"
-          style={{
-            shadowColor: '#0d631b',
-            shadowOpacity: 0.2,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 6 },
-          }}
-        >
-          <LinearGradient
-            colors={['#0d631b', '#2e7d32']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              paddingVertical: 16,
-              paddingHorizontal: 24,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <Text
-              className="text-white text-base"
-              style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-            >
-              Continue to Payment
-            </Text>
-            <ArrowRight size={20} color="#ffffff" />
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+      <CheckoutFooter
+        total={ORDER_TOTAL}
+        actionLabel="Continue to Payment"
+        onAction={handleContinue}
+      />
     </View>
   );
 }

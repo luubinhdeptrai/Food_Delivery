@@ -9,16 +9,17 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ArrowLeft,
-  ArrowRight,
   Banknote,
-  CreditCard,
-  Leaf,
   PlusCircle,
   Smartphone,
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
+import {
+  CheckoutHeader,
+  CheckoutFooter,
+  CheckoutProgress,
+  PaymentMethodCard,
+} from '../components';
 import type { PaymentScreenProps } from '../types';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -29,10 +30,10 @@ type SavedCard = {
   expiry: string;
 };
 
-type PaymentOption = {
+type PaymentOptionData = {
   id: string;
   label: string;
-  tone: 'dark' | 'neutral' | 'soft';
+  tone: 'dark' | 'neutral' | 'soft' | 'surface';
   icon: React.ReactNode;
 };
 
@@ -62,7 +63,7 @@ const GoogleIcon = () => (
   </Svg>
 );
 
-const OTHER_METHODS: PaymentOption[] = [
+const OTHER_METHODS: PaymentOptionData[] = [
   {
     id: 'apple-pay',
     label: 'Apple Pay',
@@ -84,126 +85,6 @@ const OTHER_METHODS: PaymentOption[] = [
 ];
 
 const ORDER_TOTAL = 142.5;
-
-function SelectionIndicator({ selected }: { selected: boolean }) {
-  return (
-    <View
-      className={
-        selected
-          ? 'h-6 w-6 rounded-full border-2 border-primary items-center justify-center'
-          : 'h-6 w-6 rounded-full border-2 border-outline-variant'
-      }
-    >
-      {selected ? <View className="h-3 w-3 rounded-full bg-primary" /> : null}
-    </View>
-  );
-}
-
-function SavedCardRow({
-  card,
-  selected,
-  onPress,
-}: {
-  card: SavedCard;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={onPress}
-      className={
-        selected
-          ? 'relative overflow-hidden rounded-[20px] bg-surface-container-lowest border-2 border-primary/10 shadow-sm'
-          : 'relative overflow-hidden rounded-[20px] bg-surface-container-low border-2 border-transparent'
-      }
-    >
-      <View className="p-5">
-        <View className="flex-row items-start justify-between">
-          <View className="gap-4">
-            <View className="flex-row items-center gap-3">
-              <View className="w-10 h-6 rounded bg-surface-container items-center justify-center">
-                <CreditCard
-                  size={16}
-                  color={selected ? '#0d631b' : '#40493d'}
-                />
-              </View>
-              <Text
-                className={
-                  selected ? 'text-on-surface' : 'text-on-surface-variant'
-                }
-                style={{ fontFamily: 'Inter_700Bold', fontSize: 14 }}
-              >
-                •••• {card.last4}
-              </Text>
-            </View>
-            <View>
-              <Text
-                className="text-outline text-[10px] tracking-tighter uppercase"
-                style={{ fontFamily: 'Inter_700Bold' }}
-              >
-                Expires
-              </Text>
-              <Text
-                className="text-on-surface text-sm"
-                style={{ fontFamily: 'Inter_500Medium' }}
-              >
-                {card.expiry}
-              </Text>
-            </View>
-          </View>
-          <SelectionIndicator selected={selected} />
-        </View>
-        {selected ? (
-          <View className="absolute -right-4 -bottom-4 opacity-5">
-            <Leaf size={120} color="#0d631b" />
-          </View>
-        ) : null}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-function PaymentOptionRow({
-  option,
-  selected,
-  onPress,
-}: {
-  option: PaymentOption;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const toneStyle =
-    option.tone === 'dark'
-      ? { backgroundColor: '#000000' }
-      : option.tone === 'soft'
-        ? { backgroundColor: '#f0fdf4' }
-        : { backgroundColor: '#eeeeee' };
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={onPress}
-      className="flex-row items-center justify-between rounded-[20px] bg-surface-container-lowest p-4 shadow-sm"
-    >
-      <View className="flex-row items-center gap-4">
-        <View
-          className="w-10 h-10 rounded-full items-center justify-center"
-          style={toneStyle}
-        >
-          {option.icon}
-        </View>
-        <Text
-          className="text-on-surface text-sm"
-          style={{ fontFamily: 'Inter_600SemiBold' }}
-        >
-          {option.label}
-        </Text>
-      </View>
-      <SelectionIndicator selected={selected} />
-    </TouchableOpacity>
-  );
-}
 
 export function PaymentScreen({
   onBack,
@@ -250,33 +131,7 @@ export function PaymentScreen({
       <View className="absolute -top-24 -left-24 w-64 h-64 rounded-full bg-primary/5" />
       <View className="absolute top-1/2 -right-28 w-72 h-72 rounded-full bg-secondary/5" />
 
-      {/* ── Floating Header ─────────────────────────────────────────────── */}
-      <View
-        className="absolute top-0 left-0 right-0 z-50 bg-white/80"
-        style={{
-          paddingTop: insets.top,
-          shadowColor: '#1a1c1c',
-          shadowOpacity: 0.05,
-          shadowRadius: 12,
-        }}
-      >
-        <View className="flex-row items-center px-4 h-16">
-          <TouchableOpacity
-            onPress={handleBack}
-            activeOpacity={0.7}
-            className="w-10 h-10 rounded-full hover:bg-zinc-100 items-center justify-center"
-          >
-            <ArrowLeft size={24} color="#0d631b" />
-          </TouchableOpacity>
-          <Text
-            className="ml-2 text-primary text-lg"
-            style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-          >
-            Checkout
-          </Text>
-        </View>
-        <View className="h-px bg-zinc-100" />
-      </View>
+      <CheckoutHeader onBack={handleBack} />
 
       <ScrollView
         className="flex-1"
@@ -288,28 +143,10 @@ export function PaymentScreen({
           gap: 32,
         }}
       >
-        {/* ── Progress Indicator ───────────────────────────────────────── */}
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between px-1">
-            <Text
-              className="text-primary text-[10px] tracking-[0.15em] uppercase"
-              style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-            >
-              Step 2 of 3
-            </Text>
-            <Text
-              className="text-outline text-xs"
-              style={{ fontFamily: 'Inter_600SemiBold' }}
-            >
-              Payment Method
-            </Text>
-          </View>
-          <View className="flex-row gap-2 h-1.5">
-            <View className="flex-1 rounded-full bg-primary" />
-            <View className="flex-1 rounded-full bg-primary" />
-            <View className="flex-1 rounded-full bg-surface-container-highest" />
-          </View>
-        </View>
+        <CheckoutProgress
+          currentStep={2}
+          stepName="Payment Method"
+        />
 
         {/* ── Saved Cards ─────────────────────────────────────────────── */}
         <View className="gap-4">
@@ -321,9 +158,11 @@ export function PaymentScreen({
           </Text>
           <View className="gap-4">
             {SAVED_CARDS.map((card) => (
-              <SavedCardRow
+              <PaymentMethodCard
                 key={card.id}
-                card={card}
+                type="card"
+                label={`•••• ${card.last4}`}
+                subtitle={card.expiry}
                 selected={selectedId === card.id}
                 onPress={() => handleSelect(card.id)}
               />
@@ -356,9 +195,11 @@ export function PaymentScreen({
           </Text>
           <View className="gap-3">
             {OTHER_METHODS.map((option) => (
-              <PaymentOptionRow
+              <PaymentMethodCard
                 key={option.id}
-                option={option}
+                label={option.label}
+                icon={option.icon}
+                tone={option.tone}
                 selected={selectedId === option.id}
                 onPress={() => handleSelect(option.id)}
               />
@@ -367,72 +208,13 @@ export function PaymentScreen({
         </View>
       </ScrollView>
 
-      {/* ── Bottom Action Bar ─────────────────────────────────────────── */}
-      <View
-        className="absolute bottom-0 left-0 right-0 bg-white/80 px-4 pt-4"
-        style={{
-          paddingBottom: footerInset + 8,
-          borderTopWidth: 1,
-          borderTopColor: 'rgba(244, 244, 245, 0.1)',
-          shadowColor: '#1a1c1c',
-          shadowOpacity: 0.06,
-          shadowRadius: 24,
-          shadowOffset: { width: 0, height: -4 },
-        }}
-      >
-        <View className="max-w-lg mx-auto w-full">
-          <View className="flex-row items-end justify-between mb-4 px-1">
-            <View>
-              <Text
-                className="text-outline text-[10px] tracking-widest uppercase mb-0.5"
-                style={{ fontFamily: 'Inter_700Bold' }}
-              >
-                Total Amount
-              </Text>
-              <Text
-                className="text-secondary text-2xl"
-                style={{ fontFamily: 'PlusJakartaSans_800ExtraBold' }}
-              >
-                ${ORDER_TOTAL.toFixed(2)}
-              </Text>
-            </View>
-            <Text
-              className="text-outline text-[10px]"
-              style={{ fontFamily: 'Inter_500Medium' }}
-            >
-              Incl. taxes and shipping
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleContinue}
-            activeOpacity={0.9}
-            className="rounded-full overflow-hidden"
-          >
-            <LinearGradient
-              colors={['#0d631b', '#2e7d32']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                paddingVertical: 16,
-                paddingHorizontal: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <Text
-                className="text-white text-base"
-                style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
-              >
-                Review Order
-              </Text>
-              <ArrowRight size={20} color="#ffffff" />
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <CheckoutFooter
+        total={ORDER_TOTAL}
+        totalLabel="Total Amount"
+        actionLabel="Review Order"
+        onAction={handleContinue}
+        helperText="Incl. taxes and shipping"
+      />
     </View>
   );
 }
