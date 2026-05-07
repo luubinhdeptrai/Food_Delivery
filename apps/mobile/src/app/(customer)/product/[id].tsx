@@ -29,6 +29,14 @@ export default function ProductDetailPage() {
     console.log("Add related product to cart:", productId);
   };
 
+  const handleTabPress = (tabId: string) => {
+    if (tabId === "home") {
+      router.navigate("/(customer)");
+    } else {
+      router.navigate(`/(customer)/(tabs)/${tabId}`);
+    }
+  };
+
   return (
     <ProductDetailScreen
       productId={id ?? ""}
@@ -37,6 +45,7 @@ export default function ProductDetailPage() {
       onFavoriteToggle={handleFavoriteToggle}
       onViewAllRelated={handleViewAllRelated}
       onRelatedProductAdd={handleRelatedProductAdd}
+      onTabPress={handleTabPress}
     />
   );
 }

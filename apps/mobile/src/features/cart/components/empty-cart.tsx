@@ -28,19 +28,21 @@ export function EmptyCart({ onContinueShopping }: EmptyCartProps) {
         produce and more!
       </Text>
 
-      <TouchableOpacity
-        onPress={onContinueShopping}
-        activeOpacity={0.85}
-        className="flex-row items-center gap-2 bg-primary rounded-full px-7 py-4 mt-2 shadow-md active:scale-95"
-      >
-        <Text
-          className="text-on-primary text-[15px]"
-          style={{ fontFamily: 'Inter_600SemiBold' }}
+      {onContinueShopping && (
+        <TouchableOpacity
+          onPress={onContinueShopping}
+          activeOpacity={0.85}
+          className="flex-row items-center gap-2 bg-primary rounded-full px-7 py-4 mt-2 shadow-md active:scale-95"
         >
-          Start Shopping
-        </Text>
-        <ArrowRight size={16} color="#ffffff" />
-      </TouchableOpacity>
+          <Text
+            className="text-on-primary text-[15px]"
+            style={{ fontFamily: 'Inter_600SemiBold' }}
+          >
+            Start Shopping
+          </Text>
+          <ArrowRight size={16} color="#ffffff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

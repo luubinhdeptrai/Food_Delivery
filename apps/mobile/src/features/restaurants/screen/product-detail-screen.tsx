@@ -3,7 +3,6 @@ import { View, ScrollView, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  BottomNav,
   ProductDetailTopBar,
   ProductHeroSection,
   ProductInfoCard,
@@ -69,6 +68,7 @@ export function ProductDetailScreen({
   onAddToCart,
   onViewAllRelated,
   onRelatedProductAdd,
+  onTabPress,
 }: ProductDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(1);
@@ -132,9 +132,6 @@ export function ProductDetailScreen({
           onRelatedProductAdd={onRelatedProductAdd}
         />
       </ScrollView>
-
-      {/* ── Bottom Navigation ──────────────────────────────────────────────── */}
-      <BottomNav insetBottom={insets.bottom} activeTab="home" />
     </View>
   );
 }

@@ -37,4 +37,5 @@ export interface ProductDetailScreenProps {
   onAddToCart?: (productId: string, quantity: number) => void;
   onViewAllRelated?: () => void;
   onRelatedProductAdd?: (productId: string) => void;
+  onTabPress?: (tabId: string) => void;
 }
