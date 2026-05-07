@@ -32,3 +32,15 @@ export interface ShippingAddressScreenProps {
   onEditAddress?: (addressId: string) => void;
   onSelectAddress?: (addressId: string) => void;
 }
+
+export interface PaymentScreenProps {
+  onBack?: () => void;
+  onContinue?: (selectedPaymentMethodId: string) => void;
+  onAddPaymentMethod?: () => void;
+  onSelectPaymentMethod?: (paymentMethodId: string) => void;
+}
+
+export interface ReviewScreenProps {
+  onBack?: () => void;
+  onPlaceOrder?: () => void;
+}

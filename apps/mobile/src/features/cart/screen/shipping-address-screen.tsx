@@ -153,7 +153,11 @@ export function ShippingAddressScreen({
   };
 
   const handleContinue = () => {
-    onContinue?.(selectedId);
+    if (onContinue) {
+      onContinue(selectedId);
+    } else {
+      router.push('/(customer)/checkout/payment');
+    }
   };
 
   return (
