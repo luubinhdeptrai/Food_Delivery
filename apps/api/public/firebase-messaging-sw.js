@@ -40,6 +40,35 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
 // ---------------------------------------------------------------------------
+// Service worker lifecycle — activate immediately so a newly deployed SW
+// version takes over existing tabs without requiring a full page reload.
+//
+// Without skipWaiting + clients.claim(), a new SW sits in "waiting" state
+// until ALL tabs using the old SW are closed. During that window the old SW
+// handles FCM messages, which means the old onBackgroundMessage / click-URL
+// logic runs even after a code deployment. Calling skipWaiting() forces the
+// new SW to activate instantly, and clients.claim() makes open tabs adopt
+// the new SW without reloading.
+// ---------------------------------------------------------------------------
+self.addEventListener('install', (event) => {
+  // Force this SW to become active immediately instead of waiting
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', (event) => {
+  // Claim open clients (pages) so they switch to this SW right away
+  event.waitUntil(self.clients.claim());
+});
+
+// Allow the main thread (fcm-test.html) to trigger skipWaiting manually,
+// e.g. after showing an "update available" banner to the user.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    void self.skipWaiting();
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Firebase project configuration
 //
 // These values are safe to expose in client-side/service-worker code.
@@ -76,15 +105,31 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message:', payload);
 
-  const title = payload.notification?.title ?? 'SoLi Notification';
-  const body  = payload.notification?.body  ?? '';
+  // ---------------------------------------------------------------------------
+  // Payload design: data-only messages
+  //
+  // The server sends a data-only FCM message (no top-level `notification` key).
+  // This ensures:
+  //   - onMessage() fires in the FOREGROUND tab (main thread handles display)
+  //   - onBackgroundMessage() fires here when the tab is in the BACKGROUND
+  //
+  // All notification fields (title, body, icon, link) are in `payload.data`.
+  // ---------------------------------------------------------------------------
+  const title = payload.data?.title ?? payload.notification?.title ?? 'SoLi Notification';
+  const body  = payload.data?.body  ?? payload.notification?.body  ?? '';
+
+  // Click-through URL — data.link set by the server; falls back to fcmOptions.link
+  const clickUrl = payload.data?.link ?? payload.fcmOptions?.link ?? self.registration.scope;
 
   const options = {
     body,
-    // icon: '/icons/notification-icon.png',  // add when app icons are ready
-    badge: '/icons/badge-icon.png',           // optional — shown on Android
-    data: payload.data ?? {},                 // forwarded to notificationclick handler
-    // tag: payload.data?.notificationId,    // uncomment to collapse duplicate notifs
+    icon:  payload.data?.icon  ?? payload.notification?.icon  ?? '/icons/notification-icon.png',
+    badge: '/icons/badge-icon.png',
+    data: { ...payload.data, _clickUrl: clickUrl },
+    // Keep notification visible so user sees it even after screen sleep
+    requireInteraction: false,
+    // Tag prevents duplicate notifications for the same data type
+    tag: payload.data?.notificationId ?? payload.data?.orderId ?? undefined,
   };
 
   self.registration.showNotification(title, options);
@@ -104,7 +149,7 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url ?? '/';
+  const targetUrl = event.notification.data?._clickUrl ?? event.notification.data?.url ?? '/';
 
   event.waitUntil(
     clients

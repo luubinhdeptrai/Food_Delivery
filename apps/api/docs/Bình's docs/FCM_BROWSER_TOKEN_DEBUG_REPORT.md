@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-07  
 **Scope**: `apps/api/public/fcm-test.html` · `apps/api/public/firebase-messaging-sw.js`  
-**Status**: ✅ All static files verified — **server must be running at port 3000**
+**Status**: ✅ Browser FCM token generation **VERIFIED WORKING** — real tokens generated in live test
 
 ---
 
@@ -196,6 +196,6 @@ The Firebase service account private key (`soli-food-delivery-FCM-key.json`) was
 - [x] Origin guard shows "Go now" redirect button
 - [x] SW registration error correctly identifies 404 as wrong-origin issue
 - [x] `nest start` starts cleanly (89 unit tests, 62 E2E notification tests passing)
-- [ ] Open `http://localhost:3000/fcm-test.html` in browser → no red banner
-- [ ] Click "Request Permission" → SW registers → token generated
+- [x] Open `http://localhost:3000/fcm-test.html` in browser → no red banner (**VERIFIED**)
+- [x] Click "Request Permission" → SW registers → token generated (**VERIFIED**: tokens `dJUG-tG7LjFmYTVW2JP4…` and `cr9REDGl664X-uRr6X7w…` generated in live test)
 - [ ] (After GCP API enabled) Click "Send via Backend" → successCount: 1

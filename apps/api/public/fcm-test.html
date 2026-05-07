@@ -288,6 +288,38 @@
       const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
         scope: '/',
       });
+
+      // ---------------------------------------------------------------------------
+      // SW update detection — when a new SW version is available, activate it
+      // immediately instead of waiting for all tabs to close.
+      //
+      // Flow:
+      //   1. reg.update() checks for a new SW version on every call.
+      //   2. If found, the new SW enters "installing" → "installed/waiting".
+      //   3. We detect the new worker via updatefound + statechange.
+      //   4. We send SKIP_WAITING to the new worker — it calls self.skipWaiting()
+      //      which makes it active immediately (the SW file also handles this
+      //      via its own install event, but belt-and-suspenders here).
+      //   5. The 'controllerchange' event fires when the new SW takes control.
+      //      We log a notice so the developer knows the SW was refreshed.
+      // ---------------------------------------------------------------------------
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New SW is waiting — trigger it to activate immediately
+            log('SW update found — activating new service worker…', 'info');
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+
+      // When the SW changes (new controller), notify the developer
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        log('Service worker updated and now active. Foreground push handling is fresh.', 'ok');
+      });
+
       await navigator.serviceWorker.ready;
       setSwStatus('registered ✓', 'ok');
       log('Service worker registered and ready.', 'ok');
@@ -314,19 +346,51 @@
   // ---------------------------------------------------------------------------
   // Foreground message handler
   //
-  // When the tab is in the foreground, Firebase does NOT display a native
-  // browser notification automatically. Instead, onMessage() fires and we
-  // log it here (and could show a custom in-app toast if needed).
+  // IMPORTANT — FCM foreground vs background behaviour:
+  //
+  //   When a message has a top-level `notification` key, the browser/SW
+  //   intercepts the push event BEFORE the main thread sees it. In a foreground
+  //   tab, Chrome silently drops the event without calling onMessage(). The user
+  //   sees nothing and the JavaScript callback never fires.
+  //
+  //   When a message is DATA-ONLY (no top-level `notification` key), FCM routes
+  //   the message to:
+  //     - onMessage() in THIS tab (foreground)
+  //     - onBackgroundMessage() in the service worker (background)
+  //   Both handlers then manually display the notification.
+  //
+  //   The SoLi backend sends data-only messages so this handler always fires
+  //   when the tab is in the foreground. All notification fields (title, body,
+  //   icon, link) are in payload.data.
   //
   // Background messages (tab hidden or closed) are handled by the service
   // worker in firebase-messaging-sw.js.
   // ---------------------------------------------------------------------------
   onMessage(messaging, (payload) => {
+    console.log('[FCM] onMessage fired (foreground):', payload);
     log(`📨 Foreground push received!`, 'ok');
-    log(`   title: ${payload.notification?.title ?? '(none)'}`, 'info');
-    log(`   body:  ${payload.notification?.body ?? '(none)'}`, 'info');
+
+    // For data-only payloads, fields are in payload.data
+    const title = payload.data?.title ?? payload.notification?.title ?? '(no title)';
+    const body  = payload.data?.body  ?? payload.notification?.body  ?? '(no body)';
+
+    log(`   title: ${title}`, 'info');
+    log(`   body:  ${body}`, 'info');
+
     if (payload.data && Object.keys(payload.data).length > 0) {
-      log(`   data:  ${JSON.stringify(payload.data)}`, 'info');
+      const { title: _t, body: _b, icon: _i, link: _l, ...rest } = payload.data;
+      if (Object.keys(rest).length > 0) {
+        log(`   data:  ${JSON.stringify(rest)}`, 'info');
+      }
+    }
+
+    // Show a browser Notification manually (FCM doesn't auto-show for data-only
+    // payloads in the foreground — we handle it here).
+    if (Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: payload.data?.icon ?? '/icons/notification-icon.png',
+      });
     }
   });
 
@@ -409,10 +473,14 @@
         if (data.invalidTokens?.length > 0) {
           log(`  invalidTokens: ${data.invalidTokens.length} (register a fresh token)`, 'warn');
         }
-        if (data.successCount > 0 && document.visibilityState === 'visible') {
-          log('Tab is in foreground — you should see a foreground push logged above.', 'info');
-        } else if (data.successCount > 0) {
-          log('Tab is in background — a native browser notification should appear.', 'info');
+        if (data.successCount > 0) {
+          if (document.visibilityState === 'visible') {
+            log(`✅ Tab is FOREGROUND — onMessage() should fire above. Also showing browser Notification manually.`, 'ok');
+          } else {
+            log(`✅ Tab is BACKGROUND — a native OS notification should appear.`, 'ok');
+          }
+          log(`💡 If onMessage() did NOT fire: check the browser console for errors.`, 'warn');
+          log(`   Common causes: service worker not registered, wrong origin, browser blocked notifications.`, 'warn');
         }
       } else {
         log(`Backend error ${res.status}: ${JSON.stringify(data)}`, 'err');
