@@ -1,5 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, StatusBar } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  StatusBar,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
@@ -120,9 +126,21 @@ export function CartScreen({
     }
   };
 
+  const handleCheckout = () => {
+    if (onCheckout) {
+      onCheckout();
+    } else {
+      router.push('/(customer)/checkout/shipping-address');
+    }
+  };
+
   return (
     <View className="flex-1 bg-surface">
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
 
       {/* ── Floating Header ──────────────────────────────────────────────────── */}
       <CartHeader insetsTop={insets.top} onBack={handleBack} />
@@ -174,7 +192,7 @@ export function CartScreen({
           style={{ paddingBottom: Math.max(insets.bottom, 16) }}
         >
           <TouchableOpacity
-            onPress={onCheckout}
+            onPress={handleCheckout}
             activeOpacity={0.85}
             className="flex-row items-center justify-between bg-primary rounded-full pl-7 pr-2 py-2 shadow-lg active:scale-95"
           >

@@ -24,3 +24,11 @@ export interface CartScreenProps {
   onCheckout?: () => void;
   onContinueShopping?: () => void;
 }
+
+export interface ShippingAddressScreenProps {
+  onBack?: () => void;
+  onContinue?: (selectedAddressId: string) => void;
+  onAddNewAddress?: () => void;
+  onEditAddress?: (addressId: string) => void;
+  onSelectAddress?: (addressId: string) => void;
+}
