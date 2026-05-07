@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import * as schema from '@/drizzle/schema';
@@ -8,7 +9,20 @@ import {
   type NewNotification,
   type Notification,
   type NotificationStatus,
+  type NotificationType,
 } from '../domain/notification.schema';
+
+// ---------------------------------------------------------------------------
+// Filter shape for inbox queries
+// ---------------------------------------------------------------------------
+
+/** Optional filters applied by the inbox REST endpoint (Phase N-3). */
+export interface InboxFilters {
+  /** When true, only rows with is_read = false are included. */
+  unreadOnly?: boolean;
+  /** When set, only rows of this notification type are included. */
+  type?: NotificationType;
+}
 
 /**
  * NotificationRepository
@@ -44,11 +58,16 @@ export class NotificationRepository {
   /**
    * Fetch one page of a user's in-app inbox, newest first.
    * Used by the inbox REST endpoint (Phase N-3).
+   *
+   * Optional `filters` support:
+   *  - unreadOnly: true  → adds WHERE is_read = false
+   *  - type: <value>     → adds WHERE type = <value>
    */
   async findInboxByUserId(
     recipientId: string,
     limit: number,
     offset: number,
+    filters?: InboxFilters,
   ): Promise<Notification[]> {
     return this.db
       .select()
@@ -57,11 +76,38 @@ export class NotificationRepository {
         and(
           eq(notifications.recipientId, recipientId),
           eq(notifications.channel, 'in_app'),
-        ),
+          filters?.unreadOnly ? eq(notifications.isRead, false) : undefined,
+          filters?.type ? eq(notifications.type, filters.type) : undefined,
+        ) as SQL,
       )
       .orderBy(desc(notifications.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+
+  /**
+   * Count in-app notifications for a user matching the given filters.
+   * Used alongside findInboxByUserId to compute pagination metadata.
+   *
+   * Reuses the same filter logic so the WHERE clause is always consistent
+   * with the corresponding data page query.
+   */
+  async countInbox(
+    recipientId: string,
+    filters?: InboxFilters,
+  ): Promise<number> {
+    const result = await this.db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.recipientId, recipientId),
+          eq(notifications.channel, 'in_app'),
+          filters?.unreadOnly ? eq(notifications.isRead, false) : undefined,
+          filters?.type ? eq(notifications.type, filters.type) : undefined,
+        ) as SQL,
+      );
+    return result[0]?.count ?? 0;
   }
 
   /**
@@ -106,9 +152,12 @@ export class NotificationRepository {
   /**
    * Bulk mark all unread in-app notifications as read for a user.
    * Called from the "Mark all as read" inbox action.
+   *
+   * Returns the count of rows actually updated (0 when everything was
+   * already read). Used by the REST response to inform the client.
    */
-  async markAllRead(recipientId: string): Promise<void> {
-    await this.db
+  async markAllRead(recipientId: string): Promise<number> {
+    const updated = await this.db
       .update(notifications)
       .set({ isRead: true, readAt: new Date(), status: 'read' })
       .where(
@@ -117,7 +166,9 @@ export class NotificationRepository {
           eq(notifications.channel, 'in_app'),
           eq(notifications.isRead, false),
         ),
-      );
+      )
+      .returning({ id: notifications.id });
+    return updated.length;
   }
 
   /**

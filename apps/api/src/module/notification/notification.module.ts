@@ -19,6 +19,9 @@ import { NotificationService } from './services/notification.service';
 // Gateway
 import { NotificationGateway } from './gateway/notification.gateway';
 
+// Controller (Phase N-3)
+import { NotificationController } from './controllers/notification.controller';
+
 // Event Handlers
 import { OrderPlacedNotificationHandler } from './events/order-placed.handler';
 import { OrderStatusChangedNotificationHandler } from './events/order-status-changed.handler';
@@ -27,10 +30,21 @@ import { PaymentFailedNotificationHandler } from './events/payment-failed.handle
 import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-cancelled-after-payment.handler';
 
 /**
- * NotificationModule — Phase N-2 Real-time WebSocket Gateway
+ * NotificationModule — Phase N-3 Notification Inbox REST API
  *
  * Implements the Notification BC as a non-global NestJS module.
  * NOT @Global() — imported explicitly in AppModule.
+ *
+ * Phase N-3 additions over N-2:
+ *  - NotificationController: 4 REST endpoints for the in-app inbox.
+ *    GET  /api/notifications/my            — paginated inbox
+ *    GET  /api/notifications/my/unread-count — cached badge count
+ *    PATCH /api/notifications/my/read-all  — bulk mark all as read
+ *    PATCH /api/notifications/:id/read     — mark single notification as read
+ *  - NotificationService: getInbox, getUnreadCount, markRead, markAllRead
+ *    with Redis unread count caching (key: `unread:{userId}`, TTL: 5 min).
+ *  - RedisService (from global RedisModule) injected into NotificationService
+ *    for unread count cache management.
  *
  * Phase N-2 additions over N-1:
  *  - NotificationGateway: Socket.IO WebSocket gateway on the /notifications
@@ -52,10 +66,17 @@ import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-ca
  * NotificationGateway.logConnectionMetrics() works without re-importing
  * ScheduleModule here.
  *
+ * RedisModule is @Global() — RedisService is available without importing
+ * RedisModule explicitly here.
+ *
  * No exports — NotificationService has no port consumed by other modules.
  */
 @Module({
   imports: [CqrsModule, DatabaseModule],
+  controllers: [
+    // Phase N-3: inbox REST API
+    NotificationController,
+  ],
   providers: [
     // --- ACL ---
     NotificationRestaurantAclRepository,

@@ -73,7 +73,10 @@ export interface NotificationPayload {
 //   WS_NOTIFICATION_CREATED    ('notification.created')
 //     payload: NotificationPayload            — new notification row persisted
 //   WS_NOTIFICATION_READ       ('notification.read')
-//     payload: { id: string }                 — read on another device (sync)
+//     Two payload variants depending on the operation:
+//       Single read:  { id: string, readAt: string }  — one notification read
+//       Bulk read:    { all: true, readAt: string }    — markAllRead bulk update
+//     Clients should check for the `all` key to handle the bulk variant.
 //   WS_AUTH_EXPIRED            ('auth:expired')
 //     payload: none                           — session expired, must reconnect
 //

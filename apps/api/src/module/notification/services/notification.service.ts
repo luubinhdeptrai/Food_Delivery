@@ -2,6 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import {
   type NotificationType,
   type NotificationChannel,
+  type Notification,
 } from '../domain/notification.schema';
 import {
   DEFAULT_PREFERENCES,
@@ -12,8 +13,15 @@ import { NotificationTemplateService } from './notification-template.service';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import {
   WS_NOTIFICATION_CREATED,
+  WS_NOTIFICATION_READ,
 } from '../gateway/notification-payload.dto';
 import type { NotificationPayload } from '../gateway/notification-payload.dto';
+import { RedisService } from '@/lib/redis/redis.service';
+import type {
+  NotificationInboxQueryDto,
+  NotificationInboxResponseDto,
+  NotificationItemDto,
+} from '../dto/notification.dto';
 
 // ---------------------------------------------------------------------------
 // Input type for sendFromEvent
@@ -70,10 +78,14 @@ export interface SendFromEventParams {
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
+  /** Redis key for the per-user unread count cache. TTL: 5 minutes. */
+  private static readonly UNREAD_CACHE_TTL_SECONDS = 300;
+
   constructor(
     private readonly notificationRepo: NotificationRepository,
     private readonly preferenceRepo: NotificationPreferenceRepository,
     private readonly templateService: NotificationTemplateService,
+    private readonly redisService: RedisService,
     // @Optional() prevents a hard DI error when NotificationGateway is not
     // yet registered (e.g. in unit tests that only test DB persistence).
     // In production, the gateway is always present in NotificationModule.
@@ -89,6 +101,35 @@ export class NotificationService {
     this.logger.log(
       `[NotificationService] Gateway DI: ${notificationGateway ? 'NotificationGateway injected — realtime enabled' : 'NotificationGateway NOT injected — realtime disabled (unit test mode)'}`,
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Redis helpers
+  // ---------------------------------------------------------------------------
+
+  /** Redis key for the user's unread in-app notification count. */
+  private unreadCacheKey(userId: string): string {
+    return `unread:${userId}`;
+  }
+
+  /**
+   * Invalidate the cached unread count for a user.
+   * Called after any write operation that changes the unread count:
+   *   - New in_app notification persisted (sendFromEvent)
+   *   - markRead
+   *   - markAllRead
+   *
+   * Uses DEL so the next getUnreadCount call re-computes from the DB.
+   */
+  private async invalidateUnreadCache(userId: string): Promise<void> {
+    try {
+      await this.redisService.del(this.unreadCacheKey(userId));
+    } catch (err) {
+      // Cache invalidation failure must never crash business logic.
+      this.logger.warn(
+        `[Notification] Failed to invalidate unread cache for userId=${userId}: ${(err as Error).message}`,
+      );
+    }
   }
 
   /**
@@ -170,37 +211,44 @@ export class NotificationService {
           this.logger.log(
             `[Notification] Persisted: id=${row.id} type=${type} channel=${channel} recipient=${recipientId}`,
           );
-          // Phase N-2: dispatch real-time WebSocket delivery for in_app channel.
-          if (channel === 'in_app' && this.notificationGateway) {
-            const payload: NotificationPayload = {
-              id: row.id,
-              type: row.type,
-              title: row.title,
-              body: row.body,
-              data: (row.data as Record<string, string> | null) ?? undefined,
-              orderId: row.orderId ?? undefined,
-              createdAt: row.createdAt.toISOString(),
-              isRead: row.isRead,
-            };
-            this.logger.log(
-              `[Notification] Realtime delivery: notificationId=${row.id} userId=${recipientId} event=${WS_NOTIFICATION_CREATED}`,
-            );
-            try {
-              const emitted = this.notificationGateway.sendToUser(
-                recipientId,
-                WS_NOTIFICATION_CREATED,
-                payload,
-              );
+
+          if (channel === 'in_app') {
+            // Phase N-3: invalidate the unread count cache so the next
+            // GET /notifications/my/unread-count reflects the new notification.
+            void this.invalidateUnreadCache(recipientId);
+
+            // Phase N-2: dispatch real-time WebSocket delivery for in_app channel.
+            if (this.notificationGateway) {
+              const payload: NotificationPayload = {
+                id: row.id,
+                type: row.type,
+                title: row.title,
+                body: row.body,
+                data: (row.data as Record<string, string> | null) ?? undefined,
+                orderId: row.orderId ?? undefined,
+                createdAt: row.createdAt.toISOString(),
+                isRead: row.isRead,
+              };
               this.logger.log(
-                `[Notification] Realtime delivery dispatched: notificationId=${row.id} userId=${recipientId} emitted=${emitted}`,
+                `[Notification] Realtime delivery: notificationId=${row.id} userId=${recipientId} event=${WS_NOTIFICATION_CREATED}`,
               );
-            } catch (wsErr) {
-              // WebSocket delivery failure must never affect DB persistence.
-              // The notification is already persisted — client will fetch it
-              // via the inbox REST API on reconnect.
-              this.logger.warn(
-                `[Notification] WebSocket delivery failed for id=${row.id}: ${(wsErr as Error).message}`,
-              );
+              try {
+                const emitted = this.notificationGateway.sendToUser(
+                  recipientId,
+                  WS_NOTIFICATION_CREATED,
+                  payload,
+                );
+                this.logger.log(
+                  `[Notification] Realtime delivery dispatched: notificationId=${row.id} userId=${recipientId} emitted=${emitted}`,
+                );
+              } catch (wsErr) {
+                // WebSocket delivery failure must never affect DB persistence.
+                // The notification is already persisted — client will fetch it
+                // via the inbox REST API on reconnect.
+                this.logger.warn(
+                  `[Notification] WebSocket delivery failed for id=${row.id}: ${(wsErr as Error).message}`,
+                );
+              }
             }
           }
         } else {
@@ -257,5 +305,182 @@ export class NotificationService {
     if (prefs.mutedTypes?.includes(type)) return false;
 
     return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase N-3 — Inbox REST API methods
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Map a Notification domain row to the NotificationItemDto shape.
+   */
+  private toItemDto(row: Notification): NotificationItemDto {
+    return {
+      id: row.id,
+      type: row.type,
+      title: row.title,
+      body: row.body,
+      data: (row.data as Record<string, string> | null) ?? undefined,
+      orderId: row.orderId ?? undefined,
+      isRead: row.isRead,
+      readAt: row.readAt?.toISOString(),
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  /**
+   * Fetch a paginated page of a user's in-app inbox.
+   *
+   * Runs three parallel queries:
+   *  1. Fetch the page of notification rows (with optional filters)
+   *  2. Count total matching rows (for pagination metadata)
+   *  3. Read the user's current unread count (Redis-cached or DB fallback)
+   *
+   * Phase N-3
+   */
+  async getInbox(
+    userId: string,
+    query: NotificationInboxQueryDto,
+  ): Promise<NotificationInboxResponseDto> {
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
+    const filters = { unreadOnly: query.unreadOnly, type: query.type };
+
+    const [rows, total, unreadCount] = await Promise.all([
+      this.notificationRepo.findInboxByUserId(userId, limit, offset, filters),
+      this.notificationRepo.countInbox(userId, filters),
+      this.getUnreadCount(userId),
+    ]);
+
+    return {
+      items: rows.map((r) => this.toItemDto(r)),
+      total,
+      unreadCount,
+      offset,
+      limit,
+      hasMore: offset + rows.length < total,
+    };
+  }
+
+  /**
+   * Return the total unread in-app notification count for a user.
+   *
+   * Redis cache strategy:
+   *  - Cache key: `unread:{userId}` (TTL: 5 minutes)
+   *  - On cache hit: return parsed integer directly (no DB query)
+   *  - On cache miss: query DB via countUnread(), store result, return
+   *  - Cache is invalidated (DEL) by: markRead, markAllRead, and sendFromEvent
+   *    when a new in_app notification is persisted.
+   *
+   * Phase N-3
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    const cacheKey = this.unreadCacheKey(userId);
+    try {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached !== null) {
+        return Number(cached);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `[Notification] Redis cache read failed for userId=${userId}: ${(err as Error).message}`,
+      );
+    }
+
+    const count = await this.notificationRepo.countUnread(userId);
+
+    try {
+      await this.redisService.setWithExpiry(
+        cacheKey,
+        String(count),
+        NotificationService.UNREAD_CACHE_TTL_SECONDS,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `[Notification] Redis cache write failed for userId=${userId}: ${(err as Error).message}`,
+      );
+    }
+
+    return count;
+  }
+
+  /**
+   * Mark a single notification as read (idempotent).
+   *
+   * Ownership is enforced at the DB level: the UPDATE WHERE clause includes
+   * both `id = :id` AND `recipient_id = :userId`. If the notification belongs
+   * to a different user, or does not exist, the repository returns null and
+   * this method returns false.
+   *
+   * After a successful mark-read:
+   *  - Redis unread count cache is invalidated.
+   *  - A `notification.read` WebSocket event is emitted to the user's room
+   *    so that other open tabs reflect the read state immediately.
+   *
+   * Phase N-3
+   */
+  async markRead(userId: string, notificationId: string): Promise<boolean> {
+    const row = await this.notificationRepo.markRead(notificationId, userId);
+    if (!row) {
+      // Either not found or belongs to a different user — return false (not 404)
+      // so the controller can respond with { success: false } without leaking
+      // whether the notification exists.
+      return false;
+    }
+
+    // Invalidate unread cache
+    void this.invalidateUnreadCache(userId);
+
+    // Emit cross-tab sync event
+    if (this.notificationGateway) {
+      try {
+        this.notificationGateway.sendToUser(userId, WS_NOTIFICATION_READ, {
+          id: notificationId,
+          readAt: row.readAt?.toISOString() ?? new Date().toISOString(),
+        });
+      } catch (wsErr) {
+        this.logger.warn(
+          `[Notification] WS emit failed after markRead for id=${notificationId}: ${(wsErr as Error).message}`,
+        );
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Mark all unread in-app notifications as read for a user.
+   *
+   * After the bulk update:
+   *  - Redis unread count cache is invalidated.
+   *  - A `notification.read` WebSocket event with `{ all: true }` is emitted
+   *    to the user's room so that all open tabs clear their unread indicators.
+   *
+   * Returns the count of rows that were updated (0 when already all read).
+   *
+   * Phase N-3
+   */
+  async markAllRead(userId: string): Promise<number> {
+    const count = await this.notificationRepo.markAllRead(userId);
+
+    if (count > 0) {
+      // Only invalidate cache and emit if rows were actually changed.
+      void this.invalidateUnreadCache(userId);
+
+      if (this.notificationGateway) {
+        try {
+          this.notificationGateway.sendToUser(userId, WS_NOTIFICATION_READ, {
+            all: true,
+            readAt: new Date().toISOString(),
+          });
+        } catch (wsErr) {
+          this.logger.warn(
+            `[Notification] WS emit failed after markAllRead for userId=${userId}: ${(wsErr as Error).message}`,
+          );
+        }
+      }
+    }
+
+    return count;
   }
 }
