@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
+import type { ReactNode } from 'react';
 import { Home, ShoppingCart, ReceiptText, User } from 'lucide-react-native';
-import { View, Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ACTIVE_COLOR = '#0d631b';
@@ -8,6 +9,25 @@ const INACTIVE_COLOR = '#707a6c';
 const TAB_BAR_BG = '#f8faf7';
 
 const TAB_CONTENT_HEIGHT = Platform.OS === 'ios' ? 56 : 52;
+
+type TabBarIconProps = {
+  children: ReactNode;
+  color: string;
+  focused: boolean;
+};
+
+function TabBarIcon({ children, focused }: TabBarIconProps) {
+  return (
+    <View
+      style={[
+        styles.tabIcon,
+        focused ? styles.tabIconFocused : styles.tabIconInactive,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -49,16 +69,9 @@ export default function TabsLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={{
-                backgroundColor: focused ? 'rgba(13,99,27,0.12)' : 'transparent',
-                borderRadius: 12,
-                paddingHorizontal: 12,
-                paddingVertical: 4,
-              }}
-            >
+            <TabBarIcon color={color} focused={focused}>
               <Home size={22} color={color} />
-            </View>
+            </TabBarIcon>
           ),
         }}
       />
@@ -67,16 +80,9 @@ export default function TabsLayout() {
         options={{
           title: 'Cart',
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={{
-                backgroundColor: focused ? 'rgba(13,99,27,0.12)' : 'transparent',
-                borderRadius: 12,
-                paddingHorizontal: 12,
-                paddingVertical: 4,
-              }}
-            >
+            <TabBarIcon color={color} focused={focused}>
               <ShoppingCart size={22} color={color} />
-            </View>
+            </TabBarIcon>
           ),
         }}
       />
@@ -85,16 +91,9 @@ export default function TabsLayout() {
         options={{
           title: 'Orders',
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={{
-                backgroundColor: focused ? 'rgba(13,99,27,0.12)' : 'transparent',
-                borderRadius: 12,
-                paddingHorizontal: 12,
-                paddingVertical: 4,
-              }}
-            >
+            <TabBarIcon color={color} focused={focused}>
               <ReceiptText size={22} color={color} />
-            </View>
+            </TabBarIcon>
           ),
         }}
       />
@@ -103,19 +102,26 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={{
-                backgroundColor: focused ? 'rgba(13,99,27,0.12)' : 'transparent',
-                borderRadius: 12,
-                paddingHorizontal: 12,
-                paddingVertical: 4,
-              }}
-            >
+            <TabBarIcon color={color} focused={focused}>
               <User size={22} color={color} />
-            </View>
+            </TabBarIcon>
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIcon: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  tabIconFocused: {
+    backgroundColor: 'rgba(13,99,27,0.12)',
+  },
+  tabIconInactive: {
+    backgroundColor: 'transparent',
+  },
+});
