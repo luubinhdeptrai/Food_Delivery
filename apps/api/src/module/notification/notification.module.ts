@@ -16,6 +16,9 @@ import { NotificationDeliveryLogRepository } from './repositories/notification-d
 import { NotificationTemplateService } from './services/notification-template.service';
 import { NotificationService } from './services/notification.service';
 
+// Gateway
+import { NotificationGateway } from './gateway/notification.gateway';
+
 // Event Handlers
 import { OrderPlacedNotificationHandler } from './events/order-placed.handler';
 import { OrderStatusChangedNotificationHandler } from './events/order-status-changed.handler';
@@ -24,31 +27,32 @@ import { PaymentFailedNotificationHandler } from './events/payment-failed.handle
 import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-cancelled-after-payment.handler';
 
 /**
- * NotificationModule — Phase N-1 Foundation
+ * NotificationModule — Phase N-2 Real-time WebSocket Gateway
  *
  * Implements the Notification BC as a non-global NestJS module.
  * NOT @Global() — imported explicitly in AppModule.
  *
- * Responsibilities in Phase N-1:
- *  - Define all Drizzle-managed DB tables (5 tables via schema files)
- *  - Register ACL projector for RestaurantUpdatedEvent → snapshot table
- *  - Register event handlers for all upstream domain events
- *  - Persist notification rows to DB on every event (no delivery yet)
+ * Phase N-2 additions over N-1:
+ *  - NotificationGateway: Socket.IO WebSocket gateway on the /notifications
+ *    namespace. Authenticates connections via Better Auth session (same
+ *    mechanism as HTTP guards). Per-user rooms + Redis presence tracking.
+ *  - NotificationService now injects NotificationGateway to push real-time
+ *    'notification:new' events to connected in_app channel recipients.
  *
- * Phase N-2+: WebSocket gateway + in-app real-time delivery
  * Phase N-4:  Firebase Cloud Messaging push delivery
  * Phase N-5:  SMTP email delivery, cleanup cron
- * Phase N-6:  Retry worker, dead-letter queue
+ * Phase N-6:  Retry worker, dead-letter queue, Socket.IO Redis adapter
  *
  * CqrsModule import is required: @EventsHandler-decorated classes only
- * register with the EventBus if CqrsModule is imported in the same module
- * (NestJS CQRS DI scoping rule).
+ * register with the EventBus if CqrsModule is imported in the same module.
  *
- * DatabaseModule provides DB_CONNECTION (Drizzle NodePgDatabase) to all
- * repositories and the ACL repository.
+ * DatabaseModule provides DB_CONNECTION to all repositories.
  *
- * No exports — Phase N-1 has no services consumed by other modules.
- * NotificationService will be exported starting Phase N-3 (REST controller).
+ * ScheduleModule.forRoot() is imported in AppModule — @Interval on
+ * NotificationGateway.logConnectionMetrics() works without re-importing
+ * ScheduleModule here.
+ *
+ * No exports — NotificationService has no port consumed by other modules.
  */
 @Module({
   imports: [CqrsModule, DatabaseModule],
@@ -66,6 +70,9 @@ import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-ca
     // --- Services ---
     NotificationTemplateService,
     NotificationService,
+
+    // --- Gateway (Phase N-2) ---
+    NotificationGateway,
 
     // --- Event Handlers ---
     OrderPlacedNotificationHandler,

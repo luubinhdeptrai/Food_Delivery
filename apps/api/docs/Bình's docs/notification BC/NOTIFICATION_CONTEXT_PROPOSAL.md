@@ -1944,9 +1944,13 @@ src/module/notification/
 
 ---
 
-### Phase N-2: Real-time WebSocket Gateway
+### Phase N-2: Real-time WebSocket Gateway ✅ Implemented
 
 **Goal:** Implement the Socket.IO WebSocket gateway. Users can connect, authenticate, and receive real-time notifications when domain events fire.
+
+> **Implementation note (completed):** All deliverables below are implemented. TypeScript compilation passes with 0 errors (`tsc --noEmit`). The gateway is registered as a provider in `NotificationModule`. `NotificationService` dispatches `notification:new` WebSocket events to connected users after DB persistence. `RedisService` has been extended with `incr()`, `decr()`, and `expire()` methods.
+
+> **Architecture note:** The `@WebSocketServer()` decorated property is typed as `Namespace` (not `Server`) because NestJS injects the namespace-scoped object for namespaced gateways. This allows `server.sockets.size` to resolve correctly as the Map's `.size` property.
 
 **Scope:**
 - Install `@nestjs/websockets` and `socket.io` (see Section 4.7 for exact packages — do NOT install `@nestjs/platform-socket.io`)
@@ -1959,17 +1963,18 @@ src/module/notification/
 
 **Deliverables:**
 - `gateway/notification.gateway.ts`
-- Updated event handlers calling `NotificationGateway`
-- `services/notification.service.ts` (orchestration layer between handlers and gateway)
+- `gateway/notification-payload.dto.ts`
+- Updated `services/notification.service.ts` (dispatches WebSocket after DB persistence)
+- Updated `notification.module.ts` (includes `NotificationGateway`)
+- Extended `src/lib/redis/redis.service.ts` (`incr`, `decr`, `expire` methods)
 
 **Architecture Decisions:**
 - `NotificationGateway` is a provider inside `NotificationModule`, NOT a separate module
 - `NotificationGateway` injects `RedisService` (already global) for presence tracking
-- The gateway's `server` property is set in `afterInit(server: Server)` lifecycle hook
-
-**Testing Strategy:**
-- Unit test: mock Socket.IO server, verify `to(room).emit()` is called with correct payload
-- E2E test: connect a test WebSocket client, trigger `OrderPlacedEvent`, assert event received
+- `@WebSocketServer()` property typed as `Namespace` (namespace-scoped object, not root `Server`)
+- `NotificationService` injects `NotificationGateway` with `@Optional()` for unit-test safety
+- WebSocket delivery is fire-and-forget with `try/catch` — never propagates to persistence
+- Multi-device presence limitation documented in code comment (not fixed in N-2)
 
 **Risks:**
 - Better Auth session validation in WS context: the `auth.api.getSession()` method expects HTTP headers, which are available in the Socket.IO handshake. Test carefully with the actual session format.

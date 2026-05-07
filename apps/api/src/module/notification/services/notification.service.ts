@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import {
   type NotificationType,
   type NotificationChannel,
@@ -9,6 +9,11 @@ import {
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationPreferenceRepository } from '../repositories/notification-preference.repository';
 import { NotificationTemplateService } from './notification-template.service';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  WS_NOTIFICATION_CREATED,
+} from '../gateway/notification-payload.dto';
+import type { NotificationPayload } from '../gateway/notification-payload.dto';
 
 // ---------------------------------------------------------------------------
 // Input type for sendFromEvent
@@ -43,8 +48,14 @@ export interface SendFromEventParams {
 //   `notifications`. No external delivery (push, email, WebSocket) is
 //   performed — those are implemented in later phases.
 //
-// Phase N-2+: this service will be extended to dispatch push (FCM),
-//   email (SMTP), and in-app (WebSocket) delivery after persistence.
+// Phase N-2 (current):
+//   In-app (WebSocket) delivery is now live. After persisting the DB row,
+//   NotificationService calls NotificationGateway.sendToUser() for in_app
+//   channels. WebSocket delivery is fire-and-forget — a failure never
+//   affects DB persistence. Notifications are always retrievable via the
+//   inbox REST API (Phase N-3).
+//
+// Phase N-4+: push (FCM) and email (SMTP) delivery channels.
 //
 // Architecture decisions:
 //  - NEVER throw from sendFromEvent — it is called from @EventsHandler.
@@ -53,7 +64,7 @@ export interface SendFromEventParams {
 //    DB UNIQUE constraint enforces at-most-once persistence per key.
 //    ON CONFLICT DO NOTHING in NotificationRepository.insertIfNotExists().
 //
-// Phase: N-1 — Foundation
+// Phase: N-2 — Real-time WebSocket Gateway
 // ---------------------------------------------------------------------------
 @Injectable()
 export class NotificationService {
@@ -63,7 +74,22 @@ export class NotificationService {
     private readonly notificationRepo: NotificationRepository,
     private readonly preferenceRepo: NotificationPreferenceRepository,
     private readonly templateService: NotificationTemplateService,
-  ) {}
+    // @Optional() prevents a hard DI error when NotificationGateway is not
+    // yet registered (e.g. in unit tests that only test DB persistence).
+    // In production, the gateway is always present in NotificationModule.
+    //
+    // IMPORTANT: Do NOT use a union type like `NotificationGateway | null` here.
+    // TypeScript compiles union types to `Object` in Reflect.metadata (emitDecoratorMetadata).
+    // NestJS reads that metadata to resolve DI tokens. With `Object` as the type, NestJS
+    // cannot match the `NotificationGateway` provider and @Optional() silently injects
+    // `undefined`, causing `this.notificationGateway` to always be falsy and the realtime
+    // emit to be skipped silently. The plain class type is required for correct DI resolution.
+    @Optional() private readonly notificationGateway: NotificationGateway,
+  ) {
+    this.logger.log(
+      `[NotificationService] Gateway DI: ${notificationGateway ? 'NotificationGateway injected — realtime enabled' : 'NotificationGateway NOT injected — realtime disabled (unit test mode)'}`,
+    );
+  }
 
   /**
    * Persist one notification row per requested channel after verifying
@@ -83,6 +109,10 @@ export class NotificationService {
       orderId,
     } = params;
 
+    this.logger.log(
+      `[Notification] sendFromEvent start: type=${type} recipientId=${recipientId} sourceId=${sourceId} channels=[${channels.join(',')}] gatewayReady=${!!this.notificationGateway}`,
+    );
+
     try {
       // 1. Load preferences (fall back to defaults when no row exists)
       const prefs =
@@ -92,6 +122,10 @@ export class NotificationService {
       // 2. Filter to opted-in channels
       const enabledChannels = channels.filter((ch) =>
         this.isChannelEnabled(prefs, type, ch),
+      );
+
+      this.logger.log(
+        `[Notification] Channels after preference filter: requested=[${channels.join(',')}] enabled=[${enabledChannels.join(',')}]`,
       );
 
       if (enabledChannels.length === 0) {
@@ -133,10 +167,42 @@ export class NotificationService {
 
         if (row) {
           persisted++;
-          this.logger.debug(
-            `[Notification] Persisted ${channel} notification id=${row.id} type=${type} recipient=${recipientId}`,
+          this.logger.log(
+            `[Notification] Persisted: id=${row.id} type=${type} channel=${channel} recipient=${recipientId}`,
           );
-          // Phase N-2+: dispatch push / WebSocket / email delivery here.
+          // Phase N-2: dispatch real-time WebSocket delivery for in_app channel.
+          if (channel === 'in_app' && this.notificationGateway) {
+            const payload: NotificationPayload = {
+              id: row.id,
+              type: row.type,
+              title: row.title,
+              body: row.body,
+              data: (row.data as Record<string, string> | null) ?? undefined,
+              orderId: row.orderId ?? undefined,
+              createdAt: row.createdAt.toISOString(),
+              isRead: row.isRead,
+            };
+            this.logger.log(
+              `[Notification] Realtime delivery: notificationId=${row.id} userId=${recipientId} event=${WS_NOTIFICATION_CREATED}`,
+            );
+            try {
+              const emitted = this.notificationGateway.sendToUser(
+                recipientId,
+                WS_NOTIFICATION_CREATED,
+                payload,
+              );
+              this.logger.log(
+                `[Notification] Realtime delivery dispatched: notificationId=${row.id} userId=${recipientId} emitted=${emitted}`,
+              );
+            } catch (wsErr) {
+              // WebSocket delivery failure must never affect DB persistence.
+              // The notification is already persisted — client will fetch it
+              // via the inbox REST API on reconnect.
+              this.logger.warn(
+                `[Notification] WebSocket delivery failed for id=${row.id}: ${(wsErr as Error).message}`,
+              );
+            }
+          }
         } else {
           this.logger.debug(
             `[Notification] Skipped duplicate: idempotencyKey=${idempotencyKey}`,

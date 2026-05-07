@@ -68,6 +68,36 @@ export class RedisService implements OnModuleDestroy {
     return keys;
   }
 
+  /**
+   * Atomically increment the integer value of a key by 1.
+   * If the key does not exist it is initialised to 0 before the operation.
+   * Returns the value of the key after the increment.
+   * Used for: multi-device presence reference counting (Phase N-3+).
+   */
+  async incr(key: string): Promise<number> {
+    return this.client.incr(key);
+  }
+
+  /**
+   * Atomically decrement the integer value of a key by 1.
+   * If the key does not exist it is initialised to 0 before the operation.
+   * Returns the value of the key after the decrement.
+   * Used for: multi-device presence reference counting (Phase N-3+).
+   */
+  async decr(key: string): Promise<number> {
+    return this.client.decr(key);
+  }
+
+  /**
+   * Set the TTL (time-to-live) of an existing key without changing its value.
+   * This is the cleanest way to refresh a heartbeat TTL — no value read/write needed.
+   * If the key does not exist, the command is a no-op.
+   * Used for: WebSocket heartbeat TTL refresh (Phase N-2).
+   */
+  async expire(key: string, ttlSeconds: number): Promise<void> {
+    await this.client.expire(key, ttlSeconds);
+  }
+
   async ping(): Promise<string> {
     return this.client.ping();
   }
