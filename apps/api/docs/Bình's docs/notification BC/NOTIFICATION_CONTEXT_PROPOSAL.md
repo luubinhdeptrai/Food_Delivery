@@ -2,10 +2,11 @@
 
 > **Document Type:** Living Design Document (Code-Verified)
 > **Author Role:** Senior Software Architect
-> **Status:** Phase N-1 ✅ Implemented | Phase N-2 through N-7 — Pending Implementation 🔲
+> **Status:** Phases N-1 through N-5 ✅ Fully Implemented | Phase N-6 (Retry Worker) 🔲 Pending
 > **Target Project:** `SoLi-Food-Order-and-Deliver-App` / `apps/api`
 > **Depends On:** Phase 5 (Order Lifecycle), Phase 6 (Downstream Event Stubs), Phase 8 (Payment Context)
-> **Verified Against:** Full codebase audit — all facts cross-checked with source files
+> **Last Full Audit:** May 2026 — all facts cross-checked against source files
+> **Source of Truth:** Actual codebase, NOT this document
 
 ### Change Legend
 
@@ -1113,55 +1114,53 @@ Usage: Fast-path deduplication before DB write
 
 Uses existing `RedisService.setNx()`.
 
-### 9.2 Online User Presence Tracking
+### 9.2 Online User Presence Tracking — [IMPLEMENTED N-5]
 
-When a user connects via WebSocket, their presence is recorded in Redis:
+When a user connects via WebSocket, their presence is recorded in Redis using a **reference-counted INCR/DECR pattern** that correctly handles multi-tab / multi-device users:
 
 ```
-Key:   presence:{userId}
-Value: socketId of the connecting socket
-TTL:   30 seconds (refreshed by client heartbeat ping every ~25s)
-Usage: PushService checks presence — if user is online, skip FCM push (WebSocket is sufficient)
+Key:   ws:connections:{userId}
+Value: integer reference count (number of active sockets)
+TTL:   90 seconds (refreshed by client heartbeat ping every ~25s)
+Usage: ChannelDispatcherService checks presence before FCM push dispatch
 ```
 
-```typescript
-// On WebSocket connect (in handleConnection)
-await this.redisService.setWithExpiry(`presence:${userId}`, client.id, 30);
-
-// In PushService.sendToUser()
-const isOnline = await this.redisService.exists(`presence:${userId}`);
-if (isOnline) {
-  this.logger.debug(`User ${userId} is online — skipping push notification`);
-  return; // WebSocket delivery is sufficient
-}
+**Protocol (atomic):**
+```
+connect    → INCR ws:connections:{userId}; EXPIRE ws:connections:{userId} 90
+heartbeat  → EXPIRE ws:connections:{userId} 90  (refresh TTL, no value change)
+disconnect → DECR ws:connections:{userId}; if result ≤ 0: DEL ws:connections:{userId}
+push check → GET ws:connections:{userId} → online if value > 0
 ```
 
-> **[TRADEOFF]** Skipping push when online: This reduces unnecessary push notifications but has a race condition — the user might disconnect between the `exists` check and the WebSocket delivery. Mitigation: WebSocket delivery always runs first; the presence check only gates push. Missed push notifications are acceptable because the in-app notification is already persisted in DB.
+**Why INCR/DECR not SET/DEL:**
+The old single-key `SET presence:{userId} = socketId; DEL on disconnect` pattern had a confirmed multi-tab race bug: disconnecting any tab deleted the key even while other tabs remained connected. INCR/DECR ensures the key only disappears when ALL sockets for a user are closed.
 
-> **[RISK] Multi-device presence (Phase N-3 fix required):** Storing one socketId with `setWithExpiry` is incorrect for multi-device users. If a user has 2 browser tabs open and closes tab 1, `handleDisconnect` calls `redisService.del('presence:{userId}')` — the key is deleted entirely even though tab 2 is still connected. The user appears offline for up to 30s (until the next heartbeat refreshes the key). **Proper fix:** Add `incr` and `decr` to `RedisService` (see Section 9.7) and use a reference counter: `INCR` on connect + `EXPIRE` 30s, `DECR` on disconnect (delete if result <= 0). This is tracked as a Phase N-3+ improvement.
+**TTL safety:** 90s TTL >> 25s heartbeat interval (3× safety margin). If the server crashes without calling `handleDisconnect`, the key naturally expires within 90s, preventing ghost-online state.
 
-### 9.3 Unread Count Cache
+**Redis failure safety:** All `UserPresenceService` methods (`markOnline`, `markOffline`, `refreshTtl`, `isOnline`) absorb Redis errors internally. `isOnline()` returns `false` on error — safe default means push is delivered as fallback rather than silently suppressed.
+
+> **[TRADEOFF]** Skipping push when online: Reduces device notification noise but has a sub-second race window where user disconnects between the `isOnline()` check and the WS `emit()`. Acceptable tradeoff: the in-app notification is already persisted in DB regardless of delivery; the user will see it in inbox on reconnect. This is consistent with all at-most-once WS delivery semantics.
+
+### 9.3 Unread Count Cache — [IMPLEMENTED]
 
 ```
 Key:   unread:{userId}
 Value: integer string
-TTL:   no expiry (invalidated when count changes)
+TTL:   300 seconds (5 minutes) — set on cache population
 Usage: Serve unread count without a COUNT(*) DB query on every inbox request
 ```
 
-**Phase N-3 implementation — invalidate-on-change (avoids race condition):**
+**Cache-aside (invalidate-on-change) strategy:**
 
 ```typescript
-// On new notification created: invalidate the cache
+// On new in_app notification created or on mark-read: DEL the key
 await this.redisService.del(`unread:${userId}`);
-// The next GET /notifications/inbox/unread-count falls back to DB COUNT
-// and the controller populates the cache with the authoritative value.
-
-// On mark-as-read: also invalidate
-await this.redisService.del(`unread:${userId}`);
+// The next GET /notifications/my/unread-count hits the DB COUNT,
+// stores the result with a 5-minute TTL, and returns it.
 ```
 
-> **Why invalidate instead of INCR/DECR:** A read-modify-write pattern (`get` → parse → increment → `set`) has a **race condition**: two concurrent new notifications both read count N and both write N+1 instead of N+2. The atomic fix requires `INCR`/`DECR` commands, which are not yet in `RedisService`. Invalidation-on-change is race-free and correct: the DB `COUNT` query (backed by the partial index on `recipient_id WHERE is_read = false`) is fast. **Phase N-3+ upgrade:** Add `RedisService.incr()` (see Section 9.7) and switch to atomic INCR/DECR.
+**Why invalidation not INCR/DECR:** DEL-on-write + DB-on-miss is race-free and correct. The DB `COUNT` query (backed by `notif_recipient_unread_idx` partial index on `recipient_id WHERE is_read = false`) is fast. The 5-minute TTL also provides a safety net in case a cache-invalidation call is ever missed.
 
 ### 9.4 Socket Room Membership (Phase N-6 — Redis Adapter)
 
@@ -1190,20 +1189,26 @@ Usage: Background retry worker polls ZRANGEBYSCORE for due retries
 
 > **Implementation note:** The retry queue requires `zadd`, `zrangebyscore`, and `zrem` on `RedisService`. See Section 9.7 for the full list of required extensions.
 
-### 9.7 Required `RedisService` Extensions
+### 9.7 Redis Key Summary
 
-The following Redis commands are referenced in this proposal but are **NOT** currently in `src/lib/redis/redis.service.ts`. They must be added before the phases that depend on them.
+| Key Pattern | Type | TTL | Phase | Purpose |
+|-------------|------|-----|-------|---------|
+| `ws:connections:{userId}` | String (int) | 90s | N-5 ✅ | WebSocket presence ref count (INCR/DECR) |
+| `unread:{userId}` | String (int) | 300s | N-3 ✅ | Unread notification count cache |
+| `notif:retry:queue` | ZSET | — | N-6 🔲 | Retry worker sorted set (score = next attempt Unix ts) |
 
-| Method | Redis command | Phase | Purpose |
-|--------|--------------|-------|---------|
-| `incr(key: string): Promise<number>` | `INCR` | N-3 | Atomic unread count increment |
-| `decr(key: string): Promise<number>` | `DECR` | N-3 | Atomic unread count decrement |
-| `expire(key: string, ttlSeconds: number): Promise<void>` | `EXPIRE` | N-3 | Refresh presence counter TTL without changing value |
-| `zadd(key: string, score: number, member: string): Promise<number>` | `ZADD` | N-6 | Enqueue into retry SORTED SET |
-| `zrangebyscore(key: string, min: number, max: number, limit?: number): Promise<string[]>` | `ZRANGEBYSCORE` | N-6 | Poll retry queue for due entries |
-| `zrem(key: string, ...members: string[]): Promise<number>` | `ZREM` | N-6 | Remove processed entries from retry SORTED SET |
+**RedisService extensions already implemented:**
+- `incr(key)` — used by `UserPresenceService.markOnline()`
+- `decr(key)` — used by `UserPresenceService.markOffline()`
+- `expire(key, ttl)` — used by `UserPresenceService.refreshTtl()`
+- `incrIfExists(key)` — available for future write-through unread count optimization
 
-> **CRITICAL:** `REDIS_CLIENT` (the raw ioredis Symbol) is NOT exported from `RedisModule` — only `RedisService` is. Do NOT add `REDIS_CLIENT` to `RedisModule` exports as a shortcut — that breaks encapsulation. Add the required methods to `RedisService` itself. All notification providers must inject `RedisService`.
+**Phase N-6 additions required:**
+- `zadd(key, score, member)` — enqueue into retry SORTED SET
+- `zrangebyscore(key, min, max, limit?)` — poll retry queue
+- `zrem(key, ...members)` — remove processed entries
+
+> **CRITICAL:** `REDIS_CLIENT` (raw ioredis Symbol) is NOT exported from `RedisModule` — only `RedisService` is. Do NOT inject `REDIS_CLIENT` directly into notification providers — add methods to `RedisService` instead.
 
 ---
 
@@ -1252,29 +1257,43 @@ const DEFAULT_PREFERENCES: Partial<NotificationPreference> = {
 
 Preference rows are created lazily (on first change), not at registration. This avoids creating empty rows for users who never interact with preferences.
 
-### 10.3 Quiet Hours Implementation
+### 10.3 Quiet Hours Implementation — [IMPLEMENTED N-5]
+
+Quiet hours are evaluated by `QuietHoursService` using native `Intl.DateTimeFormat` — **no external timezone library required**.
 
 ```typescript
-private isQuietHours(prefs: NotificationPreference): boolean {
+// services/quiet-hours.service.ts (actual implementation)
+isQuietHours(prefs: NotificationPreference, now: Date = new Date()): boolean {
   if (prefs.quietHoursStart == null || prefs.quietHoursEnd == null) return false;
 
-  // Use the user's stored timezone (default: 'Asia/Ho_Chi_Minh') to compute
-  // local hour. new Date().getHours() returns UTC which is wrong for Vietnam.
-  // dayjs-plugin-timezone must be installed: npm install dayjs
-  // import dayjs from 'dayjs'; import tz from 'dayjs/plugin/timezone'; dayjs.extend(tz);
-  const nowHour = dayjs().tz(prefs.timezone ?? 'Asia/Ho_Chi_Minh').hour();
-  const { quietHoursStart: start, quietHoursEnd: end } = prefs;
+  const tz = prefs.timezone ?? 'Asia/Ho_Chi_Minh';
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      hour12: false,
+      timeZone: tz,
+    }).formatToParts(now);
+    const hourPart = parts.find((p) => p.type === 'hour');
+    if (!hourPart) return false;
+    const nowHour = parseInt(hourPart.value, 10);
 
-  // Handle overnight ranges (e.g., 22→6)
-  if (start > end) {
-    return nowHour >= start || nowHour < end;
+    const { quietHoursStart: start, quietHoursEnd: end } = prefs;
+    // Handle overnight ranges (e.g., start=22, end=7 → quiet from 22:00 to 06:59)
+    if (start > end) {
+      return nowHour >= start || nowHour < end;
+    }
+    return nowHour >= start && nowHour < end;
+  } catch {
+    // Invalid IANA timezone string — log WARN and return false (not quiet)
+    return false;
   }
-  return nowHour >= start && nowHour < end;
 }
 ```
 
-> ~~**[RISK]** Timezone handling: The `timezone` field is now in the `notification_preferences` schema (default `'Asia/Ho_Chi_Minh'`). The `isQuietHours()` implementation uses `dayjs-plugin-timezone`. Add `dayjs` to the project dependencies in Phase N-5.~~
-> **[RESOLVED — Phase N-5]** `QuietHoursService` was implemented using native `Intl.DateTimeFormat.formatToParts()` — no dayjs or external timezone library required.
+**Key behaviours:**
+- Invalid timezone strings silently return `false` (fail-open: notification proceeds rather than being suppressed due to config error)
+- Zero-length windows (`start === end`) are treated as disabled
+- Overnight ranges (start > end) correctly span midnight
 
 ### 10.4 Muted Notification Types
 
@@ -1298,121 +1317,76 @@ The architecture supports this distinction via the `mutedTypes` array and a futu
 
 ## 11. Security & Authorization
 
-### 11.1 WebSocket Authentication
+### 11.1 WebSocket Authentication — [IMPLEMENTED]
 
-Socket.IO connections in NestJS are established via an HTTP upgrade request. The authentication handshake uses the **same Better Auth session** as the HTTP API. The project uses `@thallesp/nestjs-better-auth` — there is **no** `JwtService` from `@nestjs/jwt` in this project.
+Socket.IO connections authenticate using the **same Better Auth session** as the HTTP API (`@thallesp/nestjs-better-auth`). No JwtService from `@nestjs/jwt` is used.
 
-The `auth` instance (exported from `src/lib/auth.ts`) exposes an `api.getSession()` method that accepts standard HTTP headers, including the `authorization: Bearer <token>` format used by Socket.IO clients.
+**Token extraction order (handshake only — not per-message):**
+1. `client.handshake.auth.token` (preferred: mobile SDK pattern)
+2. `client.handshake.headers.authorization` stripped of `Bearer ` prefix (web SDK pattern)
+
+**Connection lifecycle (actual implementation):**
 
 ```typescript
-import { auth } from '@/lib/auth';
-import { RedisService } from '@/lib/redis/redis.service';
-
 @WebSocketGateway({
   namespace: '/notifications',
   cors: { origin: process.env.CORS_ORIGIN ?? '*', credentials: true },
 })
 export class NotificationGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  private readonly logger = new Logger(NotificationGateway.name);
+  @WebSocketServer() server: Namespace;
 
-  @WebSocketServer()
-  server: Server;
-
-  /**
-   * Tracks per-socket session-expiry timers keyed by socket.id.
-   * MUST be cleared in handleDisconnect to prevent:
-   *   (a) memory leaks — the timer holds a closure reference to the socket object
-   *   (b) post-disconnect calls — client.emit() / client.disconnect() on a
-   *       stale socket throw or silently corrupt Socket.IO internal state
-   */
+  // Per-socket session expiry timers. Always cleared in handleDisconnect.
   private readonly sessionTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
-    // RedisService is globally available (exported from @Global() RedisModule).
-    // Do NOT inject the raw REDIS_CLIENT token — it is NOT exported from RedisModule
-    // and is therefore not resolvable outside of that module. Doing so would throw
-    // a NestJS dependency injection error at startup.
-    private readonly redisService: RedisService,
+    private readonly notificationService: NotificationService,
+    private readonly presenceService: UserPresenceService,
   ) {}
 
   async handleConnection(client: Socket): Promise<void> {
-    // Extract auth token from handshake.
-    // Mobile clients send via handshake.auth.token;
-    // web clients may send via Authorization header.
     const token =
       (client.handshake.auth?.token as string | undefined) ??
       client.handshake.headers.authorization?.replace('Bearer ', '');
 
-    if (!token) {
-      client.disconnect(true);
-      return;
-    }
+    if (!token) { client.disconnect(true); return; }
 
-    // --- Single auth.api.getSession() call ---
-    // Extract BOTH userId and session expiry from one round-trip.
-    // Two separate helper methods (resolveUserId + resolveSessionExpiry) would
-    // each call auth.api.getSession(), doubling the latency for every connect.
     let session: Awaited<ReturnType<typeof auth.api.getSession>>;
     try {
       session = await auth.api.getSession({
         headers: new Headers({ authorization: `Bearer ${token}` }),
       });
-    } catch {
-      // Network failure or Better Auth internal error — reject the connection.
-      client.disconnect(true);
-      return;
-    }
+    } catch { client.disconnect(true); return; }
 
     const userId = session?.user?.id;
-    if (!userId) {
-      client.disconnect(true);
-      return;
-    }
+    if (!userId) { client.disconnect(true); return; }
 
     client.data.userId = userId;
-    await client.join(`user:${userId}`);
+    // Room format: room:user:{userId}  ← NOTE: NOT user:{userId}
+    await client.join(`room:user:${userId}`);
+    await this.presenceService.markOnline(userId);  // INCR ws:connections:{userId}, EXPIRE 90s
 
-    // --- Presence tracking ---
-    // TTL is intentionally short (30s) and refreshed by client heartbeat pings
-    // (client sends ping every ~25s; server updates TTL on each ping).
-    //
-    // KNOWN LIMITATION (multi-device): This simple setWithExpiry approach has a
-    // race condition when a user has multiple tabs open. If tab 1 disconnects,
-    // handleDisconnect deletes the key — tab 2 is still connected but the
-    // user appears offline until the next heartbeat TTL refresh (max 30s gap).
-    //
-    // Proper fix (requires adding RedisService.incr() / decr()):
-    //   connect:    INCR presence:{userId}, EXPIRE presence:{userId} 30
-    //   disconnect: DECR presence:{userId} — delete key if result <= 0
-    // Add this in Phase N-2 when RedisService is extended (see Section 9.7).
-    await this.redisService.setWithExpiry(`presence:${userId}`, client.id, 30);
-
-    // --- Session expiry enforcement ---
-    // Disconnect the socket when the Better Auth session expires so stale
-    // connections do not persist indefinitely. Without this, a user whose
-    // session has expired can still receive real-time notifications.
+    // Session expiry enforcement — disconnect socket when Better Auth session expires
     const sessionExpiresAt = session?.session?.expiresAt;
     if (sessionExpiresAt) {
-      const ttlMs = new Date(sessionExpiresAt).getTime() - Date.now();
+      const ttlMs = Math.min(
+        new Date(sessionExpiresAt).getTime() - Date.now(),
+        2_147_483_647,  // Node.js setTimeout max (2^31-1 ms ~24.8 days)
+      );
       if (ttlMs > 0) {
         const timer = setTimeout(() => {
-          this.sessionTimers.delete(client.id); // clean up map entry
+          this.sessionTimers.delete(client.id);
           client.emit('auth:expired');
           client.disconnect(true);
         }, ttlMs);
-        // Store timer reference so handleDisconnect can cancel it.
         this.sessionTimers.set(client.id, timer);
       }
     }
 
-    this.logger.log(`Socket connected: userId=${userId} socketId=${client.id}`);
+    client.emit('connection:established', { userId, room: `room:user:${userId}`, connectedAt: new Date().toISOString() });
   }
 
   async handleDisconnect(client: Socket): Promise<void> {
-    // --- Cancel session expiry timer ---
-    // If the client disconnects before the session expires (the common case),
-    // the timer would otherwise fire on a stale socket. clearTimeout is a no-op
-    // if the timer has already fired — safe to call unconditionally.
+    // Always cancel session timer to prevent stale-socket calls
     const timer = this.sessionTimers.get(client.id);
     if (timer !== undefined) {
       clearTimeout(timer);
@@ -1421,36 +1395,45 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
     const userId = client.data.userId as string | undefined;
     if (userId) {
-      // For single-device users: presence key is deleted immediately on clean disconnect.
-      // For multi-device users: see KNOWN LIMITATION note in handleConnection.
-      // Ungraceful disconnects (network cut) are handled by the 30s TTL expiry.
-      await this.redisService.del(`presence:${userId}`);
-      this.logger.log(`Socket disconnected: userId=${userId}`);
+      // DECR ws:connections:{userId} — DEL if count ≤ 0
+      // Multi-tab safe: other tabs keep the key alive via their own connect INCR
+      await this.presenceService.markOffline(userId);
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Called by NotificationService to push to a specific user's devices
-  // ---------------------------------------------------------------------------
-  sendToUser(userId: string, event: string, payload: unknown): void {
-    this.server.to(`user:${userId}`).emit(event, payload);
+  @SubscribeMessage('notification:ping')
+  async handlePing(client: Socket): Promise<void> {
+    const userId = client.data.userId as string | undefined;
+    if (userId) {
+      // Refresh presence TTL without changing the counter value
+      await this.presenceService.refreshTtl(userId);
+    }
   }
 
-  // ---------------------------------------------------------------------------
-  // Namespace-level broadcast (system announcements to ALL connected users)
-  // ---------------------------------------------------------------------------
+  // Called by NotificationService after in_app channel delivery
+  sendToUser(userId: string, event: string, payload: unknown): void {
+    this.server.to(`room:user:${userId}`).emit(event, payload);
+  }
+
+  // System announcements to ALL connected clients in /notifications namespace
   broadcastToAll(event: string, payload: unknown): void {
-    // server.emit() broadcasts to ALL clients in the /notifications namespace.
-    // Do NOT use server.to('/notifications').emit() — that treats '/notifications'
-    // as a ROOM name, not the namespace, and delivers to nobody.
+    // server.emit() broadcasts to all clients in THIS namespace.
+    // Do NOT use server.to('/notifications').emit() — treats the namespace
+    // name as a room name and delivers to nobody.
     this.server.emit(event, payload);
+  }
+
+  // Connection count metric (logged every 60s)
+  @Interval(60_000)
+  logConnectionMetrics(): void {
+    this.logger.log({ event: 'websocket.connections', count: this.server.sockets.size });
   }
 }
 ```
 
-> **Note on Better Auth session format:** The exact field path for session expiry (`session?.session?.expiresAt`) must be verified against the `@thallesp/nestjs-better-auth` version in use. If the API shape differs, adjust the field path accordingly. The invariant is: the WebSocket gateway MUST use the same session validation mechanism as the HTTP guards — no separate JWT secret or parallel auth path.
+> **Room name:** `room:user:{userId}` — the `room:` prefix prevents accidental collision between room names and other Socket.IO internal identifiers.
 
-> **Note on `CORS_ORIGIN` env var:** The gateway uses `process.env.CORS_ORIGIN ?? '*'` directly. Add `CORS_ORIGIN: z.string().default('*')` to `env.schema.ts` so it is validated at startup alongside other environment variables. Using `'*'` in production is a security risk — set `CORS_ORIGIN` to the actual frontend origin(s).
+> **`UserPresenceService`** encapsulates all Redis presence operations. Inject it instead of calling `RedisService` directly from the gateway. This keeps the gateway testable (mock `UserPresenceService` in unit tests).
 
 ### 11.2 Token Expiration During Active Connection
 
@@ -1475,14 +1458,14 @@ socket.on('auth:expired', () => {
 ### 11.3 User Isolation
 
 **Room-based isolation guarantees user data segregation:**
-- Each user is placed in room `user:{userId}` on connect
-- `NotificationGateway.sendToUser(userId, payload)` calls `this.server.to('user:' + userId).emit(...)`
+- Each user is placed in room `room:user:{userId}` on connect
+- `NotificationGateway.sendToUser(userId, payload)` calls `this.server.to('room:user:' + userId).emit(...)`
 - A malicious actor cannot receive another user's notifications because they cannot join a room they don't own
 - Never use `client.broadcast.emit()` (sends to all connected clients) for notification data
 
 ### 11.4 Multi-Device Session Handling
 
-Multiple sockets from the same user (mobile + web) both join `user:{userId}`. When `server.to('user:userId').emit(...)` is called, Socket.IO delivers to **all sockets in that room** — both devices receive the notification simultaneously. This is the correct behavior for a food delivery app (notification appears on all the user's devices).
+Multiple sockets from the same user (mobile + web) both join `room:user:{userId}`. When `server.to('room:user:userId').emit(...)` is called, Socket.IO delivers to **all sockets in that room** — both devices receive the notification simultaneously. This is the correct behavior for a food delivery app (notification appears on all the user's devices).
 
 ### 11.5 Preventing Notification Spoofing
 
@@ -1684,41 +1667,60 @@ The business logic inside `handle()` / `handleOrderPlaced()` is identical. The d
 
 ## 15. API Design
 
-### 15.1 REST Endpoints
+### 15.1 REST Endpoints — [IMPLEMENTED]
+
+All routes are under `/api/notifications`. Require Bearer token auth (Better Auth session) except `test/*` which are `@AllowAnonymous` (dev/staging only).
 
 ```
 # Notification Inbox
-GET    /notifications/inbox            → paginated list of in_app notifications for req.user
-GET    /notifications/inbox/unread-count → { count: number }
-PATCH  /notifications/:id/read         → mark single notification as read
-PATCH  /notifications/read-all         → mark all as read for req.user
+GET    /api/notifications/my
+         Query: unreadOnly?: boolean, type?: NotificationType, limit?: 1-100, offset?: 0+
+         Response: { items, total, unreadCount, offset, limit, hasMore }
 
-# Device Token Management
-POST   /notifications/device-tokens    → register FCM token for current user
-DELETE /notifications/device-tokens/:token → deregister a specific token
+GET    /api/notifications/my/unread-count
+         Response: { count: number }
+
+PATCH  /api/notifications/:id/read
+         Response: { success: boolean }  — success=false if not found or wrong user (no 404)
+
+PATCH  /api/notifications/my/read-all
+         Response: { count: number }  — number of rows updated
 
 # Preferences
-GET    /notifications/preferences      → get current user's preferences
-PATCH  /notifications/preferences      → update preferences (partial update)
+GET    /api/notifications/my/preferences
+PATCH  /api/notifications/my/preferences   — partial update (all fields optional)
 
-# Admin (internal use only — requires admin role)
-GET    /notifications/admin/stats      → delivery stats, queue depth, error rates
-POST   /notifications/admin/broadcast  → send system_announcement to all users
+# Device Token Management
+GET    /api/notifications/my/push-tokens
+         Response: { tokens: PushTokenItemDto[] }  — token values masked to last 8 chars
+
+POST   /api/notifications/my/push-tokens
+         Body: { token: string (max 500 chars), platform: 'ios' | 'android' | 'web' }
+         Response: { registered: boolean }  — always true (idempotent upsert)
+
+DELETE /api/notifications/my/push-tokens
+         Body: { token: string }
+         Response: { removed: boolean }  — always true (idempotent soft-delete)
+
+# Dev-only test endpoints [AllowAnonymous, blocked in NODE_ENV=production]
+POST   /api/notifications/test/push    { token, title?, body? }
+POST   /api/notifications/test/email   { to, subject?, body? }
 ```
 
-### 15.2 WebSocket Events
+### 15.2 WebSocket Events — [IMPLEMENTED]
 
 ```typescript
-// Server → Client events (emitted to user's room)
+// Server → Client events
 interface ServerToClientEvents {
-  'notification:new': (payload: NotificationPayload) => void;
-  'notification:read': (payload: { id: string }) => void; // sync read state across devices
-  'auth:expired': () => void; // force reconnect with new token
+  'connection:established': (payload: { userId: string; room: string; connectedAt: string }) => void;
+  'notification.created': (payload: NotificationPayload) => void;
+  'notification.read': (payload: { id: string; readAt: string } | { all: true; readAt: string }) => void;
+  'auth:expired': () => void;
 }
 
 // Client → Server events
 interface ClientToServerEvents {
-  'notification:ack': (notificationId: string) => void; // mark as delivered (not read)
+  'notification:ping': () => void;  // heartbeat — refreshes presence TTL
 }
 
 interface NotificationPayload {
@@ -1726,26 +1728,33 @@ interface NotificationPayload {
   type: NotificationType;
   title: string;
   body: string;
-  data?: Record<string, string>; // deep link data
+  data?: Record<string, string>;   // template data for deep links
   orderId?: string;
-  createdAt: string; // ISO 8601
-  isRead: boolean;
+  createdAt: string;               // ISO 8601
+  isRead: boolean;                 // always false on first delivery
+  readAt?: string;                 // ISO 8601 — undefined on first delivery
 }
 ```
 
-### 15.3 Notification Inbox API Response
+> **Note:** `notification.read` has two payload shapes: single `{ id, readAt }` (from `PATCH /my/:id/read`) and bulk `{ all: true, readAt }` (from `PATCH /my/read-all`). Clients must handle both.
+
+### 15.3 Notification Inbox API Response — [IMPLEMENTED]
 
 ```typescript
-// GET /notifications/inbox
-// Query params: ?limit=20&cursor=<createdAt ISO>&channel=in_app
+// GET /api/notifications/my
+// Query: limit?: number (1-100, default 20), offset?: number (default 0),
+//        unreadOnly?: boolean, type?: NotificationType
 
 interface NotificationInboxResponse {
-  items: NotificationItem[];
-  nextCursor: string | null;  // createdAt of last item, for cursor-based pagination
-  unreadCount: number;
+  items: NotificationItemDto[];
+  total: number;         // total matching rows (for pagination controls)
+  unreadCount: number;   // total unread for this user (badge value, not just current page)
+  offset: number;
+  limit: number;
+  hasMore: boolean;
 }
 
-interface NotificationItem {
+interface NotificationItemDto {
   id: string;
   type: NotificationType;
   title: string;
@@ -1753,8 +1762,8 @@ interface NotificationItem {
   data?: Record<string, string>;
   orderId?: string;
   isRead: boolean;
-  createdAt: string;
-  readAt?: string;
+  readAt?: string;       // ISO 8601 — undefined when unread
+  createdAt: string;     // ISO 8601
 }
 ```
 
@@ -1852,47 +1861,76 @@ Following the existing pattern in `payment_transactions` schema (see Phase 8 imp
 
 ## 17. Phase-by-Phase Roadmap
 
-### Proposed Folder Structure
+### Actual Folder Structure — [IMPLEMENTED N-5]
 
 ```
 src/module/notification/
-  notification.module.ts
+  notification.module.ts            # Dynamic EMAIL_PROVIDER + PUSH_PROVIDER factories
   acl/
     notification-restaurant-snapshot.schema.ts
-    notification-restaurant-snapshot.projector.ts
+    notification-restaurant-snapshot.projector.ts  # @EventsHandler(RestaurantUpdatedEvent)
     notification-restaurant-acl.repository.ts
+  channels/
+    channel.interface.ts            # INotificationChannel, DeliveryContext, DeliveryResult
+    email/
+      email-provider.interface.ts   # EMAIL_PROVIDER DI token
+      email-template.service.ts
+      email.channel.service.ts      # INotificationChannel impl
+      nodemailer-email.provider.ts  # Active when SMTP_HOST is set
+      noop-email.provider.ts        # Safe no-op for dev/CI
+    in-app/
+      in-app.channel.service.ts     # Redis DEL + WS emit
+    push/
+      firebase-push.provider.ts     # Active when FIREBASE_SERVICE_ACCOUNT_PATH is set
+      push-provider.interface.ts    # PUSH_PROVIDER DI token
+      push.channel.service.ts       # Fan-out to all device tokens
+      stub-push.provider.ts         # No-op for dev/CI
+  controllers/
+    notification.controller.ts      # All 10 routes under /notifications
   domain/
-    notification.schema.ts
     device-token.schema.ts
-    notification-preference.schema.ts
     notification-delivery-log.schema.ts
+    notification-preference.schema.ts
+    notification.schema.ts
+  dto/
+    device-token.dto.ts
+    notification.dto.ts
+    preference.dto.ts
+    test-email.dto.ts
+    test-push.dto.ts
   events/
+    order-cancelled-after-payment.handler.ts
     order-placed.handler.ts
     order-status-changed.handler.ts
     payment-confirmed.handler.ts
     payment-failed.handler.ts
-    order-cancelled-after-payment.handler.ts
-  commands/
-    send-notification.command.ts       (optional — if handler→service indirection needed)
   gateway/
-    notification.gateway.ts
+    notification-payload.dto.ts     # Event name constants + NotificationPayload interface
+    notification.gateway.ts         # Socket.IO /notifications namespace
   repositories/
-    notification.repository.ts
     device-token.repository.ts
-    notification-preference.repository.ts
     notification-delivery-log.repository.ts
+    notification-preference.repository.ts
+    notification.repository.ts
+    user-email.repository.ts        # Reads user.email from Better Auth tables
   services/
-    notification.service.ts
+    channel-dispatcher.service.ts   # Routes to INotificationChannel adapters
     notification-template.service.ts
-    push.service.ts
-    email.service.ts
-  controllers/
-    notification.controller.ts          (inbox, mark-as-read, preferences)
-    device-token.controller.ts
+    notification.service.ts         # Core business logic (sendFromEvent, etc.)
+    quiet-hours.service.ts
+    test-email.service.ts
+    test-push.service.ts
+    user-presence.service.ts        # Redis INCR/DECR presence
   tasks/
-    notification-cleanup.task.ts
-    notification-retry.task.ts          (Phase N-6)
+    device-token-cleanup.task.ts    # @Cron 03:00 Asia/Ho_Chi_Minh daily
 ```
+
+> **Key differences from original proposal:**
+> - `PushService` and `EmailService` are split into `channels/push/` and `channels/email/` directories
+> - Provider pattern: `PUSH_PROVIDER` and `EMAIL_PROVIDER` DI tokens with dynamic factory binding
+> - `ChannelDispatcherService` replaces the `deliverNotification()` method on `NotificationService`
+> - `UserPresenceService` is a dedicated service (not inline in gateway)
+> - All routes consolidated in one `notification.controller.ts`
 
 ---
 
@@ -2167,9 +2205,9 @@ async afterInit(server: Server): Promise<void> {
 
 **Mitigation:** Server-side disconnect timer (Section 11.2) emits `auth:expired` event and disconnects the socket. Client SDK must handle this event by refreshing token and reconnecting.
 
-**Scenario:** Two browser tabs from the same user both connect. Both join `user:{userId}` room. Notification is delivered to both. User marks as read on tab 1. Tab 2 still shows unread.
+**Scenario:** Two browser tabs from the same user both connect. Both join `room:user:{userId}` room. Notification is delivered to both. User marks as read on tab 1. Tab 2 still shows unread.
 
-**Mitigation:** When `PATCH /notifications/:id/read` is called, emit `notification:read` event to `user:{userId}` room — both tabs receive the read state update.
+**Mitigation:** When `PATCH /notifications/:id/read` is called, emit `notification.read` event to `room:user:{userId}` room — both tabs receive the read state update.
 
 ### 18.5 Notification Fanout Scalability
 
