@@ -5,6 +5,7 @@ import { NotificationDeliveryLogRepository } from '../repositories/notification-
 import { InAppChannelService } from '../channels/in-app/in-app.channel.service';
 import { EmailChannelService } from '../channels/email/email.channel.service';
 import { PushChannelService } from '../channels/push/push.channel.service';
+import { UserPresenceService } from './user-presence.service';
 import type {
   INotificationChannel,
   DeliveryContext,
@@ -40,7 +41,21 @@ import type { NotificationChannel } from '../domain/notification.schema';
 //  schedule retries — that is deferred to Phase N-6 to keep this phase
 //  focused on synchronous first-attempt delivery.
 //
-// Phase: N-4 — Multi-Channel Delivery
+// Push suppression (Phase N-5 fix):
+//  Before dispatching a push notification, ChannelDispatcherService checks
+//  whether the recipient has at least one active WebSocket connection
+//  (UserPresenceService.isOnline()). If the user is online, push delivery is
+//  suppressed: the notification is marked 'sent' (it was delivered via the
+//  in_app WebSocket channel) and a delivery log entry is written with
+//  errorCode PUSH_SUPPRESSED_USER_ONLINE so the suppression is observable.
+//
+//  Delivery rules:
+//   Rule 1 — Online:  persist (in_app + push rows) → deliver in_app WS → suppress push
+//   Rule 2 — Offline: persist (in_app + push rows) → deliver in_app to inbox → deliver push
+//   Rule 3 — Multiple WS connections: ANY active WS connection suppresses push
+//   Rule 4 — Persistence always happens upstream (NotificationService) regardless of rules
+//
+// Phase: N-5 — Delivery Orchestration Fix
 // ---------------------------------------------------------------------------
 
 @Injectable()
@@ -56,6 +71,7 @@ export class ChannelDispatcherService {
     private readonly pushChannel: PushChannelService,
     private readonly notificationRepo: NotificationRepository,
     private readonly deliveryLogRepo: NotificationDeliveryLogRepository,
+    private readonly presenceService: UserPresenceService,
   ) {
     this.adapterMap = new Map<NotificationChannel, INotificationChannel>([
       ['in_app', this.inAppChannel],
@@ -89,6 +105,65 @@ export class ChannelDispatcherService {
 
     const attemptNumber = (notification.deliveryAttempts ?? 0) + 1;
     const attemptedAt = new Date();
+
+    // Push suppression: if the recipient has an active WebSocket connection,
+    // suppress the push notification (it was already delivered in real-time
+    // via the in_app channel). This prevents duplicate notifications for
+    // online users who would otherwise receive both a WS event and an FCM
+    // push popup simultaneously.
+    //
+    // isOnline() returns false on Redis failure (safe default) so push is
+    // delivered as a fallback when presence state is unavailable.
+    if (notification.channel === 'push') {
+      let isOnline = false;
+      try {
+        isOnline = await this.presenceService.isOnline(notification.recipientId);
+      } catch {
+        // isOnline absorbs all errors internally and returns false — this
+        // catch is a double-safety net and should never be reached.
+        isOnline = false;
+      }
+
+      if (isOnline) {
+        this.logger.log(
+          `[ChannelDispatcher] Push suppressed: userId=${notification.recipientId} is online via WebSocket. ` +
+            `Notification ${notification.id} was delivered in real-time via in_app channel.`,
+        );
+
+        // Record suppression in the delivery log for observability.
+        try {
+          await this.deliveryLogRepo.log({
+            notificationId: notification.id,
+            channel: notification.channel,
+            status: 'success',
+            attemptNumber,
+            errorCode: 'PUSH_SUPPRESSED_USER_ONLINE',
+            errorMessage:
+              'Push suppressed — recipient has active WebSocket connection; delivered via in_app channel.',
+            attemptedAt,
+          });
+        } catch (logErr) {
+          this.logger.warn(
+            `[ChannelDispatcher] Failed to write suppression log for id=${notification.id}: ${(logErr as Error).message}`,
+          );
+        }
+
+        // Mark the push notification as sent (effectively delivered via WS).
+        try {
+          await this.notificationRepo.updateStatus(notification.id, 'sent', {
+            deliveryAttempts: attemptNumber,
+            lastAttemptAt: attemptedAt,
+            sentAt: attemptedAt,
+          });
+        } catch (updateErr) {
+          this.logger.warn(
+            `[ChannelDispatcher] Failed to update suppressed push status for id=${notification.id}: ${(updateErr as Error).message}`,
+          );
+        }
+
+        return; // Do not invoke FCM
+      }
+    }
 
     // 1. Invoke the channel adapter (catch any unexpected exceptions)
     let result: DeliveryResult;

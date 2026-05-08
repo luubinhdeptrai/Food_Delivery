@@ -25,6 +25,7 @@ import { ChannelDispatcherService } from './channel-dispatcher.service';
 import { InAppChannelService } from '../channels/in-app/in-app.channel.service';
 import { EmailChannelService } from '../channels/email/email.channel.service';
 import { PushChannelService } from '../channels/push/push.channel.service';
+import { UserPresenceService } from './user-presence.service';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationDeliveryLogRepository } from '../repositories/notification-delivery-log.repository';
 import type { Notification } from '../domain/notification.schema';
@@ -78,6 +79,7 @@ describe('ChannelDispatcherService', () => {
   let pushChannel: { deliver: jest.Mock };
   let notificationRepo: { updateStatus: jest.Mock };
   let deliveryLogRepo: { log: jest.Mock };
+  let presenceService: { isOnline: jest.Mock };
 
   beforeEach(async () => {
     inAppChannel = { deliver: jest.fn().mockResolvedValue({ success: true }) };
@@ -85,6 +87,9 @@ describe('ChannelDispatcherService', () => {
     pushChannel = { deliver: jest.fn().mockResolvedValue({ success: true }) };
     notificationRepo = { updateStatus: jest.fn().mockResolvedValue(undefined) };
     deliveryLogRepo = { log: jest.fn().mockResolvedValue(undefined) };
+    // Default: user is OFFLINE — push delivers normally.
+    // Override to { isOnline: true } in suppression tests.
+    presenceService = { isOnline: jest.fn().mockResolvedValue(false) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -94,6 +99,7 @@ describe('ChannelDispatcherService', () => {
         { provide: PushChannelService, useValue: pushChannel },
         { provide: NotificationRepository, useValue: notificationRepo },
         { provide: NotificationDeliveryLogRepository, useValue: deliveryLogRepo },
+        { provide: UserPresenceService, useValue: presenceService },
       ],
     }).compile();
 
@@ -280,5 +286,94 @@ describe('ChannelDispatcherService', () => {
     const notif = makeNotification({ channel: 'in_app' });
 
     await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+  });
+
+  // ─── Push suppression (Rule 1: online user → suppress push) ────────────────────────────
+
+  describe('push suppression', () => {
+    it('checks presence before delivering push notification', async () => {
+      const notif = makeNotification({ channel: 'push' });
+      await service.dispatch(notif, makeContext());
+      expect(presenceService.isOnline).toHaveBeenCalledWith(notif.recipientId);
+    });
+
+    it('does NOT invoke pushChannel.deliver when user is online', async () => {
+      presenceService.isOnline.mockResolvedValue(true);
+      const notif = makeNotification({ channel: 'push' });
+      await service.dispatch(notif, makeContext());
+      expect(pushChannel.deliver).not.toHaveBeenCalled();
+    });
+
+    it('marks push notification as sent when suppressed (delivered via WS)', async () => {
+      presenceService.isOnline.mockResolvedValue(true);
+      const notif = makeNotification({ channel: 'push' });
+      await service.dispatch(notif, makeContext());
+      expect(notificationRepo.updateStatus).toHaveBeenCalledWith(
+        notif.id,
+        'sent',
+        expect.objectContaining({
+          deliveryAttempts: 1,
+          lastAttemptAt: expect.any(Date),
+          sentAt: expect.any(Date),
+        }),
+      );
+    });
+
+    it('writes a delivery log with PUSH_SUPPRESSED_USER_ONLINE code when suppressed', async () => {
+      presenceService.isOnline.mockResolvedValue(true);
+      const notif = makeNotification({ channel: 'push' });
+      await service.dispatch(notif, makeContext());
+      expect(deliveryLogRepo.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notificationId: notif.id,
+          channel: 'push',
+          status: 'success',
+          errorCode: 'PUSH_SUPPRESSED_USER_ONLINE',
+        }),
+      );
+    });
+
+    it('delivers push normally when user is offline (default)', async () => {
+      presenceService.isOnline.mockResolvedValue(false);
+      const notif = makeNotification({ channel: 'push' });
+      await service.dispatch(notif, makeContext());
+      expect(pushChannel.deliver).toHaveBeenCalledWith(notif, expect.any(Object));
+    });
+
+    it('does NOT check presence for in_app channel', async () => {
+      const notif = makeNotification({ channel: 'in_app' });
+      await service.dispatch(notif, makeContext());
+      expect(presenceService.isOnline).not.toHaveBeenCalled();
+    });
+
+    it('does NOT check presence for email channel', async () => {
+      const notif = makeNotification({ channel: 'email' });
+      await service.dispatch(notif, makeContext());
+      expect(presenceService.isOnline).not.toHaveBeenCalled();
+    });
+
+    it('delivers push as fallback when presence check throws unexpectedly', async () => {
+      // isOnline should never throw (it absorbs errors), but if it somehow does,
+      // the dispatcher's internal catch should still deliver push.
+      presenceService.isOnline.mockRejectedValue(new Error('Unexpected presence error'));
+      const notif = makeNotification({ channel: 'push' });
+      await service.dispatch(notif, makeContext());
+      // Should fall through to normal push delivery
+      expect(pushChannel.deliver).toHaveBeenCalled();
+    });
+
+    it('does not throw when suppression log write fails', async () => {
+      presenceService.isOnline.mockResolvedValue(true);
+      deliveryLogRepo.log.mockRejectedValue(new Error('DB error'));
+      const notif = makeNotification({ channel: 'push' });
+      await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+    });
+
+    it('does not throw when suppression status update fails', async () => {
+      presenceService.isOnline.mockResolvedValue(true);
+      notificationRepo.updateStatus.mockRejectedValue(new Error('DB error'));
+      const notif = makeNotification({ channel: 'push' });
+      await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+    });
   });
 });

@@ -17,6 +17,7 @@ import { NotificationDeliveryLogRepository } from './repositories/notification-d
 import { NotificationTemplateService } from './services/notification-template.service';
 import { NotificationService } from './services/notification.service';
 import { ChannelDispatcherService } from './services/channel-dispatcher.service';
+import { UserPresenceService } from './services/user-presence.service';
 
 // Channel adapters
 import { InAppChannelService } from './channels/in-app/in-app.channel.service';
@@ -149,6 +150,7 @@ import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-ca
 
     // --- Services ---
     NotificationTemplateService,
+    UserPresenceService,
     ChannelDispatcherService,
     NotificationService,
     TestPushService,

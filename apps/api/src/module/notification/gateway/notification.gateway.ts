@@ -9,7 +9,7 @@ import {
 import { Interval } from '@nestjs/schedule';
 import type { Namespace, Socket } from 'socket.io';
 import { auth } from '@/lib/auth';
-import { RedisService } from '@/lib/redis/redis.service';
+import { UserPresenceService } from '../services/user-presence.service';
 import {
   WS_CONNECTION_ESTABLISHED,
   WS_NOTIFICATION_CREATED,
@@ -31,14 +31,15 @@ import {
 //   One user may have multiple sockets (tabs / devices) — all join the same
 //   room so a single sendToUser() call reaches all devices simultaneously.
 //
-// Presence tracking:
-//   Redis key "presence:{userId}" = socket.id, TTL = 30 s.
-//   Refreshed by client heartbeat ("notification:ping" every ~25 s).
-//   Known limitation (multi-device race): if user has 2 tabs and tab 1
-//   disconnects, handleDisconnect deletes the presence key even though
-//   tab 2 is still connected. Tab 2 re-establishes presence on its next
-//   heartbeat (within 30 s). Proper fix: INCR/DECR reference count pattern
-//   (requires RedisService.incr()/decr() — added in Phase N-2, use in N-3+).
+// Presence tracking (Phase N-5 fix):
+//   Redis key "ws:connections:{userId}" = integer reference count, TTL = 90 s.
+//   Managed by UserPresenceService: INCR on connect, DECR on disconnect.
+//   When DECR reaches 0 the key is deleted so isOnline() returns false.
+//   TTL is refreshed on every client heartbeat ("notification:ping" ~25 s).
+//   This correctly handles multi-tab: 2 tabs → count=2; tab 1 disconnects
+//   → count=1 (key stays); tab 2 disconnects → count=0 → key deleted.
+//   Replaces the old "presence:{userId}" = socket.id single-string pattern
+//   which deleted presence when any tab disconnected (multi-tab race bug).
 //
 // Session expiry:
 //   A per-socket setTimeout fires auth:expired and disconnects the client
@@ -89,10 +90,11 @@ export class NotificationGateway
   private readonly sessionTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
-    // RedisService is globally available (exported from @Global() RedisModule).
-    // NEVER inject REDIS_CLIENT token — it is NOT exported from RedisModule and
-    // cannot be resolved outside that module (DI error at startup).
-    private readonly redisService: RedisService,
+    // UserPresenceService manages WebSocket connection counts in Redis.
+    // It internally uses RedisService (which is @Global()) — do NOT also
+    // inject RedisService here directly; all presence operations go through
+    // UserPresenceService for consistency and testability.
+    private readonly presenceService: UserPresenceService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -152,17 +154,9 @@ export class NotificationGateway
       `[Gateway] Socket joined ${room} socketId=${client.id}`,
     );
 
-    // Presence: short TTL refreshed by client heartbeats.
-    // Value = latest socketId (useful for single-device presence checks).
-    // See KNOWN LIMITATION in class JSDoc for multi-device edge case.
-    // Wrapped in try/catch — Redis unavailability must not reject valid connections.
-    try {
-      await this.redisService.setWithExpiry(`presence:${userId}`, client.id, 30);
-    } catch (redisErr) {
-      this.logger.warn(
-        `[Gateway] Failed to set presence for userId=${userId}: ${(redisErr as Error).message} — continuing without presence`,
-      );
-    }
+    // Presence: INCR reference count so multi-tab users stay online until
+    // ALL tabs disconnect. markOnline absorbs Redis errors internally.
+    await this.presenceService.markOnline(userId);
 
     // Session expiry enforcement: emit 'auth:expired' and disconnect when the
     // Better Auth session TTL elapses. Without this, stale sessions remain
@@ -229,17 +223,10 @@ export class NotificationGateway
 
     const userId = client.data.userId as string | undefined;
     if (userId) {
-      // For single-device users: presence key is deleted immediately on clean
-      // disconnect. Ungraceful disconnects (network cut) are handled by the
-      // 30 s TTL on the presence key.
-      // For multi-device users: see KNOWN LIMITATION in class JSDoc.
-      try {
-        await this.redisService.del(`presence:${userId}`);
-      } catch (redisErr) {
-        this.logger.warn(
-          `[Gateway] Failed to delete presence for userId=${userId}: ${(redisErr as Error).message}`,
-        );
-      }
+      // DECR reference count. When count reaches 0 (last connection closed)
+      // UserPresenceService deletes the key so isOnline() returns false.
+      // Multi-tab: count stays > 0 while other tabs remain connected.
+      await this.presenceService.markOffline(userId);
       this.logger.log(
         `[Gateway] Socket disconnected: userId=${userId} socketId=${client.id}`,
       );
@@ -251,11 +238,12 @@ export class NotificationGateway
   // ---------------------------------------------------------------------------
 
   /**
-   * Heartbeat handler — client sends 'notification:ping' every ~25 s to keep
-   * the presence key alive (TTL = 30 s). Using expire() is cleaner than
-   * setWithExpiry() because it avoids an unnecessary write of the socket.id
-   * value (useful when the user has multiple tabs; the latest socketId would
-   * overwrite the previous one on every ping from any tab).
+   * Heartbeat handler — client sends 'notification:ping' every ~25 s.
+   * Refreshes the presence key TTL (ws:connections:{userId}) so it does not
+   * expire while the client is still connected in a background tab.
+   * Using refreshTtl() extends the TTL without changing the reference count —
+   * correct for multi-tab: all tabs share the same count key and any tab's
+   * ping should extend the shared key lifetime.
    */
   @SubscribeMessage(WS_NOTIFICATION_PING)
   handlePing(client: Socket): void {
@@ -263,13 +251,8 @@ export class NotificationGateway
     if (!userId) return;
 
     // Fire-and-forget — heartbeat failures are non-critical.
-    this.redisService
-      .expire(`presence:${userId}`, 30)
-      .catch((err: unknown) => {
-        this.logger.warn(
-          `[Gateway] Failed to refresh presence TTL for userId=${userId}: ${(err as Error).message}`,
-        );
-      });
+    // refreshTtl absorbs errors internally.
+    void this.presenceService.refreshTtl(userId);
   }
 
   // ---------------------------------------------------------------------------
