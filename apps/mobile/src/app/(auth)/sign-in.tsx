@@ -1,18 +1,34 @@
 import { useRouter } from 'expo-router';
-import { SignInScreen } from '@/src/features/auth';
+import { Alert } from 'react-native';
+import { SignInScreen, authApi } from '@/src/features/auth';
 import type { SignInFormData } from '@/src/features/auth';
+import { useState } from 'react';
 
 export default function SignInPage() {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleSignIn = (data: SignInFormData) => {
-    // TODO: Implement sign-in logic with better-auth
-    console.log('Sign-in data:', data);
-    router.push('/(customer)/(tabs)');
+  const handleSignIn = async (data: SignInFormData) => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await authApi.signIn(data);
+
+      if (error) {
+        Alert.alert('Sign In Failed', error.message || 'Check your credentials and try again.');
+        return;
+      }
+
+      router.replace('/(customer)/(tabs)');
+    } catch (err) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleForgotPassword = () => {
@@ -20,9 +36,13 @@ export default function SignInPage() {
     console.log('Forgot Password pressed');
   };
 
-  const handleGoogleSignIn = () => {
-    // TODO: Implement Google OAuth with better-auth
-    console.log('Google Sign-In pressed');
+  const handleGoogleSignIn = async () => {
+    try {
+      await authApi.signInWithGoogle();
+    } catch (err) {
+      Alert.alert('Error', 'Google sign-in failed.');
+      console.error(err);
+    }
   };
 
   const handleSignUp = () => {
@@ -31,6 +51,7 @@ export default function SignInPage() {
 
   return (
     <SignInScreen
+      isLoading={isSubmitting}
       onBack={handleBack}
       onSignIn={handleSignIn}
       onForgotPassword={handleForgotPassword}

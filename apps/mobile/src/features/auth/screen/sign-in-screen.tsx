@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -39,6 +40,7 @@ const GoogleIcon = () => (
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function SignInScreen({
+  isLoading,
   onBack,
   onSignIn,
   onForgotPassword,
@@ -52,6 +54,7 @@ export function SignInScreen({
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleSignIn = () => {
+    if (isLoading) return;
     onSignIn?.({ email, password });
   };
 
@@ -209,9 +212,13 @@ export function SignInScreen({
                   className="text-white text-[15px] font-bold"
                   style={{ fontFamily: "PlusJakartaSans_700Bold" }}
                 >
-                  Sign In
+                  {isLoading ? "Signing In..." : "Sign In"}
                 </Text>
-                <ArrowRight size={20} color="#ffffff" />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <ArrowRight size={20} color="#ffffff" />
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>

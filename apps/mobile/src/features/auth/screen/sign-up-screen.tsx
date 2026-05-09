@@ -1,10 +1,10 @@
-import React, { useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   User,
   Mail,
+  Lock,
   Phone,
   ChevronRight,
   Check,
@@ -24,6 +25,7 @@ import type { SignUpScreenProps } from "@/src/features/auth/types";
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function SignUpScreen({
+  isLoading,
   onBack,
   onContinue,
   onLogIn,
@@ -34,12 +36,14 @@ export function SignUpScreen({
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleContinue = () => {
-    onContinue?.({ fullName, email, phone });
+    if (isLoading) return;
+    onContinue?.({ fullName, email, password, phone });
   };
 
   return (
@@ -137,6 +141,19 @@ export function SignUpScreen({
           />
 
           <SignUpField
+            label="Password"
+            icon={<Lock size={20} color="#707a6c" />}
+            isFocused={focusedField === "password"}
+            placeholder="••••••••"
+            value={password}
+            onChangeText={setPassword}
+            onFocus={() => setFocusedField("password")}
+            onBlur={() => setFocusedField(null)}
+            secureTextEntry
+            autoComplete="password-new"
+          />
+
+          <SignUpField
             label="Phone Number"
             icon={<Phone size={20} color="#707a6c" />}
             isFocused={focusedField === "phone"}
@@ -223,9 +240,13 @@ export function SignUpScreen({
                   className="text-white text-[15px] font-bold"
                   style={{ fontFamily: "PlusJakartaSans_700Bold" }}
                 >
-                  Continue
+                  {isLoading ? "Creating Account..." : "Continue"}
                 </Text>
-                <ChevronRight size={20} color="#ffffff" />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <ChevronRight size={20} color="#ffffff" />
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>

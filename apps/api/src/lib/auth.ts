@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { admin, bearer, openAPI } from 'better-auth/plugins';
+import { admin, bearer, openAPI, phoneNumber } from 'better-auth/plugins';
+import { expo } from '@better-auth/expo';
 import { db } from '../drizzle/db';
 import * as schema from '../drizzle/schema';
 
@@ -15,6 +16,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  trustedOrigins: ['uitfood://', 'exp://**'],
   plugins: [
     openAPI(),
     bearer(),
@@ -22,6 +24,13 @@ export const auth = betterAuth({
       defaultRole: 'user',
       adminRoles: ['admin'],
     }),
+    phoneNumber({
+      sendOTP: async ({ phoneNumber, code }, _request) => {
+        // TODO: Implement real SMS provider (Twilio, Vonage, etc.)
+        console.log(`[AUTH] Sending OTP ${code} to ${phoneNumber}`);
+      },
+    }),
+    expo(),
   ],
   advanced: {
     database: {

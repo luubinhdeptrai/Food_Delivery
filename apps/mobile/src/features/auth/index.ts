@@ -7,3 +7,6 @@ export { SignInScreen } from "./screen/sign-in-screen";
 export type { WelcomeScreenProps } from "./screen/welcome-screen";
 export type { SignUpScreenProps, SignUpFormData } from "./types";
 export type { SignInScreenProps, SignInFormData } from "./types";
+
+// API
+export { authApi } from "./api";

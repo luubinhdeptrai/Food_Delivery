@@ -1,18 +1,35 @@
 import { useRouter } from 'expo-router';
-import { SignUpScreen } from '@/src/features/auth';
+import { Alert } from 'react-native';
+import { SignUpScreen, authApi } from '@/src/features/auth';
 import type { SignUpFormData } from '@/src/features/auth';
+import { useState } from 'react';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleContinue = (data: SignUpFormData) => {
-    // TODO: Implement sign-up logic with better-auth
-    console.log('Sign-up data:', data);
-    router.push('/(customer)/(tabs)');
+  const handleContinue = async (data: SignUpFormData) => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await authApi.signUp(data);
+
+      if (error) {
+        Alert.alert('Registration Failed', error.message || 'Please check your information and try again.');
+        return;
+      }
+
+      Alert.alert('Success', 'Account created successfully!');
+      router.replace('/(customer)/(tabs)');
+    } catch (err) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleLogIn = () => {
@@ -31,6 +48,7 @@ export default function SignUpPage() {
 
   return (
     <SignUpScreen
+      isLoading={isSubmitting}
       onBack={handleBack}
       onContinue={handleContinue}
       onLogIn={handleLogIn}
