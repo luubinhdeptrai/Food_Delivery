@@ -1,6 +1,7 @@
 export * from '../module/auth/auth.schema';
 export * from '../module/restaurant-catalog/restaurant/restaurant.schema';
 export * from '../module/restaurant-catalog/menu/menu.schema';
+export * from '../module/image/image.schema';
 
 // Ordering bounded context — Phase 1 schemas
 export * from '../module/ordering/order/order.schema';

@@ -13,6 +13,7 @@ import { GeoModule } from './lib/geo/geo.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PaymentModule } from './module/payment/payment.module';
 import { NotificationModule } from './module/notification/notification.module';
+import { ImageModule } from './module/image/image.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
 
@@ -31,6 +32,7 @@ import { vnpayConfig } from './config/vnpay.config';
     OrderingModule,
     PaymentModule,
     NotificationModule,
+    ImageModule,
 
     AuthModule.forRoot({
       auth,

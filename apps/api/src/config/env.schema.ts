@@ -69,6 +69,22 @@ export const envSchema = z.object({
     ),
 
   // ---------------------------------------------------------------------------
+  // Cloudinary — required for signed uploads
+  // ---------------------------------------------------------------------------
+  CLOUDINARY_CLOUD_NAME: z
+    .string()
+    .trim()
+    .min(1, 'CLOUDINARY_CLOUD_NAME is required'),
+  CLOUDINARY_API_KEY: z
+    .string()
+    .trim()
+    .min(1, 'CLOUDINARY_API_KEY is required'),
+  CLOUDINARY_API_SECRET: z
+    .string()
+    .trim()
+    .min(1, 'CLOUDINARY_API_SECRET is required'),
+
+  // ---------------------------------------------------------------------------
   // CORS
   // ---------------------------------------------------------------------------
   CORS_ORIGIN: z.string().default('*'),
