@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   View,
   Text,
@@ -8,233 +9,185 @@ import {
 import { Image } from 'expo-image';
 import {
   Search,
+  Star,
+  Clock,
+  Truck,
+  Pizza,
+  Soup,
   Leaf,
-  Apple,
-  Fish,
-  Milk,
   Croissant,
-  Wine,
-  ArrowRight,
+  Utensils,
+  UtensilsCrossed,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { TrendingProductCard, HomeTopBar } from '../components';
+import { HomeTopBar } from '../components';
+
+const RESTAURANTS = [
+  {
+    id: '1',
+    name: 'Burger Atelier',
+    category: 'American • Burgers',
+    rating: 4.8,
+    time: '20-30 min',
+    deliveryFee: '$2.99',
+    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1X7SiDBnsyp1c7eh6hJ1CGIPStQcrkMQSc31oEieXfat8dFWo9N4TcgDIw1EOJn7U8GxMHuhP9M5JQFLxC45fnaq99Q5Ex30AR72w9i9V2SurHqoRJtLri0578RwJzi6x8M_2evPVsc3yycj_9Dw5p3MnNncA2VPlgHn_ekeD5N-R6HyABn0T8StEXwOcDifSoyYMTa2aY6RCAG9ReNK44JOFPYGsmWTybxvnT_wDNbSU_Cnp-FyBZSAoMveYqU677UNhOBXxztYS',
+  },
+  {
+    id: '2',
+    name: 'Ocean Blue Sushi',
+    category: 'Japanese • Sushi',
+    rating: 4.9,
+    time: '35-45 min',
+    deliveryFee: 'Free',
+    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD-sJksw2vATPpH8-3Um-gQiZ7awGIDJqsVjZjjYhPl3aj2GqHayU8xGnX_8h4awwo1_G1gdSXgla1PFCP9x5Rsu3U1x5Nf-h35eFOmNdOp4UElo4T94dmVhtzhX5bBuOmf0ALDV72pcBszcMKyJSZzSiLXNoCXSJeI7ghQ8i2VTt2gQCQGoNJbIAHF-0Eu2pF8Dmdd42ebMv-qWuyH2mG4gxEvWFGAA9RD3nohDWSA6hXunpH13BVDql3PFm_LHrsyV_GQXSJFCCFr',
+  },
+  {
+    id: '3',
+    name: 'Nonna\'s Trattoria',
+    category: 'Italian • Pasta',
+    rating: 4.6,
+    time: '25-40 min',
+    deliveryFee: '$1.49',
+    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuARedRJcjr5YqgqqlzfuPbZG180GRzyKTAOw4khZ-BpVd2F2Kn_X9eISaDziroPv5pcNH_uKLB6lmZlMEKH63A2eghhoYLbTAYkyuFUp3G5pSX7ah0hSO5UtTYDU6GKL9RCjWgwTf0cROhZEM_dukQ1ceyOBRdpU45d13dDbNUUkTqhRlKrQaI8JeFdlJxPEYjpMwlnX9y-83Y1lql88x0gUHYTnQSpkGRGWGcGDRDkrFBOYnsB-BS-lEcmM750Zf0vyrtSQ-Z-8BEd',
+  },
+];
+
+const CATEGORIES = [
+  { id: 'all', name: 'All', Icon: Utensils, active: true },
+  { id: 'italian', name: 'Italian', Icon: Pizza, active: false },
+  { id: 'asian', name: 'Asian', Icon: Soup, active: false },
+  { id: 'healthy', name: 'Healthy', Icon: Leaf, active: false },
+  { id: 'bakery', name: 'Bakery', Icon: Croissant, active: false },
+];
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const homeImages = {
-    banner:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDEAydfvb_RwKuGVoiWBAmVZ32xwiLP9xHMtHn2whqI0PKEhU7Q-tfnfGyPJu5SgYm8691I5cgNfiKvulJmI_DcfAETV9xex0q-z94DSPKtHADmgoMzVJMx7dFmSpyNZlQcYTrpWcaINQzDLvqiK1rTLS6Rk7U916Hl2XzXrN9KkbVdPLXkjbaEfPzdDVMoL746jlIrfs_jU-aWS1sUVwJiOc-A6E-blYjQwz-f3QV_DeHX8I6eg1kFUVyTAr7blKVOyRDYJzAGYe-p',
-    broccoli:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDtEmU9jDk593mfx2xlxQ1an7t-f0x87YcXQ-XyXgQmbb1oGEAoNNfWixmZjzDaDbGT7JUTLictc9W4eEoJxMvXOAAnI6CbrV_Cvae0yWD2f5NB6focKolG3UQTRmcvbgaf1cW2ABbgUIGz3SnKvH3wWK73Xm1OZ69pD60sXsWqTIhlTPjpFMP5r-D3sxqjD1W5C0fM_7vO5mOimWwQPQxSbk7RyczkgGaV0ja2NLpd4s41eI5Z5aAsavCnfrBoWYIMoWPOIY7paENN',
-    salmon:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCly3watQ-rlq7AM1QbBUdmplFMV4ZLiuoJGZXZgforRLaccyviNN6ur9cB1mvlCYdZF6tNFGsq3W5syqhl0RtNByh0MeXD9Z2ELqVEM-kZrhKUugmnDglJ3Q4cCA0nkguFShEGuB8ygANBYHb5T-NyMM0-Ogp8TnBRAj13xSfbShJWaDiaecX2hhQ85sXbZKbsKaNEdp6MBvctVA_W9LUkI57-gYf8nJ9lNSxIxGskMaV0KUMXZ8mEugOqycjjDE9zvHEDZ-0ghi02',
-    oranges:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAjlXlyIiJTPQ3L60YhdFuHexUYqfDfB3sTMle7zCI-KY7_CRIQ8mSRNMatrRmVzyOYEpStgl4WurymBXJ_VlgW58HkBlVBHslBCiFmOsqnI2cIG-QXn6pePVxrjTcvjgvzTwlo021y3HRmU5LHkDy5jNmP-Woa0JADQUan8h_7oNQteY6scJ-ukqUoJAdHoGSwIFzBOtQFlXlRBUpEoekfMLugNweQ3TkxyvfNI69561UY4TXot8L3OkaqG0eG4NzfXLXPvXM5rooR',
-    peppers:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAhiMzBCnCrPM88ANvoddbGlB-cJvrscRyDnPfW0VpAz6e98MGmq_VjcA5Rl9fxMuWS_iCfD4uF6lPAIhabzcgM-gNL99q7aSmV4PnNWdQuoQFf2QZE61lv5rzdany4dyh5jOggKUNMi_SZ3g-SVdSZBxz0MfHx6FzoX_ZsjOgIIUvs7Fug2YCU7T6lsXUaoz7BFyUjXxpnJWX9EZKgwD5Na2_QWN9_7UJeIqQCJadfCZxikMMrBssLFTDiS3feWjHZnJVPAvEhg-oS',
-    freshFromFarm:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAwoqCQHBPd1w2eRe7igfOW3p7shNxsjt3JiAcWkHDkiV9sSvH1DdxwBgSmycz1tesT9tJussYHGppIDKv-ohYbFJbnlgYaMJnvBwKdsgv9bGC0VVOYCdPXOD6aSj2hflYXXBSSvUCBECdRmTuz-oZK_Y0AqKCb5GCTzsGfusOhNkTjmYe_ogvHDW4xn1bsf6Veo9uwkHo4642ldt9ByGndRcfzydmzUpMWTucBfLweMk2ZgmHqG4tsZ3u6Nh6wDmaathXFFzJBNW0w',
-  };
-
-  const handleProductPress = (productId: string) => {
-    router.push({ pathname: '/product/[id]', params: { id: productId } });
-  };
-
   return (
-    <View className="flex-1 bg-surface font-inter text-on-surface">
+    <View className="flex-1 bg-background font-inter text-on-surface">
       <HomeTopBar insetsTop={insets.top} />
 
-      <ScrollView
+      <ScrollView 
         className="flex-1"
-        contentContainerStyle={{
-          paddingTop: insets.top + 70,
+        contentContainerStyle={{ 
+          paddingTop: insets.top + 70, 
           paddingBottom: insets.bottom + 24,
-          paddingHorizontal: 16,
+          paddingHorizontal: 16 
         }}
         showsVerticalScrollIndicator={false}
       >
         {/* Search Section */}
-        <View className="mt-4 relative justify-center">
-          <View className="absolute left-4 z-10 pointer-events-none">
-            <Search size={20} color="#707a6c" />
-          </View>
-          <TextInput
-            className="w-full h-12 pl-12 pr-4 bg-surface-container-high rounded-xl font-inter text-sm text-on-surface"
-            placeholder="Search fresh groceries..."
-            placeholderTextColor="#707a6c"
-          />
-        </View>
-
-        {/* Category Navigation */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mt-8 -mx-4 px-4"
-          contentContainerStyle={{ gap: 16 }}
-        >
-          {/* Active Category */}
-          <TouchableOpacity className="flex-col items-center gap-2 group active:scale-90">
-            <View className="w-16 h-16 rounded-full bg-primary-fixed items-center justify-center shadow-sm">
-              <Leaf size={32} color="#0d631b" />
+        <View className="mt-4 mb-8">
+          <View className="relative justify-center">
+            <View className="absolute left-4 z-10 pointer-events-none">
+              <Search size={20} color="#707a6c" />
             </View>
-            <Text className="text-[11px] font-semibold font-inter text-primary">
-              Vegetables
-            </Text>
-          </TouchableOpacity>
-          {/* Inactive Categories */}
-          <TouchableOpacity className="flex-col items-center gap-2 group active:scale-90">
-            <View className="w-16 h-16 rounded-full bg-surface-container-lowest items-center justify-center">
-              <Apple size={32} color="#40493d" />
-            </View>
-            <Text className="text-[11px] font-semibold font-inter text-on-surface-variant">
-              Fruits
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-col items-center gap-2 group active:scale-90">
-            <View className="w-16 h-16 rounded-full bg-surface-container-lowest items-center justify-center">
-              <Fish size={32} color="#40493d" />
-            </View>
-            <Text className="text-[11px] font-semibold font-inter text-on-surface-variant">
-              Seafood
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-col items-center gap-2 group active:scale-90">
-            <View className="w-16 h-16 rounded-full bg-surface-container-lowest items-center justify-center">
-              <Milk size={32} color="#40493d" />
-            </View>
-            <Text className="text-[11px] font-semibold font-inter text-on-surface-variant">
-              Dairy
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-col items-center gap-2 group active:scale-90">
-            <View className="w-16 h-16 rounded-full bg-surface-container-lowest items-center justify-center">
-              <Croissant size={32} color="#40493d" />
-            </View>
-            <Text className="text-[11px] font-semibold font-inter text-on-surface-variant">
-              Bakery
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-col items-center gap-2 group active:scale-90 pr-4">
-            <View className="w-16 h-16 rounded-full bg-surface-container-lowest items-center justify-center">
-              <Wine size={32} color="#40493d" />
-            </View>
-            <Text className="text-[11px] font-semibold font-inter text-on-surface-variant">
-              Drinks
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* Promotional Banner */}
-        <View className="mt-8 relative w-full h-48 rounded-3xl overflow-hidden bg-primary-container">
-          <Image
-            source={{
-              uri: homeImages.banner,
-            }}
-            className="absolute inset-0 w-full h-full opacity-60"
-            contentFit="cover"
-          />
-          <View className="absolute inset-0 bg-primary/40 p-6 flex-col justify-center gap-2">
-            <View className="bg-secondary-container px-2 py-1 rounded-full self-start">
-              <Text className="text-on-secondary-container text-[10px] font-bold uppercase tracking-wider">
-                Flash Sale
-              </Text>
-            </View>
-            <Text className="font-jakarta-sans font-extrabold text-white text-2xl leading-tight max-w-[180px]">
-              Up to 40% OFF Fresh Produce
-            </Text>
-            <Text className="text-primary-fixed text-sm font-medium">
-              Daily essentials at market price.
-            </Text>
-            <TouchableOpacity className="mt-2 bg-white px-6 py-2 rounded-full self-start active:scale-95">
-              <Text className="text-primary font-bold text-xs">Shop Now</Text>
-            </TouchableOpacity>
+            <TextInput 
+              className="w-full h-12 pl-12 pr-4 bg-surface-container-high rounded-xl font-inter text-sm text-on-surface shadow-sm"
+              placeholder="Search restaurants, dishes..."
+              placeholderTextColor="#707a6c"
+            />
           </View>
         </View>
 
-        {/* Trending Now Bento Grid */}
-        <View className="mt-8">
-          <View className="flex-row justify-between items-end mb-4">
-            <Text className="font-jakarta-sans font-bold text-xl text-on-surface">
-              Trending Now
+        {/* Categories Section */}
+        <View className="mb-10">
+          <Text className="font-jakarta-sans text-xl font-bold mb-4 text-on-background">
+            Explore by Category
+          </Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            className="-mx-4 px-4"
+            contentContainerStyle={{ gap: 12 }}
+          >
+            {CATEGORIES.map((cat) => (
+              <TouchableOpacity 
+                key={cat.id}
+                className={`flex-col items-center gap-2 p-3 rounded-2xl shadow-sm active:scale-95 ${
+                  cat.active ? 'bg-primary-fixed' : 'bg-surface-container-low'
+                }`}
+              >
+                <View className="w-14 h-14 bg-surface-container-lowest rounded-full items-center justify-center shadow-sm">
+                  <cat.Icon 
+                    size={24} 
+                    color={cat.active ? "#0d631b" : "#40493d"} 
+                    fill={cat.active ? "#0d631b" : "none"}
+                  />
+                </View>
+                <Text className={`font-inter text-sm font-semibold ${
+                  cat.active ? 'text-primary' : 'text-on-surface-variant'
+                }`}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Featured Restaurants Section */}
+        <View>
+          <View className="flex-row justify-between items-end mb-6">
+            <Text className="font-jakarta-sans text-2xl font-bold text-on-background tracking-tight">
+              Featured Restaurants
             </Text>
             <TouchableOpacity>
-              <Text className="text-primary font-bold text-xs tracking-wide">
-                View All
-              </Text>
+              <Text className="text-primary text-sm font-semibold">See all</Text>
             </TouchableOpacity>
           </View>
-          <View className="flex-row flex-wrap justify-between gap-y-4">
-            <TrendingProductCard
-              imageUrl={homeImages.broccoli}
-              badge="-20%"
-              category="Organic"
-              name="Green Broccoli"
-              unit="approx. 500g"
-              price={3.5}
-              originalPrice={4.4}
-              onPress={() => handleProductPress('green-broccoli')}
-            />
-            <TrendingProductCard
-              imageUrl={homeImages.salmon}
-              category="Fresh Fish"
-              name="Norwegian Salmon"
-              unit="approx. 200g"
-              price={8.9}
-              onPress={() => handleProductPress('norwegian-salmon')}
-            />
-            <TrendingProductCard
-              imageUrl={homeImages.oranges}
-              category="Citrus"
-              name="Valencia Oranges"
-              unit="Pack of 4"
-              price={5.2}
-              onPress={() => handleProductPress('valencia-oranges')}
-            />
-            <TrendingProductCard
-              imageUrl={homeImages.peppers}
-              badge="-10%"
-              category="Fresh"
-              name="Bell Pepper Mix"
-              unit="Bag of 3"
-              price={4.1}
-              originalPrice={4.55}
-              onPress={() => handleProductPress('bell-pepper-mix')}
-            />
-          </View>
-        </View>
 
-        {/* Fresh Picks Recommendation */}
-        <View className="mt-8 pb-8">
-          <View className="bg-primary-fixed/20 rounded-3xl p-6 flex-row items-center gap-6 overflow-hidden relative">
-            <View className="flex-1 space-y-2 z-10">
-              <Text className="font-jakarta-sans font-extrabold text-primary-container text-lg">
-                Fresh From Farm
-              </Text>
-              <Text className="text-primary-container/80 text-xs mt-1">
-                Hand-picked daily, delivered within 2 hours of harvest.
-              </Text>
-              <TouchableOpacity className="flex-row items-center gap-1 mt-2">
-                <Text className="text-primary-container font-bold text-xs">
-                  Learn more
-                </Text>
-                <ArrowRight size={14} color="#2e7d32" />
+          <View className="flex-col gap-6">
+            {RESTAURANTS.map((restaurant) => (
+              <TouchableOpacity 
+                key={restaurant.id}
+                className="bg-surface-container-lowest rounded-xl shadow-sm active:scale-[0.98] flex-row p-4 gap-4 items-center border border-surface-variant/30"
+              >
+                <View className="w-28 h-28 rounded-xl overflow-hidden bg-surface-container relative">
+                  <Image 
+                    source={{ uri: restaurant.image }}
+                    className="w-full h-full"
+                    contentFit="cover"
+                  />
+                  <View className="absolute top-2 left-2 bg-surface/90 px-2 py-0.5 rounded-full flex-row items-center gap-1 shadow-sm">
+                    <Star size={12} color="#8b5000" fill="#8b5000" />
+                    <Text className="font-inter text-xs font-bold text-on-background">
+                      {restaurant.rating}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="flex-1 py-1">
+                  <Text className="font-jakarta-sans font-bold text-lg text-on-background leading-tight mb-1">
+                    {restaurant.name}
+                  </Text>
+                  <View className="flex-row items-center gap-1 mb-3">
+                    <UtensilsCrossed size={14} color="#40493d" />
+                    <Text className="font-inter text-sm text-on-surface-variant">
+                      {restaurant.category}
+                    </Text>
+                  </View>
+                  
+                  <View className="flex-row items-center gap-3 mt-auto">
+                    <View className="flex-row items-center gap-1 bg-surface-container-low px-2 py-1 rounded-md">
+                      <Clock size={14} color="#40493d" />
+                      <Text className="font-inter text-xs font-medium text-on-surface-variant">
+                        {restaurant.time}
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center gap-1">
+                      <Truck size={14} color={restaurant.deliveryFee === 'Free' ? "#0d631b" : "#40493d"} />
+                      <Text className={`font-inter text-xs font-medium ${
+                        restaurant.deliveryFee === 'Free' ? 'text-primary font-semibold' : 'text-on-surface-variant'
+                      }`}>
+                        {restaurant.deliveryFee}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               </TouchableOpacity>
-            </View>
-            <View
-              className="w-24 h-24 relative z-10"
-              style={{ transform: [{ rotate: '12deg' }] }}
-            >
-              <Image
-                source={{
-                  uri: homeImages.freshFromFarm,
-                }}
-                className="w-full h-full"
-                contentFit="contain"
-              />
-            </View>
+            ))}
           </View>
         </View>
       </ScrollView>
