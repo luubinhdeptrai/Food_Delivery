@@ -28,6 +28,39 @@ export interface Product {
   isFavorited?: boolean;
 }
 
+// ─── Restaurant Types ─────────────────────────────────────────────────────────
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  isPopular?: boolean;
+}
+
+export interface AddOn {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+}
+
+export interface Restaurant {
+  id: string;
+  name: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  deliveryTime: string;
+  deliveryFee: string;
+  heroImage: string;
+  menu: {
+    category: string;
+    items: MenuItem[];
+  }[];
+}
+
 // ─── Screen Props ──────────────────────────────────────────────────────────────
 
 export interface ProductDetailScreenProps {
@@ -38,4 +71,20 @@ export interface ProductDetailScreenProps {
   onViewAllRelated?: () => void;
   onRelatedProductAdd?: (productId: string) => void;
   onTabPress?: (tabId: string) => void;
+}
+
+export interface RestaurantMenuScreenProps {
+  restaurantId: string;
+  onBack?: () => void;
+  onFavoriteToggle?: (restaurantId: string) => void;
+  onItemPress?: (itemId: string) => void;
+  onAddItem?: (itemId: string) => void;
+  onTabPress?: (tabId: string) => void;
+}
+
+export interface MenuItemDetailScreenProps {
+  itemId: string;
+  onBack?: () => void;
+  onFavoriteToggle?: (itemId: string) => void;
+  onAddToCart?: (itemId: string, quantity: number, addOnIds: string[]) => void;
 }

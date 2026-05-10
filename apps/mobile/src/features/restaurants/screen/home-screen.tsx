@@ -142,6 +142,7 @@ export function HomeScreen() {
             {RESTAURANTS.map((restaurant) => (
               <TouchableOpacity 
                 key={restaurant.id}
+                onPress={() => router.push({ pathname: '/restaurant/[id]', params: { id: restaurant.id } })}
                 className="bg-surface-container-lowest rounded-xl shadow-sm active:scale-[0.98] flex-row p-4 gap-4 items-center border border-surface-variant/30"
               >
                 <View className="w-28 h-28 rounded-xl overflow-hidden bg-surface-container relative">
