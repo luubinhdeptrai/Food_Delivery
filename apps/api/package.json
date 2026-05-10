@@ -23,7 +23,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "db:seed": "tsx src/drizzle/seeds/seed.ts"
+    "db:seed": "tsx src/drizzle/seeds/seed.ts",
+    "db:seed:rich": "tsx src/drizzle/seeds/rich-catalog.seed.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.5.6",
@@ -55,6 +56,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.3",
+    "uuid": "^14.0.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -69,7 +71,9 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
+    "@types/uuid": "^11.0.0",
     "drizzle-kit": "^0.31.10",
+    "drizzle-seed": "^0.3.1",
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",

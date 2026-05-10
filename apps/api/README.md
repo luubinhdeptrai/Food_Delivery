@@ -31,6 +31,23 @@
 $ pnpm install
 ```
 
+## Database
+
+The project uses Drizzle ORM for database management.
+
+### Seeding
+
+There are two seeding options available:
+
+- **Master Seed:** Seeds the database with fixed UUIDs and stable data, ideal for E2E tests and development of core features.
+  ```bash
+  $ pnpm run db:seed
+  ```
+- **Rich Catalog Seed:** Seeds the database with high-quality, realistic restaurant and menu data (Pizza 4P's, The Coffee House, etc.) with detailed descriptions in Vietnamese.
+  ```bash
+  $ pnpm run db:seed:rich
+  ```
+
 ## Compile and run the project
 
 ```bash
