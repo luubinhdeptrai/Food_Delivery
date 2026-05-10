@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -16,30 +17,8 @@ import {
   ShoppingBag,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MenuItemDetailScreenProps } from '../types';
-
-const MOCK_ITEM = {
-  id: 'p1',
-  name: 'The Truffle Burger',
-  description: 'Double smash patty, black truffle aioli, aged swiss, caramelized onions, and wild arugula on a toasted brioche bun.',
-  price: 14.50,
-  image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDS57RyZgZAhRryvbhRRF1WDGf_Z0eHv2TK2mlE9ULsssfSGSULUdSUF-e5SdFcOWWiVqKJJf-5kvjm1HVds644-2dRI88O3RmoAjhamRg-RC71fKMbUdHx8IO_YFujeCP3myY8gSkTIsB0duaAiLBbVYUaA_uX_O1k6up3nemDwch3aD-cIPRQC4dF0FJTaWAlfK_xVNksCuXxVGJUCR64aseBux_fl8Q1qkKs2xVFU3YhEegAv4A9d32PBwVlbb1fMWDpuqARLc97',
-  isPopular: true,
-  addOns: [
-    {
-      id: 'a1',
-      name: 'Truffle Fries',
-      price: 4.50,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDrYjXTnTtjbSHIaVgeK9n0_nJjrYiWtSy2ooXXa1vFu1MD1yqp6T9VtjOVMHbco11BkSTThN-mBSckViufNwey_rc6zTiceaiQ7T9kbMd8BicOMyPX1XLSs-UvjnnjvctoOuDoeYmxsT0frlUa3R4sgAJW85qIE2XB8p1Ss0Dvw9fNwNrsBfClMLPAXP5f-Wnxnh0OJAnpCenfJfZtNOOHrmns9K8l2XrVcg6SGtXYpXRuO4oDGrtxTYJ_6fI2oCVxFFzSQhme8QwG',
-    },
-    {
-      id: 'a2',
-      name: 'Craft Cola',
-      price: 3.00,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDoCt0QaJ-D-BypfLAFHaxy_TEFiSDef_lVtduL_zZ3rqKcn98tvUO5tL9Umgsf4JJy8XGVP-wrZGGesfsIiRThXnhfgkbr19B9pwGcD1VRbYGAvgQkKS6GOs-6a-NlwleVmOjohef7AVY4YL_Kz-2ip6QhgfFZtltnQvVfc945TQPaTaQchpmV-t-RRBQqCbQrd-u-JUyERkSd6XMn5ErA_kF0tWTQ-g0Y5vFNo2xcv2jYXpxO_MvXhUuintn-GK1XWFEo3QeisI5z',
-    },
-  ],
-};
+import { MenuItemDetailScreenProps, ModifierGroup } from '../types';
+import { useMenuItem, useMenuItemModifiers } from '../api/restaurant-api';
 
 export function MenuItemDetailScreen({
   itemId,
@@ -49,24 +28,67 @@ export function MenuItemDetailScreen({
 }: MenuItemDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(1);
-  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [isFavorited, setIsFavorited] = useState(false);
 
-  const item = MOCK_ITEM; // Real app would fetch by itemId
+  const { data: item, isLoading: isLoadingItem } = useMenuItem(itemId);
+  const { data: modifierGroups, isLoading: isLoadingModifiers } = useMenuItemModifiers(itemId);
 
-  const toggleAddOn = (id: string) => {
-    setSelectedAddOns(prev => 
-      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
-    );
+  const toggleOption = (optionId: string, group: ModifierGroup) => {
+    setSelectedOptionIds(prev => {
+      const isSelected = prev.includes(optionId);
+      
+      // If it's a radio group (maxSelections = 1)
+      if (group.maxSelections === 1) {
+        if (isSelected) return prev; // Cannot deselect if it's required? Actually let's just replace.
+        const otherOptionsInGroup = group.options.map(o => o.id);
+        const filtered = prev.filter(id => !otherOptionsInGroup.includes(id));
+        return [...filtered, optionId];
+      }
+      
+      // If it's a checkbox group
+      if (isSelected) {
+        return prev.filter(id => id !== optionId);
+      } else {
+        // Check if we hit max selections
+        const optionsInGroupCount = prev.filter(id => group.options.some(o => o.id === id)).length;
+        if (optionsInGroupCount < group.maxSelections) {
+          return [...prev, optionId];
+        }
+        return prev;
+      }
+    });
   };
 
   const calculateTotal = () => {
-    const addOnsTotal = selectedAddOns.reduce((acc, id) => {
-      const addOn = item.addOns.find(a => a.id === id);
-      return acc + (addOn?.price || 0);
+    if (!item) return 0;
+    const optionsTotal = selectedOptionIds.reduce((acc, id) => {
+      const option = modifierGroups?.flatMap(g => g.options).find(o => o.id === id);
+      return acc + (option?.price || 0);
     }, 0);
-    return (item.price + addOnsTotal) * quantity;
+    return (item.price + optionsTotal) * quantity;
   };
+
+  const isLoading = isLoadingItem || isLoadingModifiers;
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <ActivityIndicator size="large" color="#0d631b" />
+      </View>
+    );
+  }
+
+  if (!item) {
+    return (
+      <View className="flex-1 items-center justify-center bg-surface">
+        <Text className="text-on-surface">Item not found</Text>
+        <TouchableOpacity onPress={onBack} className="mt-4">
+          <Text className="text-primary">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background font-inter text-on-surface">
@@ -108,16 +130,18 @@ export function MenuItemDetailScreen({
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Image */}
-        <View className="px-4 mb-8">
-          <View className="w-full h-80 rounded-3xl overflow-hidden shadow-sm bg-surface-container-low border border-surface-variant/20">
-            <Image 
-              source={{ uri: item.image }}
-              className="w-full h-full"
-              contentFit="cover"
-              transition={200}
-            />
+        {item.imageUrl && (
+          <View className="px-4 mb-8">
+            <View className="w-full h-80 rounded-3xl overflow-hidden shadow-sm bg-surface-container-low border border-surface-variant/20">
+              <Image 
+                source={{ uri: item.imageUrl }}
+                className="w-full h-full"
+                contentFit="cover"
+                transition={200}
+              />
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Product Info */}
         <View className="px-6 flex-col gap-6">
@@ -126,7 +150,7 @@ export function MenuItemDetailScreen({
               <Text className="font-jakarta-sans font-bold text-3xl text-on-surface tracking-tight mb-2">
                 {item.name}
               </Text>
-              {item.isPopular && (
+              {item.tags?.includes('popular') && (
                 <View className="flex-row">
                   <View className="flex-row items-center gap-1 bg-surface-container-high px-2 py-1 rounded-md">
                     <Flame size={14} color="#8b5000" fill="#8b5000" />
@@ -168,34 +192,51 @@ export function MenuItemDetailScreen({
             </View>
           </View>
 
-          {/* Add-ons */}
-          <View className="mt-4">
-            <Text className="font-jakarta-sans font-semibold text-lg mb-4">Make it a Meal</Text>
-            <View className="flex-row flex-wrap gap-4">
-              {item.addOns.map((addOn) => {
-                const isSelected = selectedAddOns.includes(addOn.id);
-                return (
-                  <TouchableOpacity 
-                    key={addOn.id}
-                    onPress={() => toggleAddOn(addOn.id)}
-                    className={`flex-1 min-w-[140px] bg-surface-container-lowest p-4 rounded-2xl border ${
-                      isSelected ? 'border-primary' : 'border-outline-variant/15'
-                    } items-center text-center gap-2 active:bg-surface-container-low`}
-                  >
-                    <View className="w-16 h-16 rounded-full bg-surface-container overflow-hidden mb-2">
-                      <Image 
-                        source={{ uri: addOn.image }}
-                        className="w-full h-full"
-                        contentFit="cover"
-                      />
-                    </View>
-                    <Text className="font-inter font-medium text-sm text-on-surface">{addOn.name}</Text>
-                    <Text className="font-inter text-secondary text-xs font-bold">+${addOn.price.toFixed(2)}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+          {/* Modifier Groups */}
+          {modifierGroups?.map((group) => (
+            <View key={group.id} className="mt-4">
+              <View className="flex-row justify-between items-end mb-4">
+                <Text className="font-jakarta-sans font-semibold text-lg">{group.name}</Text>
+                <Text className="font-inter text-xs text-on-surface-variant">
+                  {group.minSelections > 0 ? `Required • Select up to ${group.maxSelections}` : `Optional • Select up to ${group.maxSelections}`}
+                </Text>
+              </View>
+              <View className="flex-col gap-3">
+                {group.options.map((option) => {
+                  const isSelected = selectedOptionIds.includes(option.id);
+                  return (
+                    <TouchableOpacity 
+                      key={option.id}
+                      onPress={() => toggleOption(option.id, group)}
+                      disabled={!option.isAvailable}
+                      className={`flex-row items-center justify-between bg-surface-container-lowest p-4 rounded-2xl border ${
+                        isSelected ? 'border-primary bg-primary-fixed-dim/5' : 'border-outline-variant/15'
+                      } ${!option.isAvailable ? 'opacity-50' : ''} active:bg-surface-container-low`}
+                    >
+                      <View className="flex-1">
+                        <Text className={`font-inter font-medium text-sm ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
+                          {option.name}
+                        </Text>
+                        {!option.isAvailable && (
+                          <Text className="text-xs text-error font-medium">Sold Out</Text>
+                        )}
+                      </View>
+                      <View className="flex-row items-center gap-3">
+                        {option.price > 0 && (
+                          <Text className="font-inter text-secondary text-xs font-bold">+${option.price.toFixed(2)}</Text>
+                        )}
+                        <View className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+                          isSelected ? 'border-primary bg-primary' : 'border-outline-variant'
+                        }`}>
+                          {isSelected && <View className="w-2.5 h-2.5 rounded-full bg-white" />}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
-          </View>
+          ))}
         </View>
       </ScrollView>
 
@@ -205,8 +246,8 @@ export function MenuItemDetailScreen({
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         <TouchableOpacity 
-          onPress={() => onAddToCart?.(itemId, quantity, selectedAddOns)}
-          className="w-full flex-row items-center justify-center gap-3 rounded-full bg-gradient-to-r from-primary to-primary-container py-4 shadow-lg active:scale-[0.98]"
+          onPress={() => onAddToCart?.(itemId, quantity, selectedOptionIds)}
+          className="w-full flex-row items-center justify-center gap-3 rounded-full bg-primary py-4 shadow-lg active:scale-[0.98]"
         >
           <ShoppingBag size={24} color="#ffffff" />
           <Text className="font-jakarta-sans font-bold text-lg text-white">

@@ -5,6 +5,7 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -22,36 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { HomeTopBar } from '../components';
-
-const RESTAURANTS = [
-  {
-    id: '1',
-    name: 'Burger Atelier',
-    category: 'American • Burgers',
-    rating: 4.8,
-    time: '20-30 min',
-    deliveryFee: '$2.99',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1X7SiDBnsyp1c7eh6hJ1CGIPStQcrkMQSc31oEieXfat8dFWo9N4TcgDIw1EOJn7U8GxMHuhP9M5JQFLxC45fnaq99Q5Ex30AR72w9i9V2SurHqoRJtLri0578RwJzi6x8M_2evPVsc3yycj_9Dw5p3MnNncA2VPlgHn_ekeD5N-R6HyABn0T8StEXwOcDifSoyYMTa2aY6RCAG9ReNK44JOFPYGsmWTybxvnT_wDNbSU_Cnp-FyBZSAoMveYqU677UNhOBXxztYS',
-  },
-  {
-    id: '2',
-    name: 'Ocean Blue Sushi',
-    category: 'Japanese • Sushi',
-    rating: 4.9,
-    time: '35-45 min',
-    deliveryFee: 'Free',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD-sJksw2vATPpH8-3Um-gQiZ7awGIDJqsVjZjjYhPl3aj2GqHayU8xGnX_8h4awwo1_G1gdSXgla1PFCP9x5Rsu3U1x5Nf-h35eFOmNdOp4UElo4T94dmVhtzhX5bBuOmf0ALDV72pcBszcMKyJSZzSiLXNoCXSJeI7ghQ8i2VTt2gQCQGoNJbIAHF-0Eu2pF8Dmdd42ebMv-qWuyH2mG4gxEvWFGAA9RD3nohDWSA6hXunpH13BVDql3PFm_LHrsyV_GQXSJFCCFr',
-  },
-  {
-    id: '3',
-    name: 'Nonna\'s Trattoria',
-    category: 'Italian • Pasta',
-    rating: 4.6,
-    time: '25-40 min',
-    deliveryFee: '$1.49',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuARedRJcjr5YqgqqlzfuPbZG180GRzyKTAOw4khZ-BpVd2F2Kn_X9eISaDziroPv5pcNH_uKLB6lmZlMEKH63A2eghhoYLbTAYkyuFUp3G5pSX7ah0hSO5UtTYDU6GKL9RCjWgwTf0cROhZEM_dukQ1ceyOBRdpU45d13dDbNUUkTqhRlKrQaI8JeFdlJxPEYjpMwlnX9y-83Y1lql88x0gUHYTnQSpkGRGWGcGDRDkrFBOYnsB-BS-lEcmM750Zf0vyrtSQ-Z-8BEd',
-  },
-];
+import { useRestaurants } from '../api/restaurant-api';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', Icon: Utensils, active: true },
@@ -64,6 +36,9 @@ const CATEGORIES = [
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { data: restaurantsData, isLoading, error } = useRestaurants();
+
+  const restaurants = restaurantsData?.data || [];
 
   return (
     <View className="flex-1 bg-background font-inter text-on-surface">
@@ -138,58 +113,64 @@ export function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <View className="flex-col gap-6">
-            {RESTAURANTS.map((restaurant) => (
-              <TouchableOpacity 
-                key={restaurant.id}
-                onPress={() => router.push({ pathname: '/restaurant/[id]', params: { id: restaurant.id } })}
-                className="bg-surface-container-lowest rounded-xl shadow-sm active:scale-[0.98] flex-row p-4 gap-4 items-center border border-surface-variant/30"
-              >
-                <View className="w-28 h-28 rounded-xl overflow-hidden bg-surface-container relative">
-                  <Image 
-                    source={{ uri: restaurant.image }}
-                    className="w-full h-full"
-                    contentFit="cover"
-                  />
-                  <View className="absolute top-2 left-2 bg-surface/90 px-2 py-0.5 rounded-full flex-row items-center gap-1 shadow-sm">
-                    <Star size={12} color="#8b5000" fill="#8b5000" />
-                    <Text className="font-inter text-xs font-bold text-on-background">
-                      {restaurant.rating}
-                    </Text>
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#0d631b" />
+          ) : error ? (
+            <Text className="text-error text-center my-4">Error loading restaurants</Text>
+          ) : (
+            <View className="flex-col gap-6">
+              {restaurants.map((restaurant) => (
+                <TouchableOpacity 
+                  key={restaurant.id}
+                  onPress={() => router.push({ pathname: '/restaurant/[id]', params: { id: restaurant.id } })}
+                  className="bg-surface-container-lowest rounded-xl shadow-sm active:scale-[0.98] flex-row p-4 gap-4 items-center border border-surface-variant/30"
+                >
+                  <View className="w-28 h-28 rounded-xl overflow-hidden bg-surface-container relative">
+                    <Image 
+                      source={{ uri: restaurant.coverImageUrl || restaurant.logoUrl }}
+                      className="w-full h-full"
+                      contentFit="cover"
+                    />
+                    <View className="absolute top-2 left-2 bg-surface/90 px-2 py-0.5 rounded-full flex-row items-center gap-1 shadow-sm">
+                      <Star size={12} color="#8b5000" fill="#8b5000" />
+                      <Text className="font-inter text-xs font-bold text-on-background">
+                        {restaurant.rating || '4.5'}
+                      </Text>
+                    </View>
                   </View>
-                </View>
 
-                <View className="flex-1 py-1">
-                  <Text className="font-jakarta-sans font-bold text-lg text-on-background leading-tight mb-1">
-                    {restaurant.name}
-                  </Text>
-                  <View className="flex-row items-center gap-1 mb-3">
-                    <UtensilsCrossed size={14} color="#40493d" />
-                    <Text className="font-inter text-sm text-on-surface-variant">
-                      {restaurant.category}
+                  <View className="flex-1 py-1">
+                    <Text className="font-jakarta-sans font-bold text-lg text-on-background leading-tight mb-1">
+                      {restaurant.name}
                     </Text>
-                  </View>
-                  
-                  <View className="flex-row items-center gap-3 mt-auto">
-                    <View className="flex-row items-center gap-1 bg-surface-container-low px-2 py-1 rounded-md">
-                      <Clock size={14} color="#40493d" />
-                      <Text className="font-inter text-xs font-medium text-on-surface-variant">
-                        {restaurant.time}
+                    <View className="flex-row items-center gap-1 mb-3">
+                      <UtensilsCrossed size={14} color="#40493d" />
+                      <Text className="font-inter text-sm text-on-surface-variant">
+                        {restaurant.cuisineType || 'Cuisine'}
                       </Text>
                     </View>
-                    <View className="flex-row items-center gap-1">
-                      <Truck size={14} color={restaurant.deliveryFee === 'Free' ? "#0d631b" : "#40493d"} />
-                      <Text className={`font-inter text-xs font-medium ${
-                        restaurant.deliveryFee === 'Free' ? 'text-primary font-semibold' : 'text-on-surface-variant'
-                      }`}>
-                        {restaurant.deliveryFee}
-                      </Text>
+                    
+                    <View className="flex-row items-center gap-3 mt-auto">
+                      <View className="flex-row items-center gap-1 bg-surface-container-low px-2 py-1 rounded-md">
+                        <Clock size={14} color="#40493d" />
+                        <Text className="font-inter text-xs font-medium text-on-surface-variant">
+                          {restaurant.deliveryTime || '20-30 min'}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center gap-1">
+                        <Truck size={14} color={restaurant.deliveryFee === 'Free' ? "#0d631b" : "#40493d"} />
+                        <Text className={`font-inter text-xs font-medium ${
+                          restaurant.deliveryFee === 'Free' ? 'text-primary font-semibold' : 'text-on-surface-variant'
+                        }`}>
+                          {restaurant.deliveryFee || 'Free'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>

@@ -32,11 +32,40 @@ export interface Product {
 
 export interface MenuItem {
   id: string;
+  restaurantId: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  image: string;
-  isPopular?: boolean;
+  sku?: string;
+  categoryId?: string;
+  status: 'available' | 'unavailable' | 'out_of_stock';
+  imageUrl?: string;
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MenuItemListResponse {
+  data: MenuItem[];
+  total: number;
+}
+
+export interface ModifierOption {
+  id: string;
+  groupId: string;
+  name: string;
+  price: number;
+  isDefault: boolean;
+  isAvailable: boolean;
+}
+
+export interface ModifierGroup {
+  id: string;
+  menuItemId: string;
+  name: string;
+  minSelections: number;
+  maxSelections: number;
+  options: ModifierOption[];
 }
 
 export interface AddOn {
@@ -48,17 +77,30 @@ export interface AddOn {
 
 export interface Restaurant {
   id: string;
+  ownerId: string;
   name: string;
-  category: string;
-  rating: number;
-  reviewCount: number;
-  deliveryTime: string;
-  deliveryFee: string;
-  heroImage: string;
-  menu: {
-    category: string;
-    items: MenuItem[];
-  }[];
+  description?: string;
+  address: string;
+  phone: string;
+  isOpen: boolean;
+  isApproved: boolean;
+  latitude?: number;
+  longitude?: number;
+  cuisineType?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+  // UI-specific extensions (may not be in API yet)
+  rating?: number;
+  reviewCount?: number;
+  deliveryTime?: string;
+  deliveryFee?: string;
+}
+
+export interface RestaurantListResponse {
+  data: Restaurant[];
+  total: number;
 }
 
 // ─── Screen Props ──────────────────────────────────────────────────────────────
