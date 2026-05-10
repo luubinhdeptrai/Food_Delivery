@@ -17,8 +17,7 @@ import {
   ShoppingBag,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MenuItemDetailScreenProps, ModifierGroup } from '../types';
-import { useMenuItem, useMenuItemModifiers } from '../api/restaurant-api';
+import { formatCurrency, formatPrice } from '@/src/lib/format-utils';
 
 export function MenuItemDetailScreen({
   itemId,
@@ -162,7 +161,7 @@ export function MenuItemDetailScreen({
               )}
             </View>
             <Text className="font-jakarta-sans font-extrabold text-2xl text-secondary">
-              ${item.price.toFixed(2)}
+              {formatCurrency(item.price)}
             </Text>
           </View>
 
@@ -223,7 +222,7 @@ export function MenuItemDetailScreen({
                       </View>
                       <View className="flex-row items-center gap-3">
                         {option.price > 0 && (
-                          <Text className="font-inter text-secondary text-xs font-bold">+${option.price.toFixed(2)}</Text>
+                          <Text className="font-inter text-secondary text-xs font-bold">+{formatCurrency(option.price)}</Text>
                         )}
                         <View className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
                           isSelected ? 'border-primary bg-primary' : 'border-outline-variant'
@@ -246,12 +245,45 @@ export function MenuItemDetailScreen({
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}
       >
         <TouchableOpacity 
+          onPress={handleAddToCart}
+          disabled={!areRequiredModifiersSelected}
+          className={`w-full flex-row items-center justify-center gap-3 rounded-full py-4 shadow-lg active:scale-[0.98] ${
+            areRequiredModifiersSelected ? 'bg-primary' : 'bg-on-surface/20'
+          }`}
+        >
+          <ShoppingBag size={24} color={areRequiredModifiersSelected ? "#ffffff" : "#707a6c"} />
+          <Text className={`font-jakarta-sans font-bold text-lg ${
+            areRequiredModifiersSelected ? 'text-white' : 'text-on-surface-variant'
+          }`}>
+            {areRequiredModifiersSelected 
+              ? `Add to Cart • ${formatCurrency(calculateTotal())}`
+              : 'Select required options'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+ );
+                })}
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* Fixed Bottom Action Bar */}
+      <View 
+        className="fixed bottom-0 left-0 w-full p-4 bg-surface/80 backdrop-blur-xl border-t-0 shadow-[0_-8px_32px_rgba(26,28,28,0.08)] z-50 rounded-t-xl sm:px-6"
+        style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+      >
+        <TouchableOpacity 
           onPress={() => onAddToCart?.(itemId, quantity, selectedOptionIds)}
           className="w-full flex-row items-center justify-center gap-3 rounded-full bg-primary py-4 shadow-lg active:scale-[0.98]"
         >
           <ShoppingBag size={24} color="#ffffff" />
           <Text className="font-jakarta-sans font-bold text-lg text-white">
-            Add to Cart • ${calculateTotal().toFixed(2)}
+            Add to Cart • {formatCurrency(calculateTotal())}
           </Text>
         </TouchableOpacity>
       </View>

@@ -117,6 +117,11 @@ export function HomeScreen() {
             <ActivityIndicator size="large" color="#0d631b" />
           ) : error ? (
             <Text className="text-error text-center my-4">Error loading restaurants</Text>
+          ) : restaurants.length === 0 ? (
+            <View className="items-center justify-center my-10">
+              <Utensils size={48} color="#707a6c" />
+              <Text className="text-on-surface-variant font-medium mt-4">No restaurants available</Text>
+            </View>
           ) : (
             <View className="flex-col gap-6">
               {restaurants.map((restaurant) => (
@@ -134,7 +139,7 @@ export function HomeScreen() {
                     <View className="absolute top-2 left-2 bg-surface/90 px-2 py-0.5 rounded-full flex-row items-center gap-1 shadow-sm">
                       <Star size={12} color="#8b5000" fill="#8b5000" />
                       <Text className="font-inter text-xs font-bold text-on-background">
-                        {restaurant.rating || '4.5'}
+                        {restaurant.rating ? restaurant.rating.toFixed(1) : 'New'}
                       </Text>
                     </View>
                   </View>
@@ -154,15 +159,15 @@ export function HomeScreen() {
                       <View className="flex-row items-center gap-1 bg-surface-container-low px-2 py-1 rounded-md">
                         <Clock size={14} color="#40493d" />
                         <Text className="font-inter text-xs font-medium text-on-surface-variant">
-                          {restaurant.deliveryTime || '20-30 min'}
+                          {restaurant.deliveryTime || '—'}
                         </Text>
                       </View>
                       <View className="flex-row items-center gap-1">
-                        <Truck size={14} color={restaurant.deliveryFee === 'Free' ? "#0d631b" : "#40493d"} />
+                        <Truck size={14} color={restaurant.deliveryFee === 0 ? "#0d631b" : "#40493d"} />
                         <Text className={`font-inter text-xs font-medium ${
-                          restaurant.deliveryFee === 'Free' ? 'text-primary font-semibold' : 'text-on-surface-variant'
+                          restaurant.deliveryFee === 0 ? 'text-primary font-semibold' : 'text-on-surface-variant'
                         }`}>
-                          {restaurant.deliveryFee || 'Free'}
+                          {restaurant.deliveryFee === 0 ? 'Free' : (restaurant.deliveryFee ? `+${restaurant.deliveryFee}` : '—')}
                         </Text>
                       </View>
                     </View>

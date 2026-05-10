@@ -72,7 +72,7 @@ export interface AddOn {
   id: string;
   name: string;
   price: number;
-  image: string;
+  imageUrl: string;
 }
 
 export interface Restaurant {
@@ -95,7 +95,7 @@ export interface Restaurant {
   rating?: number;
   reviewCount?: number;
   deliveryTime?: string;
-  deliveryFee?: string;
+  deliveryFee?: number;
 }
 
 export interface RestaurantListResponse {
@@ -128,5 +128,9 @@ export interface MenuItemDetailScreenProps {
   itemId: string;
   onBack?: () => void;
   onFavoriteToggle?: (itemId: string) => void;
-  onAddToCart?: (itemId: string, quantity: number, addOnIds: string[]) => void;
+  onAddToCart?: (
+    itemId: string,
+    quantity: number,
+    modifierSelections: Record<string, string[]>,
+  ) => void;
 }

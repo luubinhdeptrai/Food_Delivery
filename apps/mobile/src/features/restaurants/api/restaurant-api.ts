@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/src/lib/api-client';
-import { Restaurant, MenuItem, RestaurantListResponse, MenuItemListResponse } from '../types';
+import {
+  Restaurant,
+  MenuItem,
+  RestaurantListResponse,
+  MenuItemListResponse,
+  ModifierGroup,
+} from '../types';
 
 export const restaurantKeys = {
   all: ['restaurants'] as const,
@@ -13,7 +19,8 @@ export const restaurantKeys = {
 export const menuKeys = {
   all: ['menu-items'] as const,
   lists: () => [...menuKeys.all, 'list'] as const,
-  list: (restaurantId: string) => [...menuKeys.lists(), { restaurantId }] as const,
+  list: (restaurantId: string) =>
+    [...menuKeys.lists(), { restaurantId }] as const,
   details: () => [...menuKeys.all, 'detail'] as const,
   detail: (id: string) => [...menuKeys.details(), id] as const,
 };
@@ -21,8 +28,10 @@ export const menuKeys = {
 export function useRestaurants(offset = 0, limit = 20) {
   return useQuery({
     queryKey: restaurantKeys.list(`offset=${offset}&limit=${limit}`),
-    queryFn: () => 
-      apiFetch<RestaurantListResponse>(`/api/restaurants?offset=${offset}&limit=${limit}`),
+    queryFn: () =>
+      apiFetch<RestaurantListResponse>(
+        `/api/restaurants?offset=${offset}&limit=${limit}`,
+      ),
   });
 }
 
@@ -37,7 +46,10 @@ export function useRestaurant(id: string) {
 export function useRestaurantMenu(restaurantId: string) {
   return useQuery({
     queryKey: menuKeys.list(restaurantId),
-    queryFn: () => apiFetch<MenuItemListResponse>(`/api/menu-items?restaurantId=${restaurantId}`),
+    queryFn: () =>
+      apiFetch<MenuItemListResponse>(
+        `/api/menu-items?restaurantId=${restaurantId}`,
+      ),
     enabled: !!restaurantId,
   });
 }
@@ -45,7 +57,10 @@ export function useRestaurantMenu(restaurantId: string) {
 export function useRestaurantCategories(restaurantId: string) {
   return useQuery({
     queryKey: [...restaurantKeys.detail(restaurantId), 'categories'] as const,
-    queryFn: () => apiFetch<{ id: string; name: string }[]>(`/api/menu-items/categories?restaurantId=${restaurantId}`),
+    queryFn: () =>
+      apiFetch<{ id: string; name: string }[]>(
+        `/api/menu-items/categories?restaurantId=${restaurantId}`,
+      ),
     enabled: !!restaurantId,
   });
 }
@@ -61,7 +76,10 @@ export function useMenuItem(id: string) {
 export function useMenuItemModifiers(menuItemId: string) {
   return useQuery({
     queryKey: [...menuKeys.detail(menuItemId), 'modifiers'] as const,
-    queryFn: () => apiFetch<any[]>(`/api/menu-items/${menuItemId}/modifier-groups`),
+    queryFn: () =>
+      apiFetch<ModifierGroup[]>(
+        `/api/menu-items/${menuItemId}/modifier-groups`,
+      ),
     enabled: !!menuItemId,
   });
 }
