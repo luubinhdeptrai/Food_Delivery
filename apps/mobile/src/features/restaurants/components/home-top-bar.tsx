@@ -2,12 +2,17 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Menu, ChevronDown } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { useAddressStore } from '../store/address-store';
 
 interface HomeTopBarProps {
   insetsTop: number;
 }
 
 export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
+  const router = useRouter();
+  const { selectedAddress } = useAddressStore();
+
   return (
     <View 
       className="absolute top-0 w-full z-50 bg-surface-container-lowest/90 shadow-sm"
@@ -22,9 +27,12 @@ export function HomeTopBar({ insetsTop }: HomeTopBarProps) {
           <Text className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-inter leading-none mb-0.5">
             Deliver to
           </Text>
-          <TouchableOpacity className="flex-row items-center gap-1">
+          <TouchableOpacity 
+            className="flex-row items-center gap-1"
+            onPress={() => router.push('/(customer)/address-selection')}
+          >
             <Text className="font-jakarta-sans font-bold text-lg text-on-surface leading-tight">
-              Asia Square Tower 2
+              {selectedAddress}
             </Text>
             <ChevronDown size={18} color="#00490e" />
           </TouchableOpacity>
