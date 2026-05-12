@@ -7,6 +7,7 @@ interface SavedAddressItemProps {
   label: string;
   address: string;
   onPress: () => void;
+  onEdit?: () => void;
 }
 
 const ICONS: Record<string, LucideIcon> = {
@@ -15,23 +16,41 @@ const ICONS: Record<string, LucideIcon> = {
   other: Home,
 };
 
-export function SavedAddressItem({ type, label, address, onPress }: SavedAddressItemProps) {
+export function SavedAddressItem({
+  type,
+  label,
+  address,
+  onPress,
+  onEdit,
+}: SavedAddressItemProps) {
   const Icon = ICONS[type] || Home;
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       onPress={onPress}
       className="bg-surface-container-lowest p-5 rounded-2xl flex-row items-start gap-4 shadow-sm active:bg-surface-container"
+      accessibilityRole="button"
+      accessibilityLabel={`${label} address: ${address}`}
     >
       <View className="bg-surface-container p-3 rounded-full">
         <Icon size={24} color="#40493d" />
       </View>
       <View className="flex-1">
         <View className="flex-row items-center justify-between mb-1">
-          <Text className="font-bold font-jakarta-sans text-on-surface">{label}</Text>
-          <TouchableOpacity>
+          <Text className="font-bold font-jakarta-sans text-on-surface">
+            {label}
+          </Text>
+          {onEdit ? (
+            <TouchableOpacity
+              onPress={onEdit}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit ${label} address`}
+            >
+              <Edit2 size={18} color="#bfcaba" />
+            </TouchableOpacity>
+          ) : (
             <Edit2 size={18} color="#bfcaba" />
-          </TouchableOpacity>
+          )}
         </View>
         <Text className="text-sm text-on-surface-variant leading-relaxed">
           {address}

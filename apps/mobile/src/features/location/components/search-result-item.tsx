@@ -17,6 +17,10 @@ export function SearchResultItem({
     <TouchableOpacity
       onPress={onPress}
       className="flex-row items-start gap-4 py-3 px-2 active:bg-surface-container rounded-lg"
+      accessibilityRole="button"
+      accessibilityLabel={`Location: ${title}${subtitle ? `, ${subtitle}` : ''}`}
+      accessibilityHint="Selects this location"
+      accessibilityState={{ disabled: false }}
     >
       <MapPin size={20} color="#bfcaba" />
       <View className="flex-1">

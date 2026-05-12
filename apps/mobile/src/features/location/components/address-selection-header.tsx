@@ -16,6 +16,10 @@ export function AddressSelectionHeader({ onBack, insetsTop }: AddressSelectionHe
       <TouchableOpacity 
         onPress={onBack}
         className="p-2 -ml-2 rounded-full active:bg-surface-variant"
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+        accessible={true}
+        testID="back-button"
       >
         <ArrowLeft size={24} color="#00490e" />
       </TouchableOpacity>

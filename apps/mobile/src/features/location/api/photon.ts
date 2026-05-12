@@ -101,7 +101,9 @@ const formatPhotonResult = (
 
   const subtitle = subtitleParts.join(', ');
 
-  const id = `${properties.osm_type || 'osm'}-${properties.osm_id || index}`;
+  const id = properties.osm_id
+    ? `${properties.osm_type || 'osm'}-${properties.osm_id}`
+    : `${properties.osm_type || 'osm'}-${index}-${Date.now()}`;
   const [longitude, latitude] = coords; // Photon returns [lon, lat].
 
   return {

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import * as Location from 'expo-location';
 import type { Coordinates } from '../types';
 
@@ -28,26 +28,48 @@ const buildLocationLabel = (
 export function useCurrentLocation() {
   const [isLocating, setIsLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isLocatingRef = useRef(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const locate =
     useCallback(async (): Promise<CurrentLocationResult | null> => {
-      if (isLocating) {
+      if (isLocatingRef.current) {
         return null;
       }
 
+      isLocatingRef.current = true;
       setIsLocating(true);
       setError(null);
 
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          setError('Location permission denied.');
+          if (isMounted.current) {
+            setError('Location permission denied.');
+          }
           return null;
         }
 
-        const position = await Location.getCurrentPositionAsync({
+        const positionPromise = Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
+
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 10000),
+        );
+
+        const position = (await Promise.race([
+          positionPromise,
+          timeoutPromise,
+        ])) as Location.LocationObject;
+
         const { latitude, longitude } = position.coords;
 
         let label = 'Current Location';
@@ -62,15 +84,28 @@ export function useCurrentLocation() {
         }
 
         return { label, coords: { latitude, longitude } };
-      } catch {
-        setError('Unable to get current location.');
+      } catch (err: any) {
+        if (isMounted.current) {
+          setError(
+            err.message === 'timeout'
+              ? 'Location request timed out.'
+              : 'Unable to get current location.',
+          );
+        }
         return null;
       } finally {
-        setIsLocating(false);
+        isLocatingRef.current = false;
+        if (isMounted.current) {
+          setIsLocating(false);
+        }
       }
-    }, [isLocating]);
+    }, []);
 
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => {
+    if (isMounted.current) {
+      setError(null);
+    }
+  }, []);
 
   return { isLocating, error, locate, clearError };
 }
