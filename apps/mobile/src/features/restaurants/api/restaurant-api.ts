@@ -72,6 +72,7 @@ export function useNearbyRestaurants(params: NearbyRestaurantsParams = {}) {
   return useQuery({
     queryKey: restaurantKeys.search(queryString),
     queryFn: () => apiFetch<UnifiedSearchResponse>(endpoint),
+    enabled: hasCoords,
   });
 }
 

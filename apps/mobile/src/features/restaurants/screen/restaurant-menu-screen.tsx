@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -58,7 +59,7 @@ export function RestaurantMenuScreen({
   // Sync favorited state from server
   React.useEffect(() => {
     if (restaurant) {
-      // setIsFavorited(!!restaurant.isFavorited); // Assuming API might have this
+      setIsFavorited(!!(restaurant as any).isFavorited);
     }
   }, [restaurant]);
 
@@ -100,11 +101,11 @@ export function RestaurantMenuScreen({
     
     try {
       if (onFavoriteToggle) {
-        await Promise.resolve(onFavoriteToggle(restaurantId));
+        await onFavoriteToggle(restaurantId);
       }
     } catch (err) {
       setIsFavorited(previousState);
-      // Alert.alert('Error', 'Failed to update favorite status');
+      Alert.alert('Error', 'Failed to update favorite status');
     } finally {
       setIsTogglingFavorite(false);
     }

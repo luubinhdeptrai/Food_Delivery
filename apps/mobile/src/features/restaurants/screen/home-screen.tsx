@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -27,11 +28,11 @@ import { HomeTopBar } from '../components';
 import { useNearbyRestaurants } from '../api/restaurant-api';
 
 const CATEGORIES = [
-  { id: 'all', name: 'All', Icon: Utensils, active: true },
-  { id: 'italian', name: 'Italian', Icon: Pizza, active: false },
-  { id: 'asian', name: 'Asian', Icon: Soup, active: false },
-  { id: 'healthy', name: 'Healthy', Icon: Leaf, active: false },
-  { id: 'bakery', name: 'Bakery', Icon: Croissant, active: false },
+  { id: 'all', name: 'All', Icon: Utensils },
+  { id: 'italian', name: 'Italian', Icon: Pizza },
+  { id: 'asian', name: 'Asian', Icon: Soup },
+  { id: 'healthy', name: 'Healthy', Icon: Leaf },
+  { id: 'bakery', name: 'Bakery', Icon: Croissant },
 ];
 
 const SPECIAL_OFFERS = [
@@ -58,7 +59,11 @@ const SPECIAL_OFFERS = [
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const { latitude, longitude } = useAddressStore();
+  
+  const hasCoordinates = latitude != null && longitude != null;
+
   const {
     data: restaurantsData,
     isLoading,
@@ -104,33 +109,37 @@ export function HomeScreen() {
             className="px-4"
             contentContainerStyle={{ gap: 16, paddingRight: 32 }}
           >
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                className="flex-col items-center gap-1.5 active:scale-95"
-              >
-                <View
-                  className={`w-16 h-16 rounded-2xl items-center justify-center shadow-md ${
-                    cat.active
-                      ? 'bg-primary rotate-3'
-                      : 'bg-surface-container-lowest border border-surface-variant'
-                  }`}
+            {CATEGORIES.map((cat) => {
+              const isActive = selectedCategory === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => setSelectedCategory(cat.id)}
+                  className="flex-col items-center gap-1.5 active:scale-95"
                 >
-                  <cat.Icon
-                    size={30}
-                    color={cat.active ? '#ffffff' : '#00490e'}
-                    fill={cat.active ? '#ffffff' : 'none'}
-                  />
-                </View>
-                <Text
-                  className={`font-jakarta-sans text-sm font-bold mt-1 ${
-                    cat.active ? 'text-primary' : 'text-on-surface-variant'
-                  }`}
-                >
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <View
+                    className={`w-16 h-16 rounded-2xl items-center justify-center shadow-md ${
+                      isActive
+                        ? 'bg-primary rotate-3'
+                        : 'bg-surface-container-lowest border border-surface-variant'
+                    }`}
+                  >
+                    <cat.Icon
+                      size={30}
+                      color={isActive ? '#ffffff' : '#00490e'}
+                      fill={isActive ? '#ffffff' : 'none'}
+                    />
+                  </View>
+                  <Text
+                    className={`font-jakarta-sans text-sm font-bold mt-1 ${
+                      isActive ? 'text-primary' : 'text-on-surface-variant'
+                    }`}
+                  >
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
 
@@ -147,6 +156,7 @@ export function HomeScreen() {
             {SPECIAL_OFFERS.map((offer) => (
               <TouchableOpacity
                 key={offer.id}
+                onPress={() => Alert.alert('Offer', `Offer clicked: ${offer.title}`)}
                 className="w-80 h-48 rounded-3xl overflow-hidden shadow-lg relative active:scale-[0.98]"
               >
                 <Image
@@ -185,7 +195,13 @@ export function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {isLoading ? (
+          {!hasCoordinates ? (
+            <View className="items-center justify-center my-10">
+              <Text className="text-on-surface-variant font-medium">
+                Select an address to see nearby restaurants
+              </Text>
+            </View>
+          ) : isLoading ? (
             <ActivityIndicator size="large" color="#00490e" />
           ) : error ? (
             <Text className="text-error text-center my-4">
@@ -229,7 +245,7 @@ export function HomeScreen() {
                             : 'New'}
                         </Text>
                         <Text className="font-inter text-xs text-on-surface-variant">
-                          (500+)
+                          ({restaurant.reviewCount || 0}+)
                         </Text>
                       </View>
                       {restaurant.deliveryFee === 0 && (
@@ -251,7 +267,8 @@ export function HomeScreen() {
                         </TouchableOpacity>
                       </View>
                       <Text className="font-inter text-sm text-on-surface-variant mb-3">
-                        {restaurant.cuisineType || 'Cuisine'} • Gourmet
+                        {restaurant.cuisineType || 'Cuisine'}
+                        {restaurant.rating && restaurant.rating >= 4.5 ? ' • Gourmet' : ''}
                       </Text>
 
                       <View className="flex-row items-center gap-3">
