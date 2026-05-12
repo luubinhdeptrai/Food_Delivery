@@ -9,17 +9,18 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
-  ArrowLeft,
+  X,
+  Share2,
   Heart,
-  Flame,
+  Check,
   Minus,
   Plus,
-  ShoppingBag,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatCurrency } from '@/src/lib/format-utils';
 import { MenuItemDetailScreenProps, ModifierGroup } from '../types';
 import { useMenuItem, useMenuItemModifiers } from '../api/restaurant-api';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export function MenuItemDetailScreen({
   itemId,
@@ -35,21 +36,12 @@ export function MenuItemDetailScreen({
   const { data: item, isLoading: isLoadingItem } = useMenuItem(itemId);
   const { data: modifierGroups, isLoading: isLoadingModifiers } = useMenuItemModifiers(itemId);
 
-  // Sync favorited state from server
-  React.useEffect(() => {
-    if (item) {
-      // setIsFavorited(!!item.isFavorited); // Assuming API might have this
-    }
-  }, [item]);
-
   const toggleOption = (optionId: string, group: ModifierGroup) => {
     setSelectedOptionIds(prev => {
       const isSelected = prev.includes(optionId);
       
-      // If it's a radio group (maxSelections = 1)
       if (group.maxSelections === 1) {
         if (isSelected) {
-          // If optional, allow deselection
           if (group.minSelections === 0) {
             return prev.filter(id => id !== optionId);
           }
@@ -60,11 +52,9 @@ export function MenuItemDetailScreen({
         return [...filtered, optionId];
       }
       
-      // If it's a checkbox group
       if (isSelected) {
         return prev.filter(id => id !== optionId);
       } else {
-        // Check if we hit max selections
         const optionsInGroupCount = prev.filter(id => group.options.some(o => o.id === id)).length;
         if (optionsInGroupCount < group.maxSelections) {
           return [...prev, optionId];
@@ -115,7 +105,7 @@ export function MenuItemDetailScreen({
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-surface">
-        <ActivityIndicator size="large" color="#0d631b" />
+        <ActivityIndicator size="large" color="#00490e" />
       </View>
     );
   }
@@ -125,7 +115,7 @@ export function MenuItemDetailScreen({
       <View className="flex-1 items-center justify-center bg-surface">
         <Text className="text-on-surface">Item not found</Text>
         <TouchableOpacity onPress={onBack} className="mt-4">
-          <Text className="text-primary">Go Back</Text>
+          <Text className="text-primary font-bold">Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -135,172 +125,166 @@ export function MenuItemDetailScreen({
     <View className="flex-1 bg-background font-inter text-on-surface">
       <StatusBar barStyle="dark-content" />
       
-      {/* Top App Bar */}
-      <View 
-        className="absolute top-0 w-full z-50 flex-row items-center justify-between px-6 bg-surface/80 backdrop-blur-xl"
-        style={{ paddingTop: insets.top, height: insets.top + 60 }}
-      >
-        <TouchableOpacity 
-          onPress={onBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-highest active:scale-95"
-        >
-          <ArrowLeft size={24} color="#1a1c1c" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          onPress={() => {
-            setIsFavorited(!isFavorited);
-            onFavoriteToggle?.(itemId);
-          }}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-highest active:scale-95"
-        >
-          <Heart 
-            size={24} 
-            color="#1a1c1c" 
-            fill={isFavorited ? "#1a1c1c" : "none"} 
-          />
-        </TouchableOpacity>
+      {/* Hero Image Area with Overlaid Navigation */}
+      <View className="relative w-full h-72 shrink-0">
+        <Image 
+          source={{ uri: item.imageUrl }}
+          className="w-full h-full rounded-b-xl"
+          contentFit="cover"
+        />
+        <View className="absolute top-0 w-full flex-row justify-between items-start px-4 py-6" style={{ paddingTop: insets.top + 10 }}>
+          <TouchableOpacity 
+            onPress={onBack}
+            className="bg-surface/80 backdrop-blur-md rounded-full p-2 shadow-sm active:bg-surface-container-highest"
+          >
+            <X size={24} color="#1a1c1c" />
+          </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <TouchableOpacity 
+              className="bg-surface/80 backdrop-blur-md rounded-full p-2 shadow-sm active:bg-surface-container-highest"
+            >
+              <Share2 size={24} color="#1a1c1c" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => {
+                setIsFavorited(!isFavorited);
+                onFavoriteToggle?.(itemId);
+              }}
+              className="bg-surface/80 backdrop-blur-md rounded-full p-2 shadow-sm active:bg-surface-container-highest"
+            >
+              <Heart 
+                size={24} 
+                color={isFavorited ? "#ba1a1a" : "#1a1c1c"} 
+                fill={isFavorited ? "#ba1a1a" : "none"} 
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Product Header Information */}
+      <View className="px-6 pt-6 pb-8 bg-surface rounded-t-xl -mt-6 relative z-20 flex-row justify-between items-start">
+        <View className="flex-1">
+          <Text className="font-jakarta-sans text-3xl font-bold text-on-surface mb-1">
+            {item.name}
+          </Text>
+          <Text className="text-on-surface-variant font-inter text-sm">
+            {item.description}
+          </Text>
+        </View>
+        <View className="text-right flex flex-col items-end">
+          <Text className="font-jakarta-sans text-2xl font-bold text-primary">
+            {formatCurrency(item.price)}
+          </Text>
+          <Text className="text-on-surface-variant text-xs mt-1">Base Price</Text>
+        </View>
       </View>
 
       <ScrollView 
-        className="flex-1"
-        contentContainerStyle={{ 
-          paddingTop: insets.top + 70,
-          paddingBottom: insets.bottom + 100 
-        }}
+        className="flex-1 px-4 pt-4"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
       >
-        {/* Hero Image */}
-        {item.imageUrl && (
-          <View className="px-4 mb-8">
-            <View className="w-full h-80 rounded-3xl overflow-hidden shadow-sm bg-surface-container-low border border-surface-variant/20">
-              <Image 
-                source={{ uri: item.imageUrl }}
-                className="w-full h-full"
-                contentFit="cover"
-                transition={200}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Product Info */}
-        <View className="px-6 flex-col gap-6">
-          <View className="flex-row justify-between items-start">
-            <View className="flex-1 pr-4">
-              <Text className="font-jakarta-sans font-bold text-3xl text-on-surface tracking-tight mb-2">
-                {item.name}
-              </Text>
-              {item.tags?.includes('popular') && (
-                <View className="flex-row">
-                  <View className="flex-row items-center gap-1 bg-surface-container-high px-2 py-1 rounded-md">
-                    <Flame size={14} color="#8b5000" fill="#8b5000" />
-                    <Text className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                      Popular
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-            <Text className="font-jakarta-sans font-extrabold text-2xl text-secondary">
-              {formatCurrency(item.price)}
-            </Text>
-          </View>
-
-          <Text className="font-inter text-base text-on-surface-variant leading-6">
-            {item.description}
-          </Text>
-
-          <View className="h-[1px] bg-surface-container my-2" />
-
-          {/* Quantity Selection */}
-          <View className="flex-row justify-between items-center bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/15">
-            <Text className="font-jakarta-sans font-semibold text-lg text-on-surface">Quantity</Text>
-            <View className="flex-row items-center gap-4 bg-surface-container-high rounded-full px-2 py-1">
-              <TouchableOpacity 
-                onPress={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-10 h-10 items-center justify-center rounded-full active:bg-surface-container-highest"
-              >
-                <Minus size={20} color="#0d631b" />
-              </TouchableOpacity>
-              <Text className="font-jakarta-sans font-bold text-lg w-6 text-center">{quantity}</Text>
-              <TouchableOpacity 
-                onPress={() => setQuantity(quantity + 1)}
-                className="w-10 h-10 items-center justify-center rounded-full active:bg-surface-container-highest"
-              >
-                <Plus size={20} color="#0d631b" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
+        <View className="space-y-10">
           {/* Modifier Groups */}
           {modifierGroups?.map((group) => (
-            <View key={group.id} className="mt-4">
-              <View className="flex-row justify-between items-end mb-4">
-                <Text className="font-jakarta-sans font-semibold text-lg">{group.name}</Text>
-                <Text className="font-inter text-xs text-on-surface-variant">
-                  {group.minSelections > 0 ? `Required • Select up to ${group.maxSelections}` : `Optional • Select up to ${group.maxSelections}`}
+            <View key={group.id} className="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
+              <View className="flex-row justify-between items-baseline mb-6">
+                <Text className="font-jakarta-sans text-xl font-semibold text-on-surface">
+                  {group.name}
                 </Text>
+                <View className="bg-surface-container px-3 py-1 rounded-full">
+                  <Text className="text-[11px] font-medium text-on-surface-variant">
+                    {group.minSelections > 0 ? 'Required' : 'Optional'}, max {group.maxSelections}
+                  </Text>
+                </View>
               </View>
-              <View className="flex-col gap-3">
+              
+              <View className="space-y-4">
                 {group.options.map((option) => {
                   const isSelected = selectedOptionIds.includes(option.id);
+                  const isRadio = group.maxSelections === 1;
+                  
                   return (
                     <TouchableOpacity 
                       key={option.id}
                       onPress={() => toggleOption(option.id, group)}
                       disabled={!option.isAvailable}
-                      className={`flex-row items-center justify-between bg-surface-container-lowest p-4 rounded-2xl border ${
-                        isSelected ? 'border-primary bg-primary-fixed-dim/5' : 'border-outline-variant/15'
-                      } ${!option.isAvailable ? 'opacity-50' : ''} active:bg-surface-container-low`}
+                      className={`flex-row items-center justify-between group py-1 ${!option.isAvailable ? 'opacity-50' : ''}`}
                     >
-                      <View className="flex-1">
-                        <Text className={`font-inter font-medium text-sm ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
+                      <View className="flex-row items-center space-x-4 flex-1">
+                        <View className={`relative flex items-center justify-center w-6 h-6 border border-outline-variant bg-surface ${
+                          isRadio ? 'rounded-full' : 'rounded'
+                        } ${isSelected ? 'border-primary' : ''}`}>
+                          {isSelected && (
+                            isRadio ? (
+                              <View className="w-3 h-3 rounded-full bg-primary" />
+                            ) : (
+                              <Check size={14} color="#00490e" strokeWidth={3} />
+                            )
+                          )}
+                        </View>
+                        <Text className="font-inter text-base text-on-surface ml-4">
                           {option.name}
                         </Text>
-                        {!option.isAvailable && (
-                          <Text className="text-xs text-error font-medium">Sold Out</Text>
-                        )}
                       </View>
-                      <View className="flex-row items-center gap-3">
-                        {option.price > 0 && (
-                          <Text className="font-inter text-secondary text-xs font-bold">+{formatCurrency(option.price)}</Text>
-                        )}
-                        <View className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
-                          isSelected ? 'border-primary bg-primary' : 'border-outline-variant'
-                        }`}>
-                          {isSelected && <View className="w-2.5 h-2.5 rounded-full bg-white" />}
-                        </View>
-                      </View>
+                      {option.price > 0 && (
+                        <Text className="font-inter text-sm font-medium text-on-surface-variant">
+                          +{formatCurrency(option.price)}
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
           ))}
+
+          {/* Quantity Section */}
+          <View className="bg-surface-container-lowest rounded-xl p-6 shadow-sm flex-row justify-between items-center mb-10">
+            <Text className="font-jakarta-sans text-xl font-semibold text-on-surface">Quantity</Text>
+            <View className="flex-row items-center bg-surface-container-low rounded-full px-2 py-1 h-14">
+              <TouchableOpacity 
+                onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                className="w-10 h-10 rounded-full items-center justify-center active:bg-surface-container-high"
+              >
+                <Minus size={20} color="#1a1c1c" />
+              </TouchableOpacity>
+              <Text className="font-jakarta-sans font-semibold text-lg px-4 text-on-surface w-12 text-center">
+                {quantity}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => setQuantity(quantity + 1)}
+                className="w-10 h-10 rounded-full items-center justify-center bg-primary-fixed/20 active:bg-primary-fixed/40"
+              >
+                <Plus size={20} color="#00490e" />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
 
-      {/* Action Bar */}
+      {/* Sticky Bottom Action Bar */}
       <View 
-        className="absolute bottom-0 left-0 w-full p-4 bg-surface/80 backdrop-blur-xl border-t-0 shadow-[0_-8px_32px_rgba(26,28,28,0.08)] z-50 rounded-t-xl sm:px-6"
-        style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+        className="absolute bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl pb-8 pt-4 px-6 shadow-lg rounded-t-xl border-t border-surface-container-high/50"
+        style={{ paddingBottom: Math.max(insets.bottom, 24) }}
       >
         <TouchableOpacity 
           onPress={handleAddToCart}
           disabled={!areRequiredModifiersSelected}
-          className={`w-full flex-row items-center justify-center gap-3 rounded-full py-4 shadow-lg active:scale-[0.98] ${
-            areRequiredModifiersSelected ? 'bg-primary' : 'bg-on-surface/20'
-          }`}
+          activeOpacity={0.9}
         >
-          <ShoppingBag size={24} color={areRequiredModifiersSelected ? "#ffffff" : "#707a6c"} />
-          <Text className={`font-jakarta-sans font-bold text-lg ${
-            areRequiredModifiersSelected ? 'text-white' : 'text-on-surface-variant'
-          }`}>
-            {areRequiredModifiersSelected 
-              ? `Add to Cart • ${formatCurrency(calculateTotal())}`
-              : 'Select required options'}
-          </Text>
+          <LinearGradient
+            colors={['#00490e', '#0d631b']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            className="w-full h-14 rounded-full flex-row items-center justify-center"
+            style={{ opacity: areRequiredModifiersSelected ? 1 : 0.6 }}
+          >
+            <Text className="text-white font-jakarta-sans font-bold text-lg">
+              Add to Cart - {formatCurrency(calculateTotal())}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
