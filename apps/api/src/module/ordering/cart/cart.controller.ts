@@ -160,7 +160,7 @@ export class CartController {
     summary: 'Replace modifier selections on a cart line item',
     description:
       'Replaces the selectedModifiers of a specific cart line item with the resolved ' +
-      'result of selectedOptions.  Replace semantics: send the full desired modifier state.  ' +
+      'result of selectedModifiers.  Replace semantics: send the full desired modifier state.  ' +
       'Sending [] clears all modifiers (valid only when no group requires minSelections > 0).  ' +
       'quantity is NEVER modified by this endpoint.',
   })
