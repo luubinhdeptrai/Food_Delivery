@@ -46,6 +46,9 @@
         }
       ]
     ],
+    "extra": {
+      "photonBaseUrl": "https://photon.komoot.io"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

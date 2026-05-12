@@ -1,0 +1,138 @@
+import Constants from 'expo-constants';
+
+type PhotonExtras = {
+  photonBaseUrl?: string;
+};
+
+const DEFAULT_PHOTON_URL = 'https://photon.komoot.io';
+
+const getPhotonBaseUrl = () => {
+  const extra = Constants.expoConfig?.extra as PhotonExtras | undefined;
+  const baseUrl = extra?.photonBaseUrl || DEFAULT_PHOTON_URL;
+  return baseUrl.replace(/\/+$/, '');
+};
+
+const PHOTON_BASE_URL = getPhotonBaseUrl();
+
+interface PhotonProperties {
+  name?: string;
+  street?: string;
+  housenumber?: string;
+  postcode?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  osm_id?: number | string;
+  osm_type?: string;
+}
+
+interface PhotonFeature {
+  properties?: PhotonProperties;
+  geometry?: {
+    type: string;
+    coordinates: [number, number];
+  };
+}
+
+interface PhotonResponse {
+  features?: PhotonFeature[];
+}
+
+export interface PhotonSearchResult {
+  id: string;
+  label: string;
+  subtitle: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface PhotonSearchOptions {
+  limit?: number;
+  lang?: string;
+  lat?: number;
+  lon?: number;
+  signal?: AbortSignal;
+}
+
+const formatPhotonResult = (
+  feature: PhotonFeature,
+  index: number,
+): PhotonSearchResult | null => {
+  const properties = feature.properties;
+  const coords = feature.geometry?.coordinates;
+
+  if (!properties || !coords || coords.length < 2) {
+    return null;
+  }
+
+  const streetLine = [properties.street, properties.housenumber]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  const label =
+    properties.name ||
+    streetLine ||
+    properties.city ||
+    properties.state ||
+    properties.country ||
+    'Unknown location';
+
+  const subtitleParts = [
+    properties.name && streetLine && properties.name !== streetLine
+      ? streetLine
+      : null,
+    properties.postcode,
+    properties.city,
+    properties.state,
+    properties.country,
+  ].filter(Boolean) as string[];
+
+  const subtitle = subtitleParts.join(', ');
+
+  const id = `${properties.osm_type || 'osm'}-${properties.osm_id || index}`;
+  const [longitude, latitude] = coords; // Photon returns [lon, lat].
+
+  return {
+    id,
+    label,
+    subtitle,
+    latitude,
+    longitude,
+  };
+};
+
+export async function searchPhoton(
+  query: string,
+  options: PhotonSearchOptions = {},
+): Promise<PhotonSearchResult[]> {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    q: trimmedQuery,
+    limit: String(options.limit ?? 6),
+  });
+
+  if (options.lang) {
+    params.set('lang', options.lang);
+  }
+
+  if (options.lat !== undefined && options.lon !== undefined) {
+    params.set('lat', String(options.lat));
+    params.set('lon', String(options.lon));
+  }
+
+  const url = `${PHOTON_BASE_URL}/api?${params.toString()}`;
+
+  const response = await fetch(url, { signal: options.signal });
+  if (!response.ok) {
+    throw new Error(`Photon search failed (${response.status})`);
+  }
+
+  const data = (await response.json()) as PhotonResponse;
+  const results = data.features?.map(formatPhotonResult).filter(Boolean) || [];
+  return results as PhotonSearchResult[];
+}

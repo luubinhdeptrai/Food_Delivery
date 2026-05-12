@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 
-interface Coordinates {
-  latitude: number;
-  longitude: number;
-}
+import type { Coordinates } from '../types';
 
 interface AddressState {
   selectedAddress: string;

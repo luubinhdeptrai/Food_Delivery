@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
-import * as Location from 'expo-location';
-import {
-  Search,
-  Navigation,
-  ChevronRight,
-  Plus,
-} from 'lucide-react-native';
+import { Search, Navigation, ChevronRight, Plus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAddressStore } from '../store/address-store';
+import { useAddressSearch, useCurrentLocation } from '../hooks';
 import {
   AddressSelectionHeader,
+  SearchResultItem,
   SavedAddressItem,
   RecentSearchItem,
 } from '../components';
@@ -27,80 +23,56 @@ import {
 export function AddressSelectionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { setSelectedAddress } = useAddressStore();
-  const [isLocating, setIsLocating] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const { setSelectedAddress, latitude, longitude } = useAddressStore();
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    results: searchResults,
+    isSearching,
+    error: searchError,
+    shouldSearch,
+    clearError: clearSearchError,
+  } = useAddressSearch({ latitude, longitude });
+  const {
+    isLocating,
+    error: locationError,
+    locate: locateCurrentLocation,
+    clearError: clearLocationError,
+  } = useCurrentLocation();
 
-  const handleSelectAddress = (address: string) => {
-    setSelectedAddress(address);
-    setLocationError(null);
+  const handleSelectAddress = (
+    address: string,
+    coords?: { latitude: number; longitude: number } | null,
+  ) => {
+    setSelectedAddress(address, coords);
+    clearLocationError();
+    clearSearchError();
     router.back();
   };
 
   const handleUseCurrentLocation = async () => {
-    if (isLocating) {
+    const result = await locateCurrentLocation();
+    if (!result) {
       return;
     }
 
-    setIsLocating(true);
-    setLocationError(null);
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationError('Location permission denied.');
-        return;
-      }
-
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const { latitude, longitude } = position.coords;
-
-      let label = 'Current Location';
-      try {
-        const [place] = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
-        if (place) {
-          const parts = [
-            place.name,
-            place.street,
-            place.city,
-            place.region,
-            place.postalCode,
-          ].filter(Boolean);
-          if (parts.length > 0) {
-            label = parts.join(', ');
-          }
-        }
-      } catch {
-        // Reverse geocoding can fail; keep the fallback label.
-      }
-
-      setSelectedAddress(label, { latitude, longitude });
-      router.back();
-    } catch {
-      setLocationError('Unable to get current location.');
-    } finally {
-      setIsLocating(false);
-    }
+    setSelectedAddress(result.label, result.coords);
+    router.back();
   };
 
   return (
     <View className="flex-1 bg-background">
-      <AddressSelectionHeader 
-        onBack={() => router.back()} 
-        insetsTop={insets.top} 
+      <AddressSelectionHeader
+        onBack={() => router.back()}
+        insetsTop={insets.top}
       />
 
-      <ScrollView 
+      <ScrollView
         className="flex-1"
-        contentContainerStyle={{ 
-          paddingTop: insets.top + 70, 
+        contentContainerStyle={{
+          paddingTop: insets.top + 70,
           paddingBottom: insets.bottom + 100,
-          paddingHorizontal: 24 
+          paddingHorizontal: 24,
         }}
         showsVerticalScrollIndicator={false}
       >
@@ -110,16 +82,54 @@ export function AddressSelectionScreen() {
             <View className="absolute left-4 z-10 pointer-events-none">
               <Search size={20} color="#40493d" />
             </View>
-            <TextInput 
+            <TextInput
               className="w-full h-14 pl-12 pr-4 bg-surface-container-high rounded-xl font-jakarta-sans font-medium text-sm text-on-surface"
               placeholder="Search for area, street, or landmark"
               placeholderTextColor="#40493d"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
         </View>
 
+        {shouldSearch ? (
+          <View className="mb-8">
+            {isSearching ? (
+              <View className="flex-row items-center gap-2 py-2">
+                <ActivityIndicator size="small" color="#00490e" />
+                <Text className="text-xs text-on-surface-variant">
+                  Searching addresses...
+                </Text>
+              </View>
+            ) : null}
+            {searchError ? (
+              <Text className="text-xs text-red-600 mb-2">{searchError}</Text>
+            ) : null}
+            {!isSearching && !searchError && searchResults.length === 0 ? (
+              <Text className="text-xs text-on-surface-variant mb-2">
+                No matches found.
+              </Text>
+            ) : null}
+            <View className="gap-2">
+              {searchResults.map((result) => (
+                <SearchResultItem
+                  key={result.id}
+                  title={result.label}
+                  subtitle={result.subtitle}
+                  onPress={() =>
+                    handleSelectAddress(result.label, {
+                      latitude: result.latitude,
+                      longitude: result.longitude,
+                    })
+                  }
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {/* Current Location Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={handleUseCurrentLocation}
           disabled={isLocating}
           className="flex-row items-center gap-4 p-5 bg-surface-container-lowest rounded-2xl mb-2 shadow-sm active:bg-surface-container"
@@ -136,7 +146,9 @@ export function AddressSelectionScreen() {
               {isLocating ? 'Fetching your location' : 'Use current location'}
             </Text>
             <Text className="text-sm text-on-surface-variant">
-              {isLocating ? 'This may take a moment' : 'Using GPS for better accuracy'}
+              {isLocating
+                ? 'This may take a moment'
+                : 'Using GPS for better accuracy'}
             </Text>
           </View>
           <ChevronRight size={20} color="#bfcaba" />
@@ -149,8 +161,10 @@ export function AddressSelectionScreen() {
 
         {/* Map Visualization */}
         <View className="mb-10 h-40 w-full rounded-2xl overflow-hidden relative shadow-sm border border-surface-variant/10">
-          <Image 
-            source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuBhzmhZKCUolF2XW75TN31tPXR3P6XddNn-Q5QoXW1Q18LTMrjJrBH4G96BNKcwqpTJWIajE0yAoL29FcQoGgmcxjJ6PimsFLHyeRyiF05iH6SWiR7heKDtrSnWdYCD7pc5fl3k9IBuFeKioKVZt7zU4qTpzPqmXXrKSbf6TyIEPPquFOh_ztp0miFrwsHFk5BItRZfJMOD9oTVa5yAjiO46wMHPj6rf4Is6DLNkpGqKtdhz-qYlNMc9yZDOe2IalF3Z3_HeIJfcho8" }}
+          <Image
+            source={{
+              uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBhzmhZKCUolF2XW75TN31tPXR3P6XddNn-Q5QoXW1Q18LTMrjJrBH4G96BNKcwqpTJWIajE0yAoL29FcQoGgmcxjJ6PimsFLHyeRyiF05iH6SWiR7heKDtrSnWdYCD7pc5fl3k9IBuFeKioKVZt7zU4qTpzPqmXXrKSbf6TyIEPPquFOh_ztp0miFrwsHFk5BItRZfJMOD9oTVa5yAjiO46wMHPj6rf4Is6DLNkpGqKtdhz-qYlNMc9yZDOe2IalF3Z3_HeIJfcho8',
+            }}
             className="w-full h-full opacity-90"
             contentFit="cover"
           />
@@ -166,21 +180,23 @@ export function AddressSelectionScreen() {
         {/* Saved Addresses */}
         <View className="mb-10">
           <View className="flex-row items-center justify-between mb-4">
-            <Text className="font-jakarta-sans font-bold text-lg text-on-surface">Saved Addresses</Text>
+            <Text className="font-jakarta-sans font-bold text-lg text-on-surface">
+              Saved Addresses
+            </Text>
             <TouchableOpacity>
               <Text className="text-primary text-sm font-bold">View All</Text>
             </TouchableOpacity>
           </View>
 
           <View className="gap-4">
-            <SavedAddressItem 
+            <SavedAddressItem
               type="home"
               label="Home"
               address="1242 Orchard Lane, Green Valley"
               onPress={() => handleSelectAddress('1242 Orchard Lane')}
             />
             <View className="h-4" />
-            <SavedAddressItem 
+            <SavedAddressItem
               type="work"
               label="Creative Studio"
               address="88 Artisans Way, Suite 400"
@@ -191,13 +207,15 @@ export function AddressSelectionScreen() {
 
         {/* Recent Searches */}
         <View className="mb-8">
-          <Text className="font-jakarta-sans font-bold text-lg text-on-surface mb-4">Recent Searches</Text>
+          <Text className="font-jakarta-sans font-bold text-lg text-on-surface mb-4">
+            Recent Searches
+          </Text>
           <View className="gap-2">
-            <RecentSearchItem 
+            <RecentSearchItem
               address="241 Maple Avenue, North Hills"
               onPress={() => handleSelectAddress('241 Maple Avenue')}
             />
-            <RecentSearchItem 
+            <RecentSearchItem
               address="Farmers Market Plaza, Downtown"
               onPress={() => handleSelectAddress('Farmers Market Plaza')}
             />
@@ -206,13 +224,15 @@ export function AddressSelectionScreen() {
       </ScrollView>
 
       {/* Fixed Footer */}
-      <View 
+      <View
         className="fixed bottom-0 left-0 w-full p-6 bg-white/90 backdrop-blur-xl border-t border-surface-variant/20"
         style={{ paddingBottom: Math.max(insets.bottom, 24) }}
       >
         <TouchableOpacity className="w-full bg-primary h-14 rounded-full flex-row items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98]">
           <Plus size={24} color="#ffffff" />
-          <Text className="text-on-primary font-bold text-base">Add New Address</Text>
+          <Text className="text-on-primary font-bold text-base">
+            Add New Address
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
