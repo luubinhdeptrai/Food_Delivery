@@ -2,7 +2,7 @@
 
 > **Document Type:** Living Design Document (Pre-Implementation)
 > **Author Role:** Senior Software Architect
-> **Status:** Proposal — Awaiting Review ⏳
+> **Status:** PR-1 ✅ Implemented | PR-2 ✅ Implemented | PR-3–PR-6 ⏳ Planned
 > **Target Project:** `SoLi-Food-Order-and-Deliver-App` / `apps/api`
 > **Depends On:** Ordering BC (Phases 0–7), Payment BC (Phase 8), Notification BC (Phase N)
 > **Verified Against:** Full codebase audit of all 7 BCs — `order.schema.ts`, `cart.service.ts`, `place-order.handler.ts`, `payment.service.ts`, `notification.service.ts`, `order-placed.handler.ts`, `menu.schema.ts`, `restaurant.schema.ts`
@@ -1429,7 +1429,9 @@ E2E tests seed promotion data directly into the `promotions` table using the exi
 
 ## 17. Phase-by-Phase Roadmap
 
-### Phase PR-1 — Foundation (Schema + Engine)
+### Phase PR-1 — Foundation (Schema + Engine) ✅ IMPLEMENTED
+
+> **Completed:** All deliverables implemented, 42/42 E2E tests passing, TypeScript clean.
 
 **Goal:** Database tables and pure pricing engine. No behavioral changes to checkout.
 
@@ -1445,7 +1447,9 @@ E2E tests seed promotion data directly into the `promotions` table using the exi
 
 **Test milestone:** `PromotionPricingEngine` unit tests — all discount types passing.
 
-### Phase PR-2 — Admin CRUD
+### Phase PR-2 — Admin CRUD ✅ IMPLEMENTED
+
+> **Completed:** All deliverables implemented, 42/42 E2E tests passing, TypeScript clean.
 
 **Goal:** Platform admin and restaurant owner can create/manage promotions via REST API.
 
