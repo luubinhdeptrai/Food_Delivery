@@ -7,6 +7,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   imageUrl: string;
+  selectedModifiers?: SelectedModifierResponse[];
 }
 
 export interface OrderSummary {

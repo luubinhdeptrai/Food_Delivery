@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Tag } from 'lucide-react-native';
+import { formatCurrency } from '@/src/lib/format-utils';
 import type { OrderSummary } from '../types';
 
 interface OrderSummaryCardProps {
@@ -57,7 +58,7 @@ export function OrderSummaryCard({ summary }: OrderSummaryCardProps) {
             >
               Add{' '}
               <Text style={{ fontFamily: 'Inter_600SemiBold' }}>
-                ${summary.remainingForDiscount.toFixed(2)}
+                {formatCurrency(summary.remainingForDiscount)}
               </Text>{' '}
               more for a{' '}
               <Text style={{ fontFamily: 'Inter_600SemiBold' }}>
@@ -69,17 +70,17 @@ export function OrderSummaryCard({ summary }: OrderSummaryCardProps) {
 
       <View className="h-px bg-surface-container" />
 
-      <SummaryRow label="Subtotal" value={`$${summary.subtotal.toFixed(2)}`} />
+      <SummaryRow label="Subtotal" value={formatCurrency(summary.subtotal)} />
       {hasDiscount && (
         <SummaryRow
           label="Discount"
-          value={`-$${summary.discount.toFixed(2)}`}
+          value={`-${formatCurrency(summary.discount)}`}
           highlight
         />
       )}
       <SummaryRow
         label="Delivery"
-        value={summary.delivery === 0 ? 'Free' : `$${summary.delivery.toFixed(2)}`}
+        value={summary.delivery === 0 ? 'Free' : formatCurrency(summary.delivery)}
       />
 
       <View className="h-px bg-surface-container" />
@@ -96,7 +97,7 @@ export function OrderSummaryCard({ summary }: OrderSummaryCardProps) {
           className="text-primary text-xl"
           style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
         >
-          ${summary.total.toFixed(2)}
+          {formatCurrency(summary.total)}
         </Text>
       </View>
     </View>

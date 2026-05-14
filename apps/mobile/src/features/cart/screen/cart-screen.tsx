@@ -15,13 +15,14 @@ import { CartItemCard } from '@/src/features/cart/components/cart-item-card';
 import { OrderSummaryCard } from '@/src/features/cart/components/order-summary-card';
 import { EmptyCart } from '@/src/features/cart/components/empty-cart';
 import type { CartItem, CartScreenProps } from '@/src/features/cart/types';
+import { formatCurrency } from '@/src/lib/format-utils';
 import { useMyCart, useUpdateCartItemQuantity, useRemoveCartItem } from '../api/cart-api';
 
 // ─── Pricing Logic ─────────────────────────────────────────────────────────────
 
-const DISCOUNT_THRESHOLD = 30;
-const DISCOUNT_PERCENT = 15;
-const DELIVERY_FEE = 0;
+const DISCOUNT_THRESHOLD = 500000; // 500k VND
+const DISCOUNT_PERCENT = 10; // 10%
+const DELIVERY_FEE = 15000; // 15k VND
 
 function computeOrderSummary(subtotal: number) {
   const remaining = Math.max(0, DISCOUNT_THRESHOLD - subtotal);
@@ -59,6 +60,7 @@ export function CartScreen({
     price: item.unitPrice,
     quantity: item.quantity,
     imageUrl: '', // Backend doesn't provide imageUrl for cart items yet
+    selectedModifiers: item.selectedModifiers,
   }));
 
   const summary = computeOrderSummary(cart?.totalAmount || 0);
@@ -201,7 +203,7 @@ export function CartScreen({
                 className="text-primary text-[15px]"
                 style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
               >
-                ${summary.total.toFixed(2)}
+                {formatCurrency(summary.total)}
               </Text>
             </View>
           </TouchableOpacity>

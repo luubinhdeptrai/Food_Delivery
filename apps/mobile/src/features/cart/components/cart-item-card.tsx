@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Minus, Plus, Trash2 } from 'lucide-react-native';
+import { formatCurrency } from '@/src/lib/format-utils';
 import type { CartItem } from '../types';
 
 interface CartItemCardProps {
@@ -47,6 +48,20 @@ export function CartItemCard({
             >
               {item.subtitle}
             </Text>
+            {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+              <View className="mt-1 gap-0.5">
+                {item.selectedModifiers.map((mod) => (
+                  <Text
+                    key={mod.optionId}
+                    className="text-on-surface-variant text-[11px]"
+                    style={{ fontFamily: 'Inter_400Regular' }}
+                  >
+                    • {mod.optionName}
+                    {mod.price > 0 ? ` (+${formatCurrency(mod.price)})` : ''}
+                  </Text>
+                ))}
+              </View>
+            )}
           </View>
           <TouchableOpacity
             onPress={() => onRemove(item.id)}
@@ -63,7 +78,7 @@ export function CartItemCard({
             className="text-primary text-base"
             style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
           >
-            ${(item.price * item.quantity).toFixed(2)}
+            {formatCurrency(item.price * item.quantity)}
           </Text>
 
           {/* Quantity stepper */}
