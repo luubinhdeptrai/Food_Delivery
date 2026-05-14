@@ -3129,7 +3129,7 @@ async function seedDeviceTokens() {
   const rows = [
     // ── Active tokens ──────────────────────────────────────────────────────────
     {
-      id: 'dt000001-0000-4000-8000-000000000001',
+      id: 'da000001-0000-4000-8000-000000000001',
       userId: IDS.customerUserId,
       token: 'ExponentPushToken[customer-ios-test-001]',
       platform: 'ios' as const,
@@ -3137,7 +3137,7 @@ async function seedDeviceTokens() {
       lastSeenAt: now,
     },
     {
-      id: 'dt000002-0000-4000-8000-000000000002',
+      id: 'da000002-0000-4000-8000-000000000002',
       userId: IDS.customerUserId,
       token: 'ExponentPushToken[customer-android-test-002]',
       platform: 'android' as const,
@@ -3145,7 +3145,7 @@ async function seedDeviceTokens() {
       lastSeenAt: now,
     },
     {
-      id: 'dt000003-0000-4000-8000-000000000003',
+      id: 'da000003-0000-4000-8000-000000000003',
       userId: IDS.ownerUserId,
       token: 'ExponentPushToken[owner1-ios-test-003]',
       platform: 'ios' as const,
@@ -3155,7 +3155,7 @@ async function seedDeviceTokens() {
     // ── Inactive token (recent — within 30d INACTIVE_TTL, NOT deleted by cron) ──
     // Simulates a device that FCM rejected last week (e.g. user reinstalled app).
     {
-      id: 'dt000004-0000-4000-8000-000000000004',
+      id: 'da000004-0000-4000-8000-000000000004',
       userId: IDS.customerUserId,
       token: 'ExponentPushToken[customer-old-web-004]',
       platform: 'web' as const,
@@ -3166,7 +3166,7 @@ async function seedDeviceTokens() {
     // Simulates owner2's old device that was deregistered 45 days ago.
     // DeviceTokenCleanupTask.deleteStaleInactive() will remove this row.
     {
-      id: 'dt000005-0000-4000-8000-000000000005',
+      id: 'da000005-0000-4000-8000-000000000005',
       userId: IDS.owner2UserId,
       token: 'ExponentPushToken[owner2-stale-android-005]',
       platform: 'android' as const,
