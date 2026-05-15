@@ -1,16 +1,23 @@
 import { apiClient } from '@/lib/api-client';
-import type { Restaurant } from './restaurant.types';
+import type { Restaurant, RestaurantListResponse } from './restaurant.types';
 import type {
   RestaurantFormValues,
   UpdateRestaurantFormValues,
 } from '../schemas/restaurant.schema';
 
 export const restaurantApi = {
-  getAll: () => apiClient.get<Restaurant[]>('/restaurants'),
-  getOne: (id: string) => apiClient.get<Restaurant>(`/restaurants/${id}`),
+  getAll: (params?: { page?: number; limit?: number }) =>
+    apiClient.get<RestaurantListResponse>('/api/restaurants', { params }),
+
+  getOne: (id: string) =>
+    apiClient.get<Restaurant>(`/api/restaurants/${id}`),
+
   create: (data: RestaurantFormValues) =>
-    apiClient.post<Restaurant>('/restaurants', data),
+    apiClient.post<Restaurant>('/api/restaurants', data),
+
   update: (id: string, data: UpdateRestaurantFormValues) =>
-    apiClient.patch<Restaurant>(`/restaurants/${id}`, data),
-  remove: (id: string) => apiClient.delete(`/restaurants/${id}`),
+    apiClient.patch<Restaurant>(`/api/restaurants/${id}`, data),
+
+  remove: (id: string) =>
+    apiClient.delete(`/api/restaurants/${id}`),
 };
