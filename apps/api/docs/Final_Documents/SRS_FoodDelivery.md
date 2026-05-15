@@ -1,13 +1,13 @@
 # Software Requirements Specification
 
-## SoLi Food Delivery Application — Phase 1
+## SoLi Food Delivery Application — Phases 1 & 2
 
 ---
 
 | Field              | Detail                                           |
 |--------------------|--------------------------------------------------|
-| **Document Title** | Software Requirements Specification — Phase 1    |
-| **Version**        | 1.5                                              |
+| **Document Title** | Software Requirements Specification — Phases 1 & 2 |
+| **Version**        | 1.6                                              |
 | **Status**         | Draft                                            |
 | **Prepared by**    | Development Team                                 |
 | **Last Modified**  | 2026-05-15                                       |
@@ -24,6 +24,7 @@
 | 1.3     | 2026-05-14 | Dev Team         | Extracted Message Rules into dedicated per-UC tables (TechMarket-aligned). Renumbered all Activity Diagrams with stable sequential numbering (removed `A`-labels). Refactored all Activity Diagrams to a single end node. Business Rules now reference message codes only — no inline message text. |
 | 1.4     | 2026-05-15 | Dev Team         | Centralized all per-UC Message Rules into one global Messages appendix (§3). Applied `<br>` line-break formatting throughout all UC header tables and Business Rules cells for improved readability. |
 | 1.5     | 2026-05-15 | Dev Team         | Added `<br>` separator between bold rule title and first ❖ bullet in all Business Rules Description cells for consistent visual separation across all 10 UCs (69 BR rows updated). |
+| 1.6     | 2026-05-15 | Dev Team         | Integrated **Phase 2 — Restaurant & Delivery Operations** (UC-11 through UC-19): Restaurant Registration & Profile Management, Manage Menu Catalog, Toggle Item & Restaurant Availability, Accept or Reject Order, Prepare Order for Pickup, Shipper Registration, Manage Shipper Availability, Accept Delivery Assignment, Deliver Order. Extended global Message Appendix (§3) with 35 new codes for `MSG-RES`, `MSG-MENU`, `MSG-AVAIL`, `MSG-LCYC`, `MSG-SHIP`, and `MSG-DEL` domains. |
 
 ---
 
@@ -37,16 +38,27 @@
    - 1.5 Notation
    - 1.6 References
 2. [Functional Requirements — Use Cases](#2-functional-requirements--use-cases)
-   - UC-1: User Authentication
-   - UC-2: Discover Restaurants & Food
-   - UC-3: View Restaurant Details
-   - UC-4: Add Item to Cart
-   - UC-5: Manage Shopping Cart
-   - UC-6: Save & Manage Delivery Addresses
-   - UC-7: Manage Delivery Zones
-   - UC-8: Place Order
-   - UC-9: Make Online Payment (VNPay)
-   - UC-10: View Order History
+   - **Phase 1 — Foundation & Customer Ordering Core**
+     - UC-1: User Authentication
+     - UC-2: Discover Restaurants & Food
+     - UC-3: View Restaurant Details
+     - UC-4: Add Item to Cart
+     - UC-5: Manage Shopping Cart
+     - UC-6: Save & Manage Delivery Addresses
+     - UC-7: Manage Delivery Zones
+     - UC-8: Place Order
+     - UC-9: Make Online Payment (VNPay)
+     - UC-10: View Order History
+   - **Phase 2 — Restaurant & Delivery Operations**
+     - UC-11: Restaurant Registration & Profile Management
+     - UC-12: Manage Menu Catalog
+     - UC-13: Toggle Item & Restaurant Availability
+     - UC-14: Accept or Reject Order
+     - UC-15: Prepare Order for Pickup
+     - UC-16: Shipper Registration
+     - UC-17: Manage Shipper Availability
+     - UC-18: Accept Delivery Assignment
+     - UC-19: Deliver Order
 3. [Appendix — Message List](#3-appendix--message-list)
 
 ---
@@ -59,7 +71,9 @@ This Software Requirements Specification (SRS) defines the functional requiremen
 
 ### 1.2 Scope
 
-Phase 1 covers the complete end-to-end ordering flow:
+This SRS covers the end-to-end ordering platform across two writing phases:
+
+**Phase 1 — Foundation & Customer Ordering Core (UC-1 through UC-10):**
 - User authentication and session management
 - Restaurant and food discovery
 - Cart management and checkout
@@ -67,7 +81,16 @@ Phase 1 covers the complete end-to-end ordering flow:
 - Order placement and VNPay online payment
 - Order history and reorder
 
-Out of scope for Phase 1: driver tracking, restaurant dashboard analytics, loyalty programs, multi-language support, and the customer address book.
+**Phase 2 — Restaurant & Delivery Operations (UC-11 through UC-19):**
+- Restaurant partner onboarding (registration, admin approval, profile management)
+- Menu catalog management (categories, items, modifier groups and options)
+- Real-time item and restaurant availability control (BR-8)
+- Order acceptance, rejection and refund-triggering cancellations
+- Order preparation and ready-for-pickup signalling
+- Shipper onboarding and online/offline availability
+- Self-assigned delivery pickup and end-to-end delivery completion
+
+Out of scope for Phases 1 – 2: customer order tracking and cancellation UCs (Phase 3), customer rating and review (Phase 3), platform-wide and restaurant promotions (Phase 3), real-time push notifications surfaces (Phase 3), payment refund processing pipeline (Phase 3), and all administrator governance UCs (Phase 4).
 
 ### 1.3 Intended Audience
 
@@ -751,9 +774,630 @@ stop
 
 ---
 
-## 3. Appendix — Message List
+### Phase 2 — Restaurant & Delivery Operations
 
-All customer- and actor-visible messages produced across every use case are listed here. Business Rules throughout §2 reference these codes only; the full message content is defined exclusively in this table.
+Phase 2 covers the operational use cases of the two supply-side actors that complete the platform: the **Restaurant Partner** (who owns the catalog and prepares orders) and the **Delivery Personnel** (also referred to as **Shipper**, who fulfils last-mile delivery). All Phase 2 use cases share the underlying `order_status` state machine introduced in Phase 1, the Restaurant–Ordering ACL snapshot mechanism (D3-B), and the same authentication and authorization stack used in Phase 1.
+
+---
+
+### UC-11: Restaurant Registration & Profile Management
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | RES-FR-01 — Restaurant Registration & Profile Management |
+| **Actor** | Restaurant Partner, Administrator |
+| **Trigger** | ❖ Restaurant Partner submits **Register Restaurant** form after signing in with role `restaurant`.<br>❖ Restaurant Partner edits restaurant profile (`PATCH /restaurants/:id`).<br>❖ Administrator approves or unapproves a restaurant (`PATCH /restaurants/:id/{approve,unapprove}`). |
+| **Description** | Registers a new restaurant entity owned by the authenticated partner, lets the owner maintain its profile (name, description, address, phone, geo-coordinates, cuisine type, logo and cover images), and lets an administrator decide whether the restaurant is publicly visible. Newly registered restaurants are created with `isApproved = false` and `isOpen = false` and remain invisible to customer discovery (UC-2) until both flags are set to `true`. Every mutation publishes a `RestaurantUpdatedEvent` that synchronises the Ordering ACL snapshot. |
+| **Pre-condition** | ❖ Actor is authenticated.<br>❖ For self-service registration and profile update: actor has role `restaurant` (or `admin`).<br>❖ For approve / unapprove: actor has role `admin`. |
+| **Post-condition** | ❖ Registration: a new `restaurants` row exists with `ownerId = session.user.id`, `isApproved = false`, `isOpen = false`; `RestaurantUpdatedEvent` is published.<br>❖ Profile update: the row reflects the new field values; `RestaurantUpdatedEvent` is published.<br>❖ Approve / unapprove: `isApproved` is set accordingly; `RestaurantUpdatedEvent` is published; customer discovery results (UC-2) reflect the new visibility on the next query. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC11-RestaurantRegistration
+title UC-11: RES-FR-01 — Restaurant Registration & Profile Management
+skinparam ConditionEndStyle hline
+
+|Restaurant Partner|
+start
+:(1) Open Registration / Profile Management screen;
+:(2) Fill in restaurant details\n(name, description, address, phone, cuisine type,\ngeo-coordinates, logo URL, cover image URL);
+:(3) Submit registration or profile-update request;
+
+|System|
+:(4) Authenticate session and verify role;
+if ((5) Role permitted and input valid?) then (yes)
+  if ((6) Action is Register?) then (yes)
+    :(7) Insert restaurant row\n(`ownerId = session.user.id`,\n`isApproved = false`, `isOpen = false`);
+    :(8) Publish `RestaurantUpdatedEvent`;
+    :(9) Return HTTP 201 referencing `MSG-RES-03`;
+  else (Profile Update)
+    :(10) Load restaurant by id;
+    if ((11) Restaurant exists?) then (yes)
+      if ((12) Admin OR `ownerId = session.user.id`?) then (yes)
+        :(13) Apply field updates and persist;
+        :(14) Publish `RestaurantUpdatedEvent`;
+        :(15) Return HTTP 200 referencing `MSG-RES-04`;
+      else (no)
+        :(16) Return HTTP 403 referencing `MSG-RES-02`;
+        stop
+      endif
+    else (no)
+      :(17) Return HTTP 404 referencing `MSG-REST-01`;
+      stop
+    endif
+  endif
+else (no)
+  :(18) Return HTTP 400 / 403 referencing `MSG-RES-01` or `MSG-RES-02`;
+endif
+stop
+
+|Administrator|
+start
+:(19) Open Pending Restaurants queue;
+:(20) Review application documents and choose Approve or Unapprove;
+
+|System|
+:(21) Verify role `admin` (@Roles guard);
+:(22) Update `isApproved` flag and persist;
+:(23) Publish `RestaurantUpdatedEvent`;
+:(24) Return HTTP 200 referencing `MSG-RES-05`;
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(3)–(5)_ | _BR-11.1_ | **Validate Rules (Registration / Profile Update):**<br>❖ `name`, `address` and `phone` are required and non-empty.<br>❖ `phone` must match the Vietnamese mobile or landline format accepted by the platform validator.<br>❖ If `latitude` and `longitude` are supplied, both must be present together and must lie inside Vietnam (latitude in [8.0, 24.0], longitude in [102.0, 110.0]).<br>❖ `logoUrl` and `coverImageUrl` (when supplied) must reference an existing image record produced by the Image module.<br>❖ Invalid input returns HTTP 400 referencing `MSG-RES-01`. |
+| _(4)–(5)_, _(21)_ | _BR-11.2_ | **Authorization Rules:**<br>❖ `POST /restaurants` and `PATCH /restaurants/:id` require role `restaurant` or `admin`; otherwise HTTP 403 referencing `MSG-RES-02`.<br>❖ `PATCH /restaurants/:id/approve` and `PATCH /restaurants/:id/unapprove` require role `admin`; otherwise HTTP 403 referencing `MSG-RES-02`. |
+| _(7)_ | _BR-11.3_ | **Default Visibility Rules (BR-1, Partner Verification):**<br>❖ A newly created restaurant always has `isApproved = false` and `isOpen = false`, regardless of any client-supplied value for those fields.<br>❖ The restaurant is excluded from public discovery (UC-2) until an administrator approves it and the partner opens it (UC-13).<br>❖ The HTTP 201 response references `MSG-RES-03` to inform the partner that the submission is pending administrator review. |
+| _(10)–(16)_ | _BR-11.4_ | **Ownership Rules:**<br>❖ For role `restaurant`, the update is allowed only when the persisted `restaurants.ownerId` equals `session.user.id`; otherwise HTTP 403 referencing `MSG-RES-02`.<br>❖ For role `admin`, the ownership check is bypassed and any restaurant can be edited.<br>❖ A non-existent `:id` returns HTTP 404 referencing `MSG-REST-01`.<br>❖ A successful profile update returns HTTP 200 referencing `MSG-RES-04`. |
+| _(8)_, _(14)_, _(23)_ | _BR-11.5_ | **Event Synchronisation Rules:**<br>❖ Every successful create, update, approve, and unapprove publishes `RestaurantUpdatedEvent` containing the latest persisted state.<br>❖ The event is consumed by the Ordering ACL projector to refresh the restaurant snapshot used by UC-8 (Place Order) and by ownership checks in UC-14 / UC-15. |
+| _(22)–(24)_ | _BR-11.6_ | **Visibility Activation Rules:**<br>❖ `isApproved` is set atomically by the admin approval/unapproval endpoint; the HTTP 200 response references `MSG-RES-05`.<br>❖ A restaurant appears in public discovery (UC-2) only when `isApproved = true` AND `isOpen = true`.<br>❖ Unapproving an already-public restaurant immediately removes it from discovery; in-flight orders are not affected. |
+
+---
+
+### UC-12: Manage Menu Catalog
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | RES-FR-02, RES-FR-03 — Manage Menu Catalog (categories, items, modifier groups, modifier options) |
+| **Actor** | Restaurant Partner, Administrator |
+| **Trigger** | ❖ Restaurant Partner creates / updates / deletes a menu category, menu item, modifier group, or modifier option via the partner console (`POST`, `PATCH`, `DELETE` on `/menu-items`, `/menu-items/categories`, `/menu-items/:id/modifier-groups`, and `/.../options`). |
+| **Description** | Provides authenticated catalog maintenance for a single restaurant. The use case covers per-restaurant **menu categories**, **menu items** (with price stored as integer VND, optional SKU, optional category, tag array, image URL, and an availability `status` ∈ {`available`, `unavailable`, `out_of_stock`}), and the two-level **modifier model** (modifier groups with `minSelections`/`maxSelections` constraints and modifier options with their own price and availability flag). Every mutation re-publishes a `MenuItemUpdatedEvent` with the full modifier snapshot so the Ordering ACL stays consistent with what customers see during checkout (UC-8). |
+| **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `restaurant` or `admin`.<br>❖ For a `restaurant` actor: the menu item / category / modifier resource ultimately belongs to a restaurant whose `ownerId = session.user.id`. |
+| **Post-condition** | ❖ The catalog row is created, updated or removed in the corresponding table (`menu_categories`, `menu_items`, `modifier_groups`, `modifier_options`).<br>❖ `MenuItemUpdatedEvent` is published with the latest persisted state and full modifier snapshot for every affected menu item.<br>❖ The Ordering ACL projector refreshes its local snapshot, so subsequent calls to UC-4 / UC-8 use the new catalog values. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC12-ManageMenuCatalog
+title UC-12: RES-FR-02 / RES-FR-03 — Manage Menu Catalog
+skinparam ConditionEndStyle hline
+
+|Restaurant Partner|
+start
+:(1) Open Menu Management screen for own restaurant;
+:(2) Select target resource (category, item, modifier group, or option);
+:(3) Provide create / update payload, or pick a row to delete;
+:(4) Submit the request;
+
+|System|
+:(5) Authenticate session and verify role is `restaurant` or `admin`;
+if ((6) Input passes validation?) then (yes)
+  :(7) Resolve owning restaurant of the target resource;
+  if ((8) Caller is admin OR `restaurant.ownerId = session.user.id`?) then (yes)
+    if ((9) Resource exists when required (update / delete)?) then (yes)
+      :(10) Persist create / update / delete in the appropriate table;
+      :(11) Rebuild menu-item modifier snapshot for the affected item(s);
+      :(12) Publish `MenuItemUpdatedEvent` for each affected menu item;
+      :(13) Ordering ACL projector refreshes its local snapshot;
+      :(14) Return updated resource (or 204 for delete);
+    else (no)
+      :(15) Return 404 referencing `MSG-MENU-04` or `MSG-MENU-07`;
+      stop
+    endif
+  else (no)
+    :(16) Return 403 referencing `MSG-MENU-05`;
+    stop
+  endif
+else (no)
+  :(17) Return 400 referencing `MSG-MENU-01` or `MSG-MENU-06`;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(4)–(6)_ | _BR-12.1_ | **Validate Rules (Menu Item):**<br>❖ `name` is required and non-empty.<br>❖ `price` is required and must be a non-negative integer (VND, no fractional units).<br>❖ `restaurantId` is required and must reference an existing restaurant.<br>❖ `categoryId` (if supplied) must reference a category that belongs to the same `restaurantId`.<br>❖ `tags` (if supplied) must be an array of non-empty strings.<br>❖ Invalid input returns HTTP 400 referencing `MSG-MENU-01`. |
+| _(4)–(6)_ | _BR-12.2_ | **Validate Rules (Menu Category):**<br>❖ `name` is required and non-empty.<br>❖ `displayOrder` (if supplied) must be a non-negative integer.<br>❖ The pair `(restaurantId, name)` must be unique; a duplicate returns HTTP 409 referencing `MSG-MENU-03`.<br>❖ Invalid input returns HTTP 400 referencing `MSG-MENU-01`. |
+| _(4)–(6)_ | _BR-12.3_ | **Validate Rules (Modifier Group & Option):**<br>❖ `minSelections` ≥ 0 and `maxSelections` ≥ `minSelections`; otherwise HTTP 400 referencing `MSG-MENU-06`.<br>❖ Modifier option `price` is a non-negative integer (VND); `0` denotes a free option.<br>❖ A modifier option must belong to a modifier group that belongs to the same menu item indicated in the URL; otherwise HTTP 404 referencing `MSG-MENU-07`. |
+| _(7)–(8)_ | _BR-12.4_ | **Ownership Rules:**<br>❖ For role `restaurant`, mutations are allowed only when the owning restaurant's `ownerId = session.user.id`; otherwise HTTP 403 referencing `MSG-MENU-05`.<br>❖ For role `admin`, ownership is bypassed and any restaurant's catalog can be edited.<br>❖ Ownership is resolved transitively for modifier groups and options: `option → group → menuItem → restaurant`. |
+| _(9)_, _(15)_ | _BR-12.5_ | **Resource Existence Rules:**<br>❖ Update / delete on a non-existent menu item returns HTTP 404 referencing `MSG-MENU-04`.<br>❖ Update / delete on a non-existent menu category returns HTTP 404 referencing `MSG-MENU-02`.<br>❖ Update / delete on a non-existent modifier group or option returns HTTP 404 referencing `MSG-MENU-07`.<br>❖ Deleting a menu category cascades by clearing `categoryId` on all items in that category; the items remain published and no `MenuItemUpdatedEvent` is emitted for the re-categorised items.<br>❖ Deleting a menu item cascades to its modifier groups and options and publishes `MenuItemUpdatedEvent` with `status = 'unavailable'` to invalidate the ACL snapshot. |
+| _(10)–(13)_ | _BR-12.6_ | **Event Synchronisation Rules:**<br>❖ Every successful menu-item, modifier-group, and modifier-option mutation publishes `MenuItemUpdatedEvent` for the affected item, carrying `id`, `restaurantId`, `name`, `price`, and `status`.<br>❖ The `modifiers` payload differs by operation: modifier-group and modifier-option mutations re-fetch the complete current modifier snapshot and publish it as a populated array; menu-item field-only updates (price, name, tags, category) publish `modifiers = null`, signalling the ACL projector to preserve the existing modifier snapshot unchanged.<br>❖ Deleting a menu item publishes `MenuItemUpdatedEvent` with `status = 'unavailable'` and `modifiers = []` (empty array) to invalidate the ACL snapshot entry.<br>❖ Menu-category create, update, and delete operations do NOT publish `MenuItemUpdatedEvent`; affected items retain their existing ACL snapshots. |
+
+---
+
+### UC-13: Toggle Item & Restaurant Availability
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | RES-FR-04 — Toggle Item & Restaurant Availability |
+| **Actor** | Restaurant Partner, Administrator |
+| **Trigger** | ❖ Restaurant Partner toggles a menu item's sold-out flag (`PATCH /menu-items/:id/toggle-sold-out`).<br>❖ Restaurant Partner opens or closes the restaurant (sets `isOpen` via `PATCH /restaurants/:id`). |
+| **Description** | Lets the partner control catalog availability in real time without rewriting the menu. A single menu item can be flipped between `available` and `out_of_stock`; an item explicitly marked `unavailable` is treated as taken down and cannot be sold-out-toggled. The restaurant as a whole can be opened or closed by toggling `isOpen`. Both operations propagate immediately to the customer surfaces via `RestaurantUpdatedEvent` / `MenuItemUpdatedEvent` (BR-8 *Real-time Availability Control*). |
+| **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `restaurant` or `admin`.<br>❖ For a `restaurant` actor: the target restaurant (or the restaurant that owns the target item) has `ownerId = session.user.id`.<br>❖ For sold-out toggle: the item's current `status` is not `unavailable`. |
+| **Post-condition** | ❖ Menu item: `status` flips between `available` and `out_of_stock`; `MenuItemUpdatedEvent` is published.<br>❖ Restaurant: `isOpen` is set to the new value; `RestaurantUpdatedEvent` is published.<br>❖ Customer surfaces (UC-2 discovery, UC-4 add to cart, UC-8 place order) reflect the change on their next call. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC13-ToggleAvailability
+title UC-13: RES-FR-04 — Toggle Item & Restaurant Availability
+skinparam ConditionEndStyle hline
+
+|Restaurant Partner|
+start
+:(1) Open Menu / Restaurant Availability screen;
+:(2) Choose target: a specific menu item OR the restaurant itself;
+:(3) Submit toggle / open-close request;
+
+|System|
+:(4) Authenticate session and verify role is `restaurant` or `admin`;
+:(5) Load target resource (menu item or restaurant) by id;
+if ((6) Resource exists?) then (yes)
+  :(7) Resolve owning restaurant and verify ownership (admin bypasses);
+  if ((8) Ownership OK?) then (yes)
+    if ((9) Target is a menu item?) then (yes)
+      if ((10) Item status is `unavailable`?) then (no)
+        :(11) Compute next status\n(`available` ↔ `out_of_stock`);
+        :(12) Persist new status and publish `MenuItemUpdatedEvent`;
+        :(13) Return HTTP 200 referencing `MSG-AVAIL-03`;
+      else (yes)
+        :(14) Return HTTP 409 referencing `MSG-AVAIL-01`;
+        stop
+      endif
+    else (Restaurant)
+      :(15) Set `isOpen` to the requested boolean value and persist;
+      :(16) Publish `RestaurantUpdatedEvent`;
+      :(17) Return HTTP 200 referencing `MSG-AVAIL-02`;
+    endif
+  else (no)
+    :(18) Return HTTP 403 referencing `MSG-RES-02` or `MSG-MENU-05`;
+    stop
+  endif
+else (no)
+  :(19) Return HTTP 404 referencing `MSG-MENU-04` or `MSG-REST-01`;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(4)_, _(7)–(8)_ | _BR-13.1_ | **Authorization & Ownership Rules:**<br>❖ Endpoints require role `restaurant` or `admin`.<br>❖ For role `restaurant`, the operation is allowed only when `restaurants.ownerId = session.user.id` (resolved transitively for menu-item operations via `menuItem → restaurant`); otherwise HTTP 403 referencing `MSG-RES-02` (restaurant scope) or `MSG-MENU-05` (item scope). |
+| _(10)–(13)_ | _BR-13.2_ | **Item Sold-Out Toggle Rules:**<br>❖ The toggle alternates between `available` and `out_of_stock` only.<br>❖ If the item's current `status` is `unavailable`, the request is rejected with HTTP 409 referencing `MSG-AVAIL-01`; the item must be re-published via UC-12 before the sold-out toggle can be applied.<br>❖ A successful toggle returns HTTP 200 with the updated item, referencing `MSG-AVAIL-03`. |
+| _(13)–(15)_ | _BR-13.3_ | **Restaurant Open/Close Rules:**<br>❖ `isOpen` is the single field that controls "currently accepting orders" for an approved restaurant.<br>❖ Setting `isOpen = false` does not affect already-placed orders (UC-14 / UC-15 continue to process them).<br>❖ Setting `isOpen = false` while `isApproved = true` keeps the restaurant in the public catalog but flags it as not currently serving on customer surfaces. |
+| _(12)_, _(16)_ | _BR-13.4_ | **Real-Time Propagation Rules (BR-8):**<br>❖ Every successful operation synchronously publishes the corresponding domain event (`MenuItemUpdatedEvent` for items, `RestaurantUpdatedEvent` for restaurants).<br>❖ The Ordering ACL projector refreshes its local snapshot in response, so subsequent UC-4 / UC-8 calls reject items that are no longer `available` and restaurants that are closed. |
+| _(5)–(6)_, _(19)_ | _BR-13.5_ | **Resource Existence Rules:**<br>❖ A sold-out toggle on a non-existent menu item returns HTTP 404 referencing `MSG-MENU-04`.<br>❖ An open/close request referencing a non-existent restaurant returns HTTP 404 referencing `MSG-REST-01`. |
+
+---
+
+### UC-14: Accept or Reject Order
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | RES-FR-05 — Accept or Reject Order |
+| **Actor** | Restaurant Partner, Administrator |
+| **Trigger** | ❖ Restaurant Partner accepts a new order (`PATCH /orders/:id/confirm`) — transitions `pending → confirmed` (T-01, COD) or `paid → confirmed` (T-04, VNPay paid).<br>❖ Restaurant Partner rejects a new order (`PATCH /orders/:id/cancel` with a reason note) — transitions `pending → cancelled` (T-03), `paid → cancelled` (T-05), or `confirmed → cancelled` (T-07). |
+| **Description** | Authorises the restaurant to decide whether an incoming order proceeds. Acceptance moves the order into `confirmed`, after which UC-15 (Prepare Order for Pickup) becomes the only forward path. Rejection requires a reason note for the audit log, and — for VNPay-paid orders cancelled from `paid` or `confirmed` — automatically triggers the refund pipeline by publishing `OrderCancelledAfterPaymentEvent`. All transitions are routed through the central CQRS `TransitionOrderCommand`, which enforces role, ownership, state validity, and optimistic locking (`version` column). |
+| **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `restaurant` (limited to own restaurant's orders) or `admin` (any order).<br>❖ The order is in a state that allows the requested transition: `pending` (for T-01 / T-03), `paid` (for T-04 / T-05), or `confirmed` (for T-07).<br>❖ For T-01 by role `restaurant`: `order.paymentMethod = 'cod'`.<br>❖ For cancel transitions: a non-empty `reason` note is supplied. |
+| **Post-condition** | ❖ `orders.status` is updated; `orders.version` is incremented atomically.<br>❖ A new `order_status_logs` row records `fromStatus`, `toStatus`, `triggeredBy`, `triggeredByRole`, and `note` (if any).<br>❖ `OrderStatusChangedEvent` is published after commit.<br>❖ For T-05 / T-07 on a VNPay order: `OrderCancelledAfterPaymentEvent` is published, which drives the refund pipeline (Phase 3 scope). |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC14-AcceptOrRejectOrder
+title UC-14: RES-FR-05 — Accept or Reject Order
+skinparam ConditionEndStyle hline
+
+|Restaurant Partner|
+start
+:(1) Open Restaurant Order Inbox;
+:(2) Select a new order in `pending` or `paid`;
+:(3) Choose Accept or Reject\n(Reject requires a reason note);
+:(4) Submit decision;
+
+|System|
+:(5) Authenticate session and resolve effective role\n(admin > restaurant > shipper > customer);
+:(6) Load order by id;
+if ((7) Order exists?) then (yes)
+  :(8) Resolve transition rule in TRANSITIONS map\n(`fromStatus → toStatus`);
+  if ((9) Transition exists and role is permitted?) then (yes)
+    :(10) Verify restaurant ownership against ACL snapshot\n(admin bypasses);
+    if ((11) Ownership OK?) then (yes)
+      if ((12) Action is Accept AND payment method requires extra check?) then (yes)
+        if ((13) `restaurant` role attempting T-01 on VNPay order?) then (no)
+          :(14) Accept allowed;
+        else (yes)
+          :(15) Return 422 referencing `MSG-LCYC-04`;
+          stop
+        endif
+      endif
+      if ((16) requireNote=true AND reason is blank or missing?) then (yes)
+        :(17) Return HTTP 400 referencing `MSG-LCYC-05`;
+        stop
+      endif
+      :(18) Begin DB transaction;
+      :(19) Update `orders` with optimistic\nlocking on `version`;
+      :(20) Insert `order_status_logs` audit row;
+      :(21) Commit transaction;
+      :(22) Publish `OrderStatusChangedEvent`;
+      if ((23) Transition triggers refund AND payment is VNPay?) then (yes)
+        :(24) Publish `OrderCancelledAfterPaymentEvent`\n(refund pipeline takes over);
+      endif
+      :(25) Return updated order referencing `MSG-LCYC-07` (accept)\nor `MSG-LCYC-08` (reject);
+    else (no)
+      :(26) Return HTTP 403 referencing `MSG-LCYC-03`;
+      stop
+    endif
+  else (no)
+    :(27) Return HTTP 403 / 422 referencing `MSG-LCYC-02` or `MSG-LCYC-01`;
+    stop
+  endif
+else (no)
+  :(28) Return HTTP 404 referencing `MSG-HIST-01`;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(5)–(6)_, _(28)_ | _BR-14.1_ | **Order Loading Rules:**<br>❖ The order is loaded by id. A non-existent id returns HTTP 404 referencing `MSG-HIST-01`.<br>❖ Idempotency: if the order is already in the requested target status, the system returns the order unchanged (no new audit row, no event). |
+| _(8)–(9)_ | _BR-14.2_ | **Transition Validity Rules:**<br>❖ Allowed transitions for this UC (restaurant / admin actors): T-01 (`pending → confirmed`), T-03 (`pending → cancelled`), T-04 (`paid → confirmed`), T-05 (`paid → cancelled`), T-07 (`confirmed → cancelled`).<br>❖ T-03 and T-05 additionally allow roles `customer` and `system` per the TRANSITIONS map; `customer`-initiated cancellation is specified in Phase 3 (Customer Cancel Order). `system`-initiated cancellation is triggered by the order-timeout scheduler and does not route through this use-case endpoint.<br>❖ Any other `(fromStatus, toStatus)` pair returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ Each transition has an `allowedRoles` set; a role outside the set returns HTTP 403 referencing `MSG-LCYC-02`. |
+| _(10)–(11)_ | _BR-14.3_ | **Restaurant Ownership Rules:**<br>❖ For role `restaurant`, the target order's `restaurantId` must belong to a restaurant whose `ownerId = session.user.id`, resolved via the Ordering ACL snapshot; otherwise HTTP 403 referencing `MSG-LCYC-03`.<br>❖ For role `admin`, the ownership check is bypassed. |
+| _(12)–(15)_ | _BR-14.4_ | **Payment-Method Pre-condition Rules (T-01):**<br>❖ Role `restaurant` may execute T-01 (`pending → confirmed`) only when `order.paymentMethod = 'cod'`.<br>❖ A `restaurant`-initiated T-01 on a VNPay order returns HTTP 422 referencing `MSG-LCYC-04`. VNPay orders must first reach `paid` via the payment context (system actor, T-02), after which T-04 (`paid → confirmed`) becomes available. |
+| _(16)–(17)_ | _BR-14.5_ | **Reject Reason Rules:**<br>❖ T-03, T-05 and T-07 carry `requireNote = true`. A missing or whitespace-only `reason` returns HTTP 400 referencing `MSG-LCYC-05`. |
+| _(18)–(21)_ | _BR-14.6_ | **Atomicity & Concurrency Rules:**<br>❖ Status update and audit log insert occur in a single DB transaction.<br>❖ The status update uses optimistic locking (`WHERE id = :id AND version = :loaded_version`); a zero-row result returns HTTP 409 referencing `MSG-LCYC-06`.<br>❖ The `order_status_logs` row records `triggeredBy`, `triggeredByRole`, and `note`. |
+| _(22)–(24)_ | _BR-14.7_ | **Event Publication Rules:**<br>❖ `OrderStatusChangedEvent` is published after commit on every successful transition.<br>❖ Transitions flagged `triggersRefundIfVnpay` (T-05, T-07) on orders with `paymentMethod = 'vnpay'` additionally publish `OrderCancelledAfterPaymentEvent`. If both pre-conditions are met but the acting role is `shipper`, the refund event is suppressed and the incident is logged at ERROR (defensive guard).<br>❖ Event-publication failure after a successful commit is logged but never rolls the transition back. |
+
+---
+
+### UC-15: Prepare Order for Pickup
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | RES-FR-06 — Prepare Order for Pickup |
+| **Actor** | Restaurant Partner, Administrator |
+| **Trigger** | ❖ Restaurant Partner starts preparing a confirmed order (`PATCH /orders/:id/start-preparing`) — transitions `confirmed → preparing` (T-06).<br>❖ Restaurant Partner marks a prepared order as ready for the shipper to pick up (`PATCH /orders/:id/ready`) — transitions `preparing → ready_for_pickup` (T-08). |
+| **Description** | Models the kitchen-side fulfilment of a confirmed order as a single unified business workflow with two atomic state transitions: T-06 (`confirmed → preparing`) and T-08 (`preparing → ready_for_pickup`). The `ready_for_pickup` transition additionally publishes `OrderReadyForPickupEvent` — enriched with the restaurant snapshot and the customer's delivery address — which is consumed by the Delivery Context to surface the order to nearby online shippers (UC-18) and by the Notification Context to notify the assigned or candidate shippers. |
+| **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `restaurant` (limited to own restaurant's orders) or `admin`.<br>❖ T-06 requires `order.status = 'confirmed'`; T-08 requires `order.status = 'preparing'`.<br>❖ The restaurant has an ACL snapshot in the Ordering BC (used to populate `OrderReadyForPickupEvent`). |
+| **Post-condition** | ❖ `orders.status` advances to `preparing` and subsequently to `ready_for_pickup`; `orders.version` is incremented on each transition.<br>❖ A `order_status_logs` row is appended for each transition.<br>❖ `OrderStatusChangedEvent` is published after each transition.<br>❖ The `preparing → ready_for_pickup` transition additionally publishes `OrderReadyForPickupEvent` with `orderId`, `restaurantId`, `restaurantName`, `restaurantAddress`, `customerId` and `deliveryAddress`. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC15-PrepareOrderForPickup
+title UC-15: RES-FR-06 — Prepare Order for Pickup
+skinparam ConditionEndStyle hline
+
+|Restaurant Partner|
+start
+:(1) Open Restaurant Order Inbox;
+:(2) Select a `confirmed` order to start preparing;
+:(3) Submit Start Preparing;
+
+|System|
+:(4) Authenticate session and resolve role;
+:(5) Load order and verify restaurant ownership (admin bypasses);
+if ((6) Ownership OK and `status = 'confirmed'`?) then (yes)
+  :(7) Apply transition T-06 (`confirmed → preparing`) inside DB transaction\nwith optimistic locking and audit log insert;
+  :(8) Publish `OrderStatusChangedEvent`;
+  :(9) Return HTTP 200 referencing `MSG-LCYC-09`;
+
+  |Restaurant Partner|
+  :(10) Cook and pack the order;
+  :(11) Submit Mark Ready for Pickup ;
+
+  |System|
+  :(12) Re-verify ownership and `status = 'preparing'`;
+  if ((13) Pre-conditions OK?) then (yes)
+    :(14) Apply transition T-08\n(`preparing → ready_for_pickup`) inside DB transaction;
+    :(15) Publish `OrderStatusChangedEvent`;
+    :(16) Load restaurant snapshot from ACL;
+    if ((17) Snapshot present?) then (yes)
+      :(18) Publish `OrderReadyForPickupEvent`\n(triggers shipper dispatch in UC-18);
+    else (no)
+      :(19) Log warning and skip pickup-ready event\n(transition still succeeds);
+    endif
+    :(20) Return HTTP 200 referencing `MSG-LCYC-10`;
+  else (no)
+    :(21) Return HTTP 403 / 422 referencing `MSG-LCYC-02` or `MSG-LCYC-01`;
+  endif
+else (no)
+  :(22) Return HTTP 403 / 422 referencing `MSG-LCYC-02` or `MSG-LCYC-01`;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(4)–(5)_, _(12)_ | _BR-15.1_ | **Authorization & Ownership Rules:**<br>❖ T-06 and T-08 are restricted to roles `restaurant` and `admin`; other roles return HTTP 403 referencing `MSG-LCYC-02`.<br>❖ For role `restaurant`, the target order's `restaurantId` must belong to a restaurant whose `ownerId = session.user.id` (resolved through the ACL snapshot); otherwise HTTP 403 referencing `MSG-LCYC-03`.<br>❖ For role `admin`, ownership is bypassed. |
+| _(6)_, _(13)_ | _BR-15.2_ | **Sequential Transition Rules:**<br>❖ T-06 requires `order.status = 'confirmed'`; any other source state returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ T-08 requires `order.status = 'preparing'`; any other source state returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ Idempotent re-issue: if the order is already in the requested target status the system returns it unchanged (no new audit row, no event). |
+| _(7)_, _(14)_ | _BR-15.3_ | **Atomicity & Concurrency Rules:**<br>❖ Each transition runs the status update + audit log insert in a single DB transaction.<br>❖ Optimistic locking on `version` rejects concurrent updates with HTTP 409 referencing `MSG-LCYC-06`. |
+| _(7)–(9)_ | _BR-15.4_ | **Event Publication & Response Rules (T-06):**<br>❖ Successful T-06 publishes `OrderStatusChangedEvent` after commit with `fromStatus = 'confirmed'` and `toStatus = 'preparing'`.<br>❖ No additional side-effect events are emitted on T-06 (no `OrderReadyForPickupEvent`, no refund event).<br>❖ The HTTP 200 response references `MSG-LCYC-09`. |
+| _(14)–(20)_ | _BR-15.5_ | **Ready-for-Pickup Event Rules (T-08):**<br>❖ Successful T-08 publishes `OrderStatusChangedEvent` (always) and `OrderReadyForPickupEvent` (when the restaurant snapshot is present in the ACL).<br>❖ `OrderReadyForPickupEvent` carries `orderId`, `restaurantId`, `restaurantName`, `restaurantAddress`, `customerId`, and `deliveryAddress` (`street`, `district`, `city`, optional `latitude`/`longitude`).<br>❖ If the restaurant snapshot is absent from the ACL, the DB transition still succeeds; the system logs a warning and skips the pickup-ready event. Downstream shipper dispatch may still occur via reconciliation.<br>❖ The HTTP 200 response references `MSG-LCYC-10`.<br>❖ The event is the contractual hand-off point from the Restaurant context to the Delivery context (UC-18). |
+
+---
+
+### UC-16: Shipper Registration
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | DEL-FR-01 — Shipper Registration |
+| **Actor** | Delivery Personnel (prospective Shipper), Administrator |
+| **Trigger** | ❖ A signed-in user submits a Shipper Application form containing personal information, government-issued identification, vehicle type and licence-plate number, and a driving-licence reference image.<br>❖ An administrator reviews a submitted application and approves or rejects it. |
+| **Description** | Onboards a new Delivery Personnel partner to the platform. Mirrors the same admin-gated verification pattern used for Restaurant Registration (UC-11): the application is created in a `pending_approval` state and the applicant cannot perform delivery operations until an administrator approves the application, which elevates the account's role to `shipper`. This use case represents the **target enterprise design**; the backend implementation is scheduled for completion in a subsequent Phase 2 sprint and is not yet present in the current codebase. |
+| **Pre-condition** | ❖ Applicant is authenticated.<br>❖ Applicant does not yet have role `shipper` on their account.<br>❖ Applicant does not have a pending or approved shipper application on record.<br>❖ For approve / reject: actor has role `admin`. |
+| **Post-condition** | ❖ A `shipper_applications` row exists with `status = 'pending_approval'`, holding the submitted personal, vehicle, and document references.<br>❖ On administrator approval: the applicant's account role is elevated to `shipper`; a `ShipperApprovedEvent` is published; the shipper becomes eligible for UC-17 (availability) and UC-18 (pickup).<br>❖ On administrator rejection: the application row is marked `rejected` with a reason note; the applicant's role is unchanged. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC16-ShipperRegistration
+title UC-16: DEL-FR-01 — Shipper Registration
+skinparam ConditionEndStyle hline
+
+|Delivery Personnel|
+start
+:(1) Open Become a Shipper screen;
+:(2) Provide personal info, vehicle type, licence plate, ID and licence images;
+:(3) Submit application;
+
+|System|
+:(4) Authenticate session and validate input;
+if ((5) Input valid and no existing application?) then (yes)
+  :(6) Persist `shipper_applications` row\n(`status = 'pending_approval'`);
+  :(7) Return application receipt referencing `MSG-SHIP-03`;
+
+  |Administrator|
+  :(8) Open Shipper Approval Queue;
+  :(9) Review documents and decide;
+
+  |System|
+  if ((10) Decision is Approve?) then (yes)
+    :(11) Mark application `approved`;
+    :(12) Elevate applicant's role to `shipper`;
+    :(13) Publish `ShipperApprovedEvent`;
+    :(14) Return approved status referencing `MSG-SHIP-04`;
+  else (Reject)
+    :(15) Mark application `rejected` with reason note;
+    :(16) Return rejected status referencing `MSG-SHIP-05`;
+  endif
+else (no)
+  :(17) Return 400 / 409 referencing `MSG-SHIP-01` or `MSG-SHIP-02`;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(3)–(5)_ | _BR-16.1_ | **Validate Rules (Application):**<br>❖ Full name, national ID number, vehicle type (`motorbike` / `bicycle` / `car`), licence-plate number (when vehicle type ≠ `bicycle`), and a driving-licence image reference are all required.<br>❖ Licence-plate number must match the Vietnamese plate format for the chosen vehicle type.<br>❖ Uploaded ID and licence images must reference existing image records owned by the applicant.<br>❖ Invalid input returns HTTP 400 referencing `MSG-SHIP-01`. |
+| _(5)_, _(17)_ | _BR-16.2_ | **Duplicate Application Rules:**<br>❖ An applicant with an existing `pending_approval` or `approved` application is rejected with HTTP 409 referencing `MSG-SHIP-02`.<br>❖ An applicant whose previous application was `rejected` may re-apply; the new row supersedes the previous one for queue purposes. |
+| _(6)_ | _BR-16.3_ | **Default Status Rules (BR-1, Partner Verification):**<br>❖ A newly submitted application is always created with `status = 'pending_approval'`, regardless of any client-supplied status value.<br>❖ The applicant's account role remains unchanged at submission time. |
+| _(8)–(13)_ | _BR-16.4_ | **Authorization Rules (Approval):**<br>❖ Approve and reject endpoints require role `admin`; otherwise HTTP 403 referencing `MSG-AUTH-05`.<br>❖ Reject requires a reason note for the audit trail. |
+| _(11)–(13)_ | _BR-16.5_ | **Role Elevation Rules:**<br>❖ On approval, the applicant's account gains role `shipper` atomically with the application status update inside one DB transaction.<br>❖ A `ShipperApprovedEvent` carrying `shipperId` and approved vehicle/plate is published after commit so downstream contexts (notification, delivery dispatch) can react. |
+
+---
+
+### UC-17: Manage Shipper Availability
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | DEL-FR-02 — Manage Shipper Availability |
+| **Actor** | Delivery Personnel (approved Shipper) |
+| **Trigger** | ❖ Shipper toggles their online/offline status from the mobile shipper console. |
+| **Description** | Lets an approved shipper opt in or out of the dispatch pool in real time. Only shippers whose status is `online` are considered candidates for new pickup assignments in UC-18. The shipper cannot go offline while holding an order in `picked_up` or `delivering` (i.e. an in-flight delivery); such an attempt is rejected. This use case represents the **target enterprise design**; the backend implementation is scheduled for completion in a subsequent Phase 2 sprint. |
+| **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `shipper` (approved through UC-16).<br>❖ For setting status to `offline`: no order owned by this shipper is in `picked_up` or `delivering`. |
+| **Post-condition** | ❖ The shipper's availability status is updated to `online` or `offline`.<br>❖ A `ShipperAvailabilityChangedEvent` is published so the dispatch service updates its candidate index. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC17-ManageShipperAvailability
+title UC-17: DEL-FR-02 — Manage Shipper Availability
+skinparam ConditionEndStyle hline
+
+|Delivery Personnel|
+start
+:(1) Open Shipper console;
+:(2) Toggle availability switch (online / offline);
+:(3) Submit new status;
+
+|System|
+:(4) Authenticate session and verify role `shipper`;
+if ((5) Role OK and account is approved?) then (yes)
+  if ((6) New status is `offline`?) then (yes)
+    if ((7) Any in-flight delivery\n(`picked_up` or `delivering`)?) then (yes)
+      :(8) Return 409 referencing `MSG-SHIP-07`;
+      stop
+    else (no)
+      :(9) Persist availability = `offline`;
+    endif
+  else (Online)
+    :(10) Persist availability = `online`;
+  endif
+  :(11) Publish `ShipperAvailabilityChangedEvent`;
+  :(12) Return new availability referencing `MSG-SHIP-06`;
+else (no)
+  :(13) Return 403 referencing `MSG-SHIP-04`;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(4)–(5)_, _(13)_ | _BR-17.1_ | **Authorization Rules:**<br>❖ Endpoint requires role `shipper` whose underlying account is `approved`; otherwise HTTP 403 referencing `MSG-SHIP-04`. |
+| _(6)–(9)_ | _BR-17.2_ | **Active-Delivery Lock Rules:**<br>❖ Setting status to `offline` is rejected with HTTP 409 referencing `MSG-SHIP-07` when the shipper owns any order in `picked_up` or `delivering`.<br>❖ The shipper must complete the in-flight delivery (UC-19) or hand it off (admin operational override) before going offline. |
+| _(9)–(11)_ | _BR-17.3_ | **State Persistence Rules:**<br>❖ Allowed values for availability are `online` and `offline`. Any other value returns HTTP 400 referencing `MSG-SHIP-01`.<br>❖ Setting the same status the shipper already has is idempotent — no event is republished. |
+| _(11)_ | _BR-17.4_ | **Dispatch Pool Synchronisation Rules:**<br>❖ A successful change publishes `ShipperAvailabilityChangedEvent` carrying `shipperId`, new availability, and the timestamp.<br>❖ The dispatch service uses this event to add or remove the shipper from the online candidate set used by UC-18. |
+
+---
+
+### UC-18: Accept Delivery Assignment
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | DEL-FR-03 — Accept Delivery Assignment |
+| **Actor** | Delivery Personnel (online Shipper), Administrator |
+| **Trigger** | ❖ A `ready_for_pickup` order is surfaced to one or more online shippers via the dispatch service (driven by `OrderReadyForPickupEvent`).<br>❖ A shipper claims the order from their queue (`PATCH /orders/:id/pickup`) — transitions `ready_for_pickup → picked_up` (T-09). |
+| **Description** | Models the self-assignment of a `ready_for_pickup` order to a shipper. T-09 atomically sets `orders.shipperId` to the acting shipper's user id and advances `orders.status` to `picked_up`. Concurrency control is critical: when two online shippers attempt to claim the same order simultaneously, the optimistic-locking `version` guard guarantees that exactly one succeeds and the other receives a conflict response. An administrator may also execute T-09 as an operational override (e.g., to assign a specific shipper); in that case `shipperId` is set to the admin's user id, and the actual shipper is recorded out-of-band. |
+| **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `shipper` and availability `online` (or role `admin` for override).<br>❖ Target order is in `status = 'ready_for_pickup'`.<br>❖ No other shipper has yet claimed the order. |
+| **Post-condition** | ❖ `orders.status = 'picked_up'`, `orders.shipperId = actorId`, `orders.version` incremented atomically.<br>❖ A new `order_status_logs` row records T-09 with `triggeredByRole = 'shipper'` (or `'admin'`).<br>❖ `OrderStatusChangedEvent` is published after commit. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC18-AcceptDeliveryAssignment
+title UC-18: DEL-FR-03 — Accept Delivery Assignment
+skinparam ConditionEndStyle hline
+
+|Delivery Personnel|
+start
+:(1) Receive `ready_for_pickup` order notification\n(via `OrderReadyForPickupEvent` dispatch);
+:(2) Tap **Accept Pickup** on the order card;
+:(3) Submit T-09 request (`PATCH /orders/:id/pickup`);
+
+|System|
+:(4) Authenticate session and resolve role\n(admin > restaurant > shipper > customer);
+:(5) Load order by id;
+if ((6) Order exists?) then (yes)
+  :(7) Resolve TRANSITIONS rule for\n`ready_for_pickup → picked_up`;
+  if ((8) Role permitted (shipper / admin)?) then (yes)
+    if ((9) For role shipper: account is `approved` and `online`?) then (yes)
+      :(10) Begin DB transaction;
+      :(11) Attempt update with optimistic locking\n(`WHERE id = :id AND version = :loaded_version`)\nand set `shipperId = actorId`;
+      if ((12) Update affected exactly 1 row?) then (yes)
+        :(13) Insert `order_status_logs` audit row;
+        :(14) Commit transaction;
+        :(15) Publish `OrderStatusChangedEvent`;
+        :(16) Return updated order referencing `MSG-DEL-01`;
+      else (no — claimed concurrently)
+        :(17) Return 409 referencing `MSG-DEL-02`;
+        stop
+      endif
+    else (no)
+      :(18) Return 403 referencing `MSG-SHIP-04`;
+      stop
+    endif
+  else (no)
+    :(19) Return 403 referencing `MSG-LCYC-02`;
+    stop
+  endif
+else (no)
+  :(20) Return 404 referencing `MSG-HIST-01`;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(4)–(8)_ | _BR-18.1_ | **Authorization & Transition Rules:**<br>❖ T-09 (`ready_for_pickup → picked_up`) is allowed only for roles `shipper` and `admin`; other roles return HTTP 403 referencing `MSG-LCYC-02`.<br>❖ An attempt from any source state other than `ready_for_pickup` returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ A non-existent order id returns HTTP 404 referencing `MSG-HIST-01`.<br>❖ Idempotency: if the order is already in `picked_up` status, the system returns the order unchanged without creating a duplicate audit log entry or re-publishing events. |
+| _(9)_, _(18)_ | _BR-18.2_ | **Shipper Eligibility Rules:**<br>❖ For role `shipper`, the underlying account must be `approved` (UC-16) and the shipper's availability must be `online` (UC-17); otherwise HTTP 403 referencing `MSG-SHIP-04`.<br>❖ The eligibility check is bypassed for role `admin`. |
+| _(10)–(14)_ | _BR-18.3_ | **Concurrency & Self-Assignment Rules:**<br>❖ The status update and `shipperId` assignment occur in a single SQL `UPDATE` guarded by `version = :loaded_version`.<br>❖ When two shippers race for the same order, the database guarantees at most one row update; the loser receives HTTP 409 referencing `MSG-DEL-02`.<br>❖ For role `shipper`, `shipperId` is set to `session.user.id`. For role `admin` operational override, `shipperId` is set to the admin's user id; subsequent T-10 / T-11 ownership rules then require the same actor. |
+| _(13)_ | _BR-18.4_ | **Audit Log Rules:**<br>❖ A `order_status_logs` row is inserted in the same transaction with `fromStatus = 'ready_for_pickup'`, `toStatus = 'picked_up'`, `triggeredBy = actorId`, `triggeredByRole = 'shipper'` or `'admin'`. |
+| _(15)_ | _BR-18.5_ | **Event Publication Rules:**<br>❖ `OrderStatusChangedEvent` is published after commit on every successful T-09.<br>❖ T-09 has no other side-effects (no refund, no ready-for-pickup republish). |
+
+---
+
+### UC-19: Deliver Order
+
+| Field | Detail |
+|---|---|
+| **Use Case ID — Name** | DEL-FR-04 — Deliver Order |
+| **Actor** | Delivery Personnel (assigned Shipper), Administrator |
+| **Trigger** | ❖ Assigned shipper starts the delivery leg (`PATCH /orders/:id/en-route`) — transitions `picked_up → delivering` (T-10).<br>❖ Assigned shipper marks the order as delivered to the customer (`PATCH /orders/:id/deliver`) — transitions `delivering → delivered` (T-11). |
+| **Description** | Completes the order fulfilment as a single unified business workflow with two sequential transitions: T-10 (`picked_up → delivering`) starts the en-route leg and T-11 (`delivering → delivered`) closes the order. Both transitions enforce **assigned-shipper ownership** — only the user whose id matches `orders.shipperId` (or an administrator) can advance the order. Each transition emits `OrderStatusChangedEvent` so the customer's order-tracking surface (Phase 3) and the COD payment-on-delivery reconciliation can react. |
+| **Pre-condition** | ❖ Actor is authenticated.<br>❖ Actor has role `shipper` and `actorId = orders.shipperId`, OR actor has role `admin`.<br>❖ T-10 requires `order.status = 'picked_up'`; T-11 requires `order.status = 'delivering'`. |
+| **Post-condition** | ❖ `orders.status` advances to `delivering` and subsequently to `delivered`; `orders.version` is incremented on each transition.<br>❖ A `order_status_logs` row is appended for each transition.<br>❖ `OrderStatusChangedEvent` is published after each transition.<br>❖ On T-11, downstream consumers (notification, COD payment reconciliation, rating eligibility) react to the `delivered` status. |
+
+#### Activities Flow
+
+```plantuml
+@startuml UC19-DeliverOrder
+title UC-19: DEL-FR-04 — Deliver Order
+skinparam ConditionEndStyle hline
+
+|Delivery Personnel|
+start
+:(1) Open assigned delivery in shipper console;
+:(2) Tap **Start Delivery** to begin en-route leg;
+:(3) Submit T-10 request (`PATCH /orders/:id/en-route`);
+
+|System|
+:(4) Authenticate session and resolve role;
+:(5) Load order and verify `shipperId = actorId` (admin bypasses);
+if ((6) Ownership OK and `status = 'picked_up'`?) then (yes)
+  :(7) Apply transition T-10 inside DB transaction\nwith optimistic locking and audit log insert;
+  :(8) Publish `OrderStatusChangedEvent`;
+
+  |Delivery Personnel|
+  :(9) Travel to customer and hand over the order;
+  :(10) Tap **Mark Delivered**;
+  :(11) Submit T-11 request (`PATCH /orders/:id/deliver`);
+
+  |System|
+  :(12) Re-verify ownership and `status = 'delivering'`;
+  if ((13) Pre-conditions OK?) then (yes)
+    :(14) Apply transition T-11 inside DB transaction;
+    :(15) Publish `OrderStatusChangedEvent`\n(`fromStatus = 'delivering'`, `toStatus = 'delivered'`);
+    :(16) Return updated order referencing `MSG-DEL-04`;
+  else (no)
+    :(17) Return 403 / 422 referencing `MSG-DEL-03`\nor `MSG-LCYC-01`;
+    stop
+  endif
+else (no)
+  :(18) Return 403 / 422 referencing `MSG-DEL-03`\nor `MSG-LCYC-01`;
+endif
+stop
+@enduml
+```
+
+#### Business Rules
+
+| Activity | BR Code | Description |
+|---|---|---|
+| _(4)–(5)_, _(12)_ | _BR-19.1_ | **Authorization & Assigned-Shipper Ownership Rules:**<br>❖ T-10 and T-11 are restricted to roles `shipper` and `admin`; other roles return HTTP 403 referencing `MSG-LCYC-02`.<br>❖ For role `shipper`, `orders.shipperId` must equal `session.user.id`; otherwise HTTP 403 referencing `MSG-DEL-03`.<br>❖ For role `admin`, the assigned-shipper check is bypassed. |
+| _(6)_, _(13)_ | _BR-19.2_ | **Sequential Transition Rules:**<br>❖ T-10 requires `order.status = 'picked_up'`; any other source state returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ T-11 requires `order.status = 'delivering'`; any other source state returns HTTP 422 referencing `MSG-LCYC-01`.<br>❖ Idempotent re-issue: if the order is already in the requested target status the system returns it unchanged. |
+| _(7)_, _(14)_ | _BR-19.3_ | **Atomicity & Concurrency Rules:**<br>❖ Each transition runs the status update plus audit-log insert in a single DB transaction.<br>❖ Optimistic locking on `version` rejects concurrent updates with HTTP 409 referencing `MSG-LCYC-06`. |
+| _(8)_, _(15)_ | _BR-19.4_ | **Event Publication Rules:**<br>❖ Each successful T-10 and T-11 publishes `OrderStatusChangedEvent` after commit with the corresponding `fromStatus` / `toStatus`.<br>❖ Neither T-10 nor T-11 triggers a refund event; T-12 (`delivered → refunded`) is an admin-only post-delivery dispute path and is out of scope for this UC. |
+| _(15)–(16)_ | _BR-19.5_ | **Delivery Completion Side-Effects Rules:**<br>❖ The `delivered` status is the trigger for downstream Phase 3 features: customer rating eligibility, order-history "delivered" filter, and COD payment-on-delivery reconciliation against `totalAmount`.<br>❖ A delivered order can only advance to `refunded` via T-12 (admin-only dispute resolution); no other forward transition is defined. |
+
+---
+
+## 3. Appendix — Message List
 
 | Message Code | Message Content | Button |
 |---|---|---|
@@ -807,7 +1451,43 @@ All customer- and actor-visible messages produced across every use case are list
 | MSG-PAY-07 | Concurrent processing conflict. (VNPay RspCode 99) | — |
 | MSG-HIST-01 | Order {orderId} not found. | OK |
 | MSG-HIST-02 | Invalid filter values. Status must be a canonical order state; date range must satisfy minDate ≤ maxDate; limit ∈ [1, 100]; offset ≥ 0. | OK |
+| MSG-RES-01 | Invalid restaurant data. Name, address and phone are required; phone must match the Vietnamese mobile or landline format; coordinates (if provided) must lie within Vietnam. | OK |
+| MSG-RES-02 | You do not have permission to perform this action on this restaurant. | OK |
+| MSG-RES-03 | Restaurant created. It is awaiting administrator approval before becoming visible to customers. | OK |
+| MSG-RES-04 | Restaurant profile updated. | OK |
+| MSG-RES-05 | Restaurant approval status updated. | OK |
+| MSG-MENU-01 | Invalid menu data. Please review name, price and the selected category. | OK |
+| MSG-MENU-02 | Menu category not found. | OK |
+| MSG-MENU-03 | A category with this name already exists for this restaurant. | OK |
+| MSG-MENU-04 | Menu item {id} not found. | OK |
+| MSG-MENU-05 | You do not own the restaurant associated with this menu item. | OK |
+| MSG-MENU-06 | Modifier group is invalid: maxSelections must be ≥ minSelections and both must be ≥ 0. | OK |
+| MSG-MENU-07 | Modifier group or option not found, or it does not belong to the specified menu item. | OK |
+| MSG-AVAIL-01 | Cannot toggle sold-out on an unavailable item. Mark it available first, then retry. | OK |
+| MSG-AVAIL-02 | Restaurant availability updated. | OK |
+| MSG-AVAIL-03 | Menu item availability updated. | OK |
+| MSG-LCYC-01 | Cannot transition order from '{fromStatus}' to '{toStatus}' — not a valid state change. | OK |
+| MSG-LCYC-02 | Your role is not permitted to perform this order transition. | OK |
+| MSG-LCYC-03 | You do not own the restaurant associated with this order. | OK |
+| MSG-LCYC-04 | VNPay orders cannot be confirmed directly by the restaurant. Wait for payment confirmation before accepting. | OK |
+| MSG-LCYC-05 | A reason note is required for this action. | OK |
+| MSG-LCYC-06 | Order was modified concurrently. Please refresh and retry. | OK |
+| MSG-LCYC-07 | Order accepted. | OK |
+| MSG-LCYC-08 | Order rejected. | OK |
+| MSG-LCYC-09 | Order is now being prepared. | OK |
+| MSG-LCYC-10 | Order is ready for pickup. A shipper will be dispatched shortly. | OK |
+| MSG-SHIP-01 | Invalid shipper application data. Please review the required fields and uploaded documents. | OK |
+| MSG-SHIP-02 | You already have a pending or approved shipper application on record. | OK |
+| MSG-SHIP-03 | Shipper application submitted. It is awaiting administrator approval. | OK |
+| MSG-SHIP-04 | Your account is not yet approved as an active shipper. | OK |
+| MSG-SHIP-05 | Shipper application rejected. See the reason note for details. | OK |
+| MSG-SHIP-06 | Shipper availability updated. | OK |
+| MSG-SHIP-07 | Cannot go offline while you have an in-flight delivery. Complete the active delivery first. | OK |
+| MSG-DEL-01 | Order picked up. Drive safely. | OK |
+| MSG-DEL-02 | Another shipper has already claimed this order. | OK |
+| MSG-DEL-03 | Only the assigned shipper can advance this delivery. | OK |
+| MSG-DEL-04 | Order delivered. Thank you. | OK |
 
 ---
 
-*End of Software Requirements Specification — Phase 1, Version 1.5*
+*End of Software Requirements Specification — Phases 1 & 2, Version 1.6*
