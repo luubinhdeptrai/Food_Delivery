@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useMenuItems, useMenuCategories } from '@/features/menu/hooks/useMenu';
 import { useDeleteMenuItem, useUpdateMenuItem } from '@/features/menu/hooks/useMenuMutations';
-import { useMyRestaurant } from '@/features/restaurant/hooks/useRestaurants';
+import { useMyRestaurant, useUpdateRestaurant } from '@/features/restaurant/hooks/useRestaurants';
 import type { MenuItem } from '@/features/menu/types';
 
 export function MenuManagementPage() {
@@ -21,6 +21,7 @@ export function MenuManagementPage() {
 
   const deleteItem = useDeleteMenuItem(restaurantId ?? '');
   const updateItem = useUpdateMenuItem(restaurantId ?? '');
+  const updateRestaurant = useUpdateRestaurant();
 
   const allItems = itemsResponse?.data ?? [];
   const filteredItems = activeCategoryId
@@ -28,11 +29,13 @@ export function MenuManagementPage() {
     : allItems;
 
   const availableItems = allItems.filter((i) => i.status === 'available').length;
+  const unavailableItems = allItems.filter((i) => i.status === 'unavailable').length;
   const outOfStockItems = allItems.filter((i) => i.status === 'out_of_stock').length;
 
   const overview = {
     totalItems: allItems.length,
     availableItems,
+    unavailableItems,
     outOfStockItems,
     categories,
   };
@@ -57,10 +60,7 @@ export function MenuManagementPage() {
 
   const handleStoreToggle = () => {
     if (!restaurant) return;
-    updateItem.mutate({
-      id: restaurant.id,
-      dto: {},
-    });
+    updateRestaurant.mutate({ id: restaurant.id, data: { isOpen: !restaurant.isOpen } });
   };
 
   return (

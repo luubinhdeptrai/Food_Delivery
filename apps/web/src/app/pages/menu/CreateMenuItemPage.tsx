@@ -14,22 +14,21 @@ import { useMyRestaurant } from '@/features/restaurant/hooks/useRestaurants';
 
 export default function CreateMenuItemPage() {
   const navigate = useNavigate();
-  const { data: restaurant } = useMyRestaurant();
-  const restaurantId = restaurant?.id ?? '';
+  const { data: restaurant, isLoading: restaurantLoading } = useMyRestaurant();
+  const restaurantId = restaurant?.id;
 
-  const { data: categories = [] } = useMenuCategories(restaurantId || undefined);
-  const { mutate: createItem, isPending, error } = useCreateMenuItem(restaurantId);
+  const { data: categories = [] } = useMenuCategories(restaurantId);
+  const { mutate: createItem, isPending, error } = useCreateMenuItem(restaurantId ?? '');
 
   const methods = useForm<CreateMenuItemFormValues>({
     resolver: zodResolver(createMenuItemSchema),
-    defaultValues: { name: '', price: undefined, description: '', sku: '' },
+    defaultValues: { name: '', description: '', sku: '' },
   });
 
   const onSubmit = (values: CreateMenuItemFormValues) => {
-    if (!restaurantId) return;
     createItem(
       {
-        restaurantId,
+        restaurantId: restaurantId!,
         name: values.name,
         price: values.price,
         categoryId: values.categoryId,
@@ -41,6 +40,35 @@ export default function CreateMenuItemPage() {
       { onSuccess: () => navigate('/menu') },
     );
   };
+
+  if (restaurantLoading) {
+    return (
+      <div className="w-full py-2 px-1">
+        <p className="text-muted-foreground text-sm">Loading restaurant…</p>
+      </div>
+    );
+  }
+
+  if (!restaurant) {
+    return (
+      <div className="w-full py-2 px-1">
+        <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-4">Create New Item</h1>
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
+          <p className="font-bold mb-1">Restaurant not found</p>
+          <p className="text-sm">
+            Your restaurant account must be <strong>approved</strong> before you can add menu items.
+            Check your restaurant status in the database or contact an admin.
+          </p>
+          <button
+            onClick={() => navigate('/menu')}
+            className="mt-4 text-sm font-bold underline"
+          >
+            ← Back to menu
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <FormProvider {...methods}>
@@ -56,7 +84,7 @@ export default function CreateMenuItemPage() {
 
         <div className="grid grid-cols-12 gap-8">
           <div className="col-span-12 lg:col-span-8 space-y-8">
-            <ProductEssenceCard categories={categories} />
+            <ProductEssenceCard categories={categories} restaurantId={restaurantId!} />
             <DietaryTagsCard />
           </div>
           <div className="col-span-12 lg:col-span-4 space-y-8">

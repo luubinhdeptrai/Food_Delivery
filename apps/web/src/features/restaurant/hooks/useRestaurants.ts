@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { restaurantApi } from '../api/restaurant.api';
 import { useSession } from '@/lib/auth-client';
+import type { UpdateRestaurantFormValues } from '../schemas/restaurant.schema';
 
 export const restaurantKeys = {
   all: ['restaurants'] as const,
@@ -31,5 +32,16 @@ export function useRestaurant(id: string) {
     queryKey: restaurantKeys.detail(id),
     queryFn: () => restaurantApi.getOne(id).then((r) => r.data),
     enabled: !!id,
+  });
+}
+
+export function useUpdateRestaurant() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateRestaurantFormValues }) =>
+      restaurantApi.update(id, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: restaurantKeys.all });
+    },
   });
 }

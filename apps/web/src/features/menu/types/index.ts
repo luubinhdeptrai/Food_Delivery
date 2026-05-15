@@ -32,6 +32,7 @@ export interface MenuItemListResponse {
 export interface MenuOverview {
   totalItems: number;
   availableItems: number;
+  unavailableItems: number;
   outOfStockItems: number;
   categories: MenuCategory[];
 }
