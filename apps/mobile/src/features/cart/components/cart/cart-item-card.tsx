@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { Minus, Plus, Trash2 } from 'lucide-react-native';
 import { formatCurrency } from '@/src/lib/format-utils';
-import type { CartItem } from '../types';
+import type { CartItem } from '../../types';
 
 interface CartItemCardProps {
   item: CartItem;

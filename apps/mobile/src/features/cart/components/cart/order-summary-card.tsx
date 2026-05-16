@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Tag } from 'lucide-react-native';
 import { formatCurrency } from '@/src/lib/format-utils';
-import type { OrderSummary } from '../types';
+import type { OrderSummary } from '../../types';
 
 interface OrderSummaryCardProps {
   summary: OrderSummary;

@@ -16,7 +16,7 @@ import {
   OrderSummaryPreview,
 } from '../components';
 import type { DeliveryAddressScreenProps } from '../types';
-import type { DeliveryAddressOption } from '../components/delivery-address-card';
+import type { DeliveryAddressOption } from '../components/delivery-address/delivery-address-card';
 import { useAddressStore } from '@/src/features/location/store/address-store';
 import { useCurrentLocation } from '@/src/features/location/hooks/use-current-location';
 
@@ -27,7 +27,6 @@ const ORDER_PREVIEW_IMAGES = [
 
 export function DeliveryAddressScreen({
   onBack,
-  onContinue,
   onAddNewAddress,
   onEditAddress,
   onSelectAddress,
@@ -77,11 +76,6 @@ export function DeliveryAddressScreen({
     if (result) {
       setSelectedAddress(result.label, result.coords);
       setSelectedId('current'); // Temporary ID for current location visual
-      if (onContinue) {
-        onContinue();
-      } else {
-        router.back();
-      }
     }
   };
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Image } from 'expo-image';
-import type { CartItem } from '../types';
+import type { CartItem } from '../../types';
 
 interface OrderReviewItemProps {
   item: CartItem;

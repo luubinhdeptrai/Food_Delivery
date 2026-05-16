@@ -11,17 +11,19 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
-import { CartHeader } from '@/src/features/cart/components/cart-header';
-import { CartItemCard } from '@/src/features/cart/components/cart-item-card';
-import { OrderSummaryCard } from '@/src/features/cart/components/order-summary-card';
-import { EmptyCart } from '@/src/features/cart/components/empty-cart';
-import type { CartItem, CartScreenProps } from '@/src/features/cart/types';
+import {
+  CartHeader,
+  CartItemCard,
+  OrderSummaryCard,
+  EmptyCart,
+} from '../components';
+import type { CartItem, CartScreenProps } from '../types';
 import { formatCurrency } from '@/src/lib/format-utils';
 import {
   useMyCart,
   useUpdateCartItemQuantity,
   useRemoveCartItem,
-} from '../api/cart-api';
+} from '../hooks';
 import { useAddressStore } from '@/src/features/location/store/address-store';
 import { useDeliveryEstimate } from '@/src/features/restaurants/api/restaurant-api';
 

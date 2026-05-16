@@ -4,7 +4,7 @@ import { ShoppingCart } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatCurrency } from '@/src/lib/format-utils';
-import { useMyCart } from '../api/cart-api';
+import { useMyCart } from '../../hooks';
 
 export function FloatingCartButton() {
   const { data: cart } = useMyCart();
