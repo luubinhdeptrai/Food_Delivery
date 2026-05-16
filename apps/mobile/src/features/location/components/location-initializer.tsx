@@ -6,7 +6,8 @@ import { useAddressStore } from '../store/address-store';
 export function LocationInitializer() {
   const { data: session } = useSession();
   const { locate } = useCurrentLocation();
-  const { setSelectedAddress, latitude } = useAddressStore();
+  const setSelectedAddress = useAddressStore((state) => state.setSelectedAddress);
+  const latitude = useAddressStore((state) => state.latitude);
   const isFetchingRef = useRef(false);
 
   useEffect(() => {

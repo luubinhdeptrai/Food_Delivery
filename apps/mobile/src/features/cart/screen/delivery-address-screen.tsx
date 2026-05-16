@@ -19,6 +19,7 @@ import type { DeliveryAddressScreenProps } from '../types';
 import type { DeliveryAddressOption } from '../components/delivery-address/delivery-address-card';
 import { useAddressStore } from '@/src/features/location/store/address-store';
 import { useCurrentLocation } from '@/src/features/location/hooks/use-current-location';
+import { useMyCart } from '../hooks/use-cart';
 
 const ORDER_PREVIEW_IMAGES = [
   'https://lh3.googleusercontent.com/aida-public/AB6AXuB9afqEW_EHwkLZwswWeZrsP2Dq-jjLX78dA9Hh9tfe3VqjVRYT-Dkv_reqJhkMwEpwUT2kg6Xguk5dbYoTviXDgkC3mii0CpcBNaWF1rfiGE-JUZHFAiBoYm0_eLLYCBEZkY3F_9fSP0lPpXvEO-ePwSOzhIPOX5rwS2Fsj7tmP_SyDXODRwDh81QiWStBmiWdgIAbjmkv_pFIJtR12n0TUJPH_Bd7CJ5tm8ucPwIiXC3wohz1F2c3FpXyzuMIdEvWtuVXxXGfvYSZ',
@@ -35,6 +36,10 @@ export function DeliveryAddressScreen({
   const { savedAddresses, setSelectedAddress, selectedAddress } =
     useAddressStore();
   const { locate, isLocating } = useCurrentLocation();
+  const { data: cart } = useMyCart();
+
+  const totalItems = cart?.items.length ?? 0;
+  const remainingCount = Math.max(0, totalItems - ORDER_PREVIEW_IMAGES.length);
 
   const addressOptions = useMemo((): DeliveryAddressOption[] => {
     return savedAddresses.map((addr) => ({
@@ -75,7 +80,7 @@ export function DeliveryAddressScreen({
     const result = await locate();
     if (result) {
       setSelectedAddress(result.label, result.coords);
-      setSelectedId('current'); // Temporary ID for current location visual
+      setSelectedId(`current-location-${Date.now()}`); // Unique ID for current location visual
     }
   };
 
@@ -174,7 +179,7 @@ export function DeliveryAddressScreen({
 
         <OrderSummaryPreview
           previewImages={ORDER_PREVIEW_IMAGES}
-          remainingCount={4}
+          remainingCount={remainingCount}
         />
       </ScrollView>
     </View>

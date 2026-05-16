@@ -21,7 +21,7 @@ export function OrderSummaryPreview({
         <View className="flex-row items-center">
           {previewImages.map((uri, index) => (
             <View
-              key={uri}
+              key={`${uri}-${index}`}
               className="w-10 h-10 rounded-full border-4 border-surface-container-low overflow-hidden"
               style={{ marginLeft: index === 0 ? 0 : -12 }}
             >

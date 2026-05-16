@@ -3,6 +3,7 @@ import { View, Text, Image, TextInput } from 'react-native';
 import { FileEdit } from 'lucide-react-native';
 import { formatCurrency } from '@/src/lib/format-utils';
 import type { CartItem } from '../../types';
+import { calculateItemTotal, calculateItemBasePrice } from '../../utils/price-calculations';
 
 interface CheckoutOrderSummaryProps {
   items: CartItem[];
@@ -77,14 +78,7 @@ export function CheckoutOrderSummary({ items }: CheckoutOrderSummaryProps) {
                       className="text-sm text-on-surface"
                       style={{ fontFamily: 'Inter_600SemiBold' }}
                     >
-                      {formatCurrency(
-                        (item.price +
-                          (item.selectedModifiers?.reduce(
-                            (sum, m) => sum + m.price,
-                            0,
-                          ) || 0)) *
-                          item.quantity,
-                      )}
+                      {formatCurrency(calculateItemTotal(item))}
                     </Text>
                     <Text
                       className="text-xs text-on-surface-variant"
@@ -97,14 +91,7 @@ export function CheckoutOrderSummary({ items }: CheckoutOrderSummaryProps) {
                     className="text-[10px] text-on-surface-variant"
                     style={{ fontFamily: 'Inter_400Regular' }}
                   >
-                    {formatCurrency(
-                      item.price +
-                        (item.selectedModifiers?.reduce(
-                          (sum, m) => sum + m.price,
-                          0,
-                        ) || 0),
-                    )}{' '}
-                    each
+                    {formatCurrency(calculateItemBasePrice(item))} each
                   </Text>
                 </View>
               </View>

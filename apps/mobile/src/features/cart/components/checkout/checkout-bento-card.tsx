@@ -1,9 +1,10 @@
+import { LucideIcon } from 'lucide-react-native';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 
 interface CheckoutBentoCardProps {
   title: string;
-  icon: any;
+  icon: LucideIcon;
   onEdit: () => void;
   children: React.ReactNode;
 }

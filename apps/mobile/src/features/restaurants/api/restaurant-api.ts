@@ -135,8 +135,13 @@ export function useDeliveryEstimate(
   lon: number | null,
 ) {
   const hasCoords = lat !== null && lon !== null;
+  const queryKey =
+    restaurantId && hasCoords
+      ? restaurantKeys.estimate(restaurantId, lat, lon)
+      : (['restaurants', 'estimate', 'unavailable'] as const);
+
   return useQuery({
-    queryKey: restaurantKeys.estimate(restaurantId!, lat!, lon!),
+    queryKey,
     queryFn: () =>
       apiFetch<DeliveryEstimateResponse>(
         `/api/restaurants/${restaurantId}/delivery-zones/delivery-estimate?lat=${lat}&lon=${lon}`,

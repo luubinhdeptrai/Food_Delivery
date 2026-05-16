@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Minus, Plus, Trash2 } from 'lucide-react-native';
 import { formatCurrency } from '@/src/lib/format-utils';
 import type { CartItem } from '../../types';
+import { calculateItemTotal } from '../../utils/price-calculations';
 
 interface CartItemCardProps {
   item: CartItem;
@@ -71,14 +72,7 @@ export function CartItemCard({
             className="text-primary text-base"
             style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
           >
-            {formatCurrency(
-              (item.price +
-                (item.selectedModifiers?.reduce(
-                  (sum, mod) => sum + mod.price,
-                  0
-                ) ?? 0)) *
-                item.quantity
-            )}
+            {formatCurrency(calculateItemTotal(item))}
           </Text>
 
           {/* Quantity stepper */}
