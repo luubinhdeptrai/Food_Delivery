@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Image } from 'expo-image';
-import type { CartItem } from '../types';
+import type { CartItem } from '../../types';
 
 interface OrderReviewItemProps {
   item: CartItem;
@@ -23,12 +23,6 @@ export function OrderReviewItem({ item }: OrderReviewItemProps) {
           style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
         >
           {item.name}
-        </Text>
-        <Text
-          className="text-xs text-on-surface-variant"
-          style={{ fontFamily: 'Inter_400Regular' }}
-        >
-          {item.subtitle}
         </Text>
       </View>
       <View className="items-end">
