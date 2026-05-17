@@ -134,7 +134,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Setup Expo
-        uses: expo/setup-expo@v3
+        uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           eas-version: latest
@@ -145,4 +145,4 @@ jobs:
 
       - name: Build Mobile (EAS)
         working-directory: apps/mobile
-        run: eas build --platform all --profile preview --non-interactive
+        run: eas build --platform all --profile development --non-interactive
