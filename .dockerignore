@@ -7,4 +7,4 @@ build
 .next
 *.log
 .env*
-! .env.example
+!.env.example
