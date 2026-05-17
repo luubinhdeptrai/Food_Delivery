@@ -112,9 +112,6 @@ export interface CartResponse {
 }
 
 export interface DeliveryAddressDto {
-  street: string;
-  district: string;
-  city: string;
   latitude?: number;
   longitude?: number;
 }

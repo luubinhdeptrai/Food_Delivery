@@ -87,12 +87,8 @@ export function useCheckout() {
       Toast.show({ type: 'error', text1: 'Payment method is required' });
       return;
     }
-    const addressObj = selectedAddress as any;
     const dto: CheckoutDto = {
       deliveryAddress: {
-        street: addressObj.street || (typeof selectedAddress === 'string' ? selectedAddress : ''),
-        district: addressObj.district || '',
-        city: addressObj.city || '',
         latitude: latitude ?? undefined,
         longitude: longitude ?? undefined,
       },

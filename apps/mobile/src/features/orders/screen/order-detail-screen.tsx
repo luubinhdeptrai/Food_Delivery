@@ -89,7 +89,9 @@ export function OrderDetailScreen() {
               Delivery Address
             </Text>
             <Text className="text-on-surface-variant" style={{ fontFamily: 'Inter_400Regular' }}>
-              {order.deliveryAddress.street}, {order.deliveryAddress.district}, {order.deliveryAddress.city}
+              {order.deliveryAddress.latitude && order.deliveryAddress.longitude 
+                ? `Lat: ${order.deliveryAddress.latitude.toFixed(4)}, Lng: ${order.deliveryAddress.longitude.toFixed(4)}`
+                : 'Location details unavailable'}
             </Text>
           </View>
         </ScrollView>

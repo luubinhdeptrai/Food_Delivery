@@ -72,9 +72,6 @@ export interface OrderStatusLogEntry {
 }
 
 export interface DeliveryAddressResponse {
-  street: string;
-  district: string;
-  city: string;
   latitude?: number;
   longitude?: number;
 }
