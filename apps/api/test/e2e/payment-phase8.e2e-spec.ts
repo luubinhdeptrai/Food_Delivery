@@ -369,10 +369,10 @@ describe('Payment Phase 8 E2E', () => {
       const txn = await getPaymentTransaction(txnRef);
 
       expect(txn).not.toBeNull();
-      expect(txn!.status).toBe('awaiting_ipn');
-      expect(txn!.orderId).toBe(orderId);
-      expect(txn!.amount).toBe(15000);
-      expect(txn!.paymentUrl).toBeTruthy();
+      expect(txn.status).toBe('awaiting_ipn');
+      expect(txn.orderId).toBe(orderId);
+      expect(txn.amount).toBe(15000);
+      expect(txn.paymentUrl).toBeTruthy();
     });
   });
 
@@ -469,9 +469,7 @@ describe('Payment Phase 8 E2E', () => {
     it('P-10 IPN with valid signature returns RspCode=00 + Message=Success', async () => {
       const ipnPayload = buildIpnPayload(txnRef, 15000, hashSecret);
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -484,10 +482,10 @@ describe('Payment Phase 8 E2E', () => {
       const txn = await getPaymentTransaction(txnRef);
 
       expect(txn).not.toBeNull();
-      expect(txn!.status).toBe('completed');
-      expect(txn!.paidAt).not.toBeNull();
-      expect(txn!.providerTxnId).toBe('14069932');
-      expect(txn!.vnpResponseCode).toBe('00');
+      expect(txn.status).toBe('completed');
+      expect(txn.paidAt).not.toBeNull();
+      expect(txn.providerTxnId).toBe('14069932');
+      expect(txn.vnpResponseCode).toBe('00');
     });
 
     it('P-12 return URL reflects completed status after IPN processed', async () => {
@@ -532,9 +530,7 @@ describe('Payment Phase 8 E2E', () => {
       // Tamper the amount AFTER signature was computed — signature now invalid
       ipnPayload['vnp_Amount'] = '99999';
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('97');
@@ -544,17 +540,15 @@ describe('Payment Phase 8 E2E', () => {
       const txn = await getPaymentTransaction(txnRef);
 
       expect(txn).not.toBeNull();
-      expect(txn!.status).toBe('awaiting_ipn');
-      expect(txn!.paidAt).toBeNull();
+      expect(txn.status).toBe('awaiting_ipn');
+      expect(txn.paidAt).toBeNull();
     });
 
     it('P-15 missing vnp_SecureHash → RspCode=97', async () => {
       const ipnPayload = buildIpnPayload(txnRef, 15000, hashSecret);
       delete ipnPayload['vnp_SecureHash'];
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('97');
@@ -565,9 +559,7 @@ describe('Payment Phase 8 E2E', () => {
       const wrongSecret = 'WRONG_SECRET_THAT_DOES_NOT_MATCH';
       const ipnPayload = buildIpnPayload(txnRef, 15000, wrongSecret);
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('97');
@@ -614,9 +606,7 @@ describe('Payment Phase 8 E2E', () => {
         vnp_TransactionNo: 'VNP_IDEM_TEST_002', // different provider ID — simulates retry
       });
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('00');
@@ -625,16 +615,16 @@ describe('Payment Phase 8 E2E', () => {
     it('P-18 DB status remains completed after duplicate IPN (no regression)', async () => {
       const txn = await getPaymentTransaction(txnRef);
 
-      expect(txn!.status).toBe('completed');
+      expect(txn.status).toBe('completed');
       // providerTxnId must still be the FIRST IPN's value — not overwritten
-      expect(txn!.providerTxnId).toBe('VNP_IDEM_TEST_001');
+      expect(txn.providerTxnId).toBe('VNP_IDEM_TEST_001');
     });
 
     it('P-19 version is incremented exactly once (optimistic lock not tripped twice)', async () => {
       const txn = await getPaymentTransaction(txnRef);
       // Version starts at 0 (create) → 1 (awaiting_ipn) → 2 (completed)
       // A second IPN should NOT increment version again (terminal early-exit)
-      expect(txn!.version).toBe(2);
+      expect(txn.version).toBe(2);
     });
   });
 
@@ -662,7 +652,7 @@ describe('Payment Phase 8 E2E', () => {
 
       // Step 2: Verify PaymentTransaction is in awaiting_ipn
       const preTxn = await getPaymentTransaction(txnRef);
-      expect(preTxn!.status).toBe('awaiting_ipn');
+      expect(preTxn.status).toBe('awaiting_ipn');
 
       // Step 3: Simulate VNPay IPN callback
       const ipnPayload = buildIpnPayload(txnRef, 15000, hashSecret, {
@@ -677,9 +667,9 @@ describe('Payment Phase 8 E2E', () => {
 
       // Step 4: Verify PaymentTransaction is now completed
       const postTxn = await getPaymentTransaction(txnRef);
-      expect(postTxn!.status).toBe('completed');
-      expect(postTxn!.paidAt).not.toBeNull();
-      expect(postTxn!.orderId).toBe(orderId);
+      expect(postTxn.status).toBe('completed');
+      expect(postTxn.paidAt).not.toBeNull();
+      expect(postTxn.orderId).toBe(orderId);
 
       // Step 5: Return URL now shows completed
       const returnParams = buildReturnParams(txnRef, 15000, hashSecret, '00');

@@ -16,10 +16,10 @@ import { NotificationService } from '../services/notification.service';
  */
 @Injectable()
 @EventsHandler(PaymentConfirmedEvent)
-export class PaymentConfirmedNotificationHandler
-  implements IEventHandler<PaymentConfirmedEvent>
-{
-  private readonly logger = new Logger(PaymentConfirmedNotificationHandler.name);
+export class PaymentConfirmedNotificationHandler implements IEventHandler<PaymentConfirmedEvent> {
+  private readonly logger = new Logger(
+    PaymentConfirmedNotificationHandler.name,
+  );
 
   constructor(private readonly notificationService: NotificationService) {}
 
@@ -39,7 +39,9 @@ export class PaymentConfirmedNotificationHandler
     }
   }
 
-  private async processNotification(event: PaymentConfirmedEvent): Promise<void> {
+  private async processNotification(
+    event: PaymentConfirmedEvent,
+  ): Promise<void> {
     await this.notificationService.sendFromEvent({
       type: 'payment_confirmed',
       recipientId: event.customerId,

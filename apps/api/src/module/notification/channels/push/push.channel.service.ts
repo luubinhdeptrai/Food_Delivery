@@ -1,9 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { Notification } from '../../domain/notification.schema';
 import { DeviceTokenRepository } from '../../repositories/device-token.repository';
-import {
-  PUSH_PROVIDER,
-} from './push-provider.interface';
+import { PUSH_PROVIDER } from './push-provider.interface';
 import type { IPushProvider } from './push-provider.interface';
 import type {
   INotificationChannel,
@@ -51,10 +49,12 @@ export class PushChannelService implements INotificationChannel {
 
   async deliver(
     notification: Notification,
-    context: DeliveryContext,
+    _context: DeliveryContext,
   ): Promise<DeliveryResult> {
     // 1. Fetch active tokens for the recipient
-    let tokens: Awaited<ReturnType<DeviceTokenRepository['findActiveByUserId']>>;
+    let tokens: Awaited<
+      ReturnType<DeviceTokenRepository['findActiveByUserId']>
+    >;
     try {
       tokens = await this.deviceTokenRepo.findActiveByUserId(
         notification.recipientId,
@@ -88,8 +88,7 @@ export class PushChannelService implements INotificationChannel {
         tokens: tokens.map((t) => t.token),
         title: notification.title,
         body: notification.body,
-        data:
-          (notification.data as Record<string, string> | null) ?? undefined,
+        data: notification.data ?? undefined,
       });
     } catch (err) {
       this.logger.error(

@@ -28,9 +28,7 @@ import { NotificationService } from '../services/notification.service';
  */
 @Injectable()
 @EventsHandler(OrderCancelledAfterPaymentEvent)
-export class OrderCancelledAfterPaymentNotificationHandler
-  implements IEventHandler<OrderCancelledAfterPaymentEvent>
-{
+export class OrderCancelledAfterPaymentNotificationHandler implements IEventHandler<OrderCancelledAfterPaymentEvent> {
   private readonly logger = new Logger(
     OrderCancelledAfterPaymentNotificationHandler.name,
   );

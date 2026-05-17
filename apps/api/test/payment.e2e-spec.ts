@@ -35,11 +35,7 @@ import {
   getTestDb,
 } from './setup/db-setup';
 import { TestAuthManager } from './helpers/test-auth';
-import {
-  setAuthManager,
-  ownerHeaders,
-  noAuthHeaders,
-} from './helpers/auth';
+import { setAuthManager, ownerHeaders, noAuthHeaders } from './helpers/auth';
 import { paymentTransactions } from '../src/module/payment/domain/payment-transaction.schema';
 
 // ─── Timing helper ────────────────────────────────────────────────────────────
@@ -377,11 +373,11 @@ describe('Payment E2E — Complete Suite', () => {
       const txn = await getPaymentTransaction(txnRef);
 
       expect(txn).not.toBeNull();
-      expect(txn!.status).toBe('awaiting_ipn');
-      expect(txn!.orderId).toBe(orderId);
-      expect(txn!.amount).toBe(15000);
-      expect(txn!.paymentUrl).toBeTruthy();
-      expect(txn!.version).toBe(1); // 0 (created) → 1 (awaiting_ipn)
+      expect(txn.status).toBe('awaiting_ipn');
+      expect(txn.orderId).toBe(orderId);
+      expect(txn.amount).toBe(15000);
+      expect(txn.paymentUrl).toBeTruthy();
+      expect(txn.version).toBe(1); // 0 (created) → 1 (awaiting_ipn)
     });
   });
 
@@ -494,7 +490,7 @@ describe('Payment E2E — Complete Suite', () => {
       expect(res.body.signatureValid).toBe(false);
       // Return URL never mutates DB — status still awaiting_ipn
       const txn = await getPaymentTransaction(txnRef);
-      expect(txn!.status).toBe('awaiting_ipn');
+      expect(txn.status).toBe('awaiting_ipn');
     });
 
     it('P-13 missing vnp_TxnRef → 200, status=unknown', async () => {
@@ -515,7 +511,7 @@ describe('Payment E2E — Complete Suite', () => {
 
       // DB status must remain awaiting_ipn (only IPN can change it)
       const txn = await getPaymentTransaction(txnRef);
-      expect(txn!.status).toBe('awaiting_ipn');
+      expect(txn.status).toBe('awaiting_ipn');
     });
   });
 
@@ -554,9 +550,7 @@ describe('Payment E2E — Complete Suite', () => {
         'VNP_SEC5_001',
       );
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('00');
@@ -566,10 +560,10 @@ describe('Payment E2E — Complete Suite', () => {
       const txn = await getPaymentTransaction(txnRef);
 
       expect(txn).not.toBeNull();
-      expect(txn!.status).toBe('completed');
-      expect(txn!.paidAt).not.toBeNull();
-      expect(txn!.providerTxnId).toBe('VNP_SEC5_001');
-      expect(txn!.vnpResponseCode).toBe('00');
+      expect(txn.status).toBe('completed');
+      expect(txn.paidAt).not.toBeNull();
+      expect(txn.providerTxnId).toBe('VNP_SEC5_001');
+      expect(txn.vnpResponseCode).toBe('00');
     });
 
     it('P-17 return URL reflects completed status after IPN', async () => {
@@ -642,9 +636,7 @@ describe('Payment E2E — Complete Suite', () => {
           'VNP_DEC_001',
         );
 
-        const res = await http
-          .get('/api/payments/vnpay/ipn')
-          .query(ipnPayload);
+        const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
         expect(res.status).toBe(200);
         // VNPay merchants always return '00' even for failed payments —
@@ -656,9 +648,9 @@ describe('Payment E2E — Complete Suite', () => {
         const txn = await getPaymentTransaction(txnRef);
 
         expect(txn).not.toBeNull();
-        expect(txn!.status).toBe('failed');
-        expect(txn!.vnpResponseCode).toBe('24');
-        expect(txn!.paidAt).toBeNull(); // paidAt only set on success
+        expect(txn.status).toBe('failed');
+        expect(txn.vnpResponseCode).toBe('24');
+        expect(txn.paidAt).toBeNull(); // paidAt only set on success
       });
 
       it('P-21 order transitions to cancelled after failed payment (PaymentFailedEvent)', async () => {
@@ -711,9 +703,7 @@ describe('Payment E2E — Complete Suite', () => {
           'VNP_AMT_001',
         );
 
-        const res = await http
-          .get('/api/payments/vnpay/ipn')
-          .query(ipnPayload);
+        const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
         expect(res.status).toBe(200);
         expect(res.body.RspCode).toBe('04');
@@ -724,7 +714,7 @@ describe('Payment E2E — Complete Suite', () => {
         const txn = await getPaymentTransaction(txnRef);
 
         expect(txn).not.toBeNull();
-        expect(txn!.status).toBe('failed');
+        expect(txn.status).toBe('failed');
       });
 
       it('P-24 order transitions to cancelled after amount mismatch (PaymentFailedEvent)', async () => {
@@ -752,9 +742,7 @@ describe('Payment E2E — Complete Suite', () => {
           'VNP_UNK_001',
         );
 
-        const res = await http
-          .get('/api/payments/vnpay/ipn')
-          .query(ipnPayload);
+        const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
         expect(res.status).toBe(200);
         expect(res.body.RspCode).toBe('01');
@@ -787,13 +775,17 @@ describe('Payment E2E — Complete Suite', () => {
     });
 
     it('P-26 tampered amount (post-sign) → RspCode=97', async () => {
-      const ipnPayload = buildIpnPayload(txnRef, 15000, hashSecret, {}, 'VNP_SIG_001');
+      const ipnPayload = buildIpnPayload(
+        txnRef,
+        15000,
+        hashSecret,
+        {},
+        'VNP_SIG_001',
+      );
       // Tamper AFTER signing → signature no longer matches
       ipnPayload['vnp_Amount'] = '999999999';
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('97');
@@ -801,16 +793,20 @@ describe('Payment E2E — Complete Suite', () => {
 
     it('P-27 DB transaction remains awaiting_ipn after rejected IPN', async () => {
       const txn = await getPaymentTransaction(txnRef);
-      expect(txn!.status).toBe('awaiting_ipn');
+      expect(txn.status).toBe('awaiting_ipn');
     });
 
     it('P-28 missing vnp_SecureHash → RspCode=97', async () => {
-      const ipnPayload = buildIpnPayload(txnRef, 15000, hashSecret, {}, 'VNP_SIG_002');
+      const ipnPayload = buildIpnPayload(
+        txnRef,
+        15000,
+        hashSecret,
+        {},
+        'VNP_SIG_002',
+      );
       delete ipnPayload['vnp_SecureHash'];
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('97');
@@ -825,9 +821,7 @@ describe('Payment E2E — Complete Suite', () => {
         'VNP_SIG_003',
       );
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('97');
@@ -835,9 +829,9 @@ describe('Payment E2E — Complete Suite', () => {
 
     it('P-30 DB not mutated after any invalid signature attempt', async () => {
       const txn = await getPaymentTransaction(txnRef);
-      expect(txn!.status).toBe('awaiting_ipn');
-      expect(txn!.paidAt).toBeNull();
-      expect(txn!.providerTxnId).toBeNull();
+      expect(txn.status).toBe('awaiting_ipn');
+      expect(txn.paidAt).toBeNull();
+      expect(txn.providerTxnId).toBeNull();
     });
   });
 
@@ -887,9 +881,7 @@ describe('Payment E2E — Complete Suite', () => {
         'VNP_IDEM_SECOND', // different providerTxnId — simulates VNPay retry
       );
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.status).toBe(200);
       expect(res.body.RspCode).toBe('00');
@@ -897,19 +889,19 @@ describe('Payment E2E — Complete Suite', () => {
 
     it('P-32 DB status remains completed after duplicate IPN (no regression)', async () => {
       const txn = await getPaymentTransaction(txnRef);
-      expect(txn!.status).toBe('completed');
+      expect(txn.status).toBe('completed');
     });
 
     it('P-33 providerTxnId retains first IPN value (not overwritten by retry)', async () => {
       const txn = await getPaymentTransaction(txnRef);
-      expect(txn!.providerTxnId).toBe('VNP_IDEM_FIRST');
+      expect(txn.providerTxnId).toBe('VNP_IDEM_FIRST');
     });
 
     it('P-34 version incremented exactly once (optimistic lock not tripped twice)', async () => {
       const txn = await getPaymentTransaction(txnRef);
       // Version: 0 (created) → 1 (awaiting_ipn) → 2 (completed)
       // A second IPN triggers isTerminalStatus() early-exit → no additional write
-      expect(txn!.version).toBe(2);
+      expect(txn.version).toBe(2);
     });
 
     it('P-35 third IPN with different responseCode still idempotent', async () => {
@@ -922,14 +914,12 @@ describe('Payment E2E — Complete Suite', () => {
         'VNP_IDEM_THIRD',
       );
 
-      const res = await http
-        .get('/api/payments/vnpay/ipn')
-        .query(ipnPayload);
+      const res = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
 
       expect(res.body.RspCode).toBe('00');
 
       const txn = await getPaymentTransaction(txnRef);
-      expect(txn!.status).toBe('completed'); // status NOT changed to failed
+      expect(txn.status).toBe('completed'); // status NOT changed to failed
     });
   });
 
@@ -989,9 +979,9 @@ describe('Payment E2E — Complete Suite', () => {
       const txnRef = extractTxnRef(checkoutRes.body.paymentUrl as string);
 
       const txn = await getPaymentTransaction(txnRef);
-      expect(txn!.amount).toBe(totalAmount);
-      expect(Number.isInteger(txn!.amount)).toBe(true);
-      expect(txn!.amount % 1000).toBe(0);
+      expect(txn.amount).toBe(totalAmount);
+      expect(Number.isInteger(txn.amount)).toBe(true);
+      expect(txn.amount % 1000).toBe(0);
 
       await http.delete('/api/carts/my').set(ownerHeaders());
     });
@@ -1017,9 +1007,7 @@ describe('Payment E2E — Complete Suite', () => {
 
     describe('§10a Authentication guard', () => {
       it('P-40 returns 401 when no Authorization header is sent', async () => {
-        const res = await http
-          .get('/api/payments/my')
-          .set(noAuthHeaders());
+        const res = await http.get('/api/payments/my').set(noAuthHeaders());
 
         expect(res.status).toBe(401);
       });
@@ -1028,9 +1016,7 @@ describe('Payment E2E — Complete Suite', () => {
         // Reset all transactions so the list is fresh
         await resetPaymentTransactions();
 
-        const res = await http
-          .get('/api/payments/my')
-          .set(ownerHeaders());
+        const res = await http.get('/api/payments/my').set(ownerHeaders());
 
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
@@ -1045,9 +1031,7 @@ describe('Payment E2E — Complete Suite', () => {
       });
 
       it('P-42 returns empty array when customer has no payment transactions', async () => {
-        const res = await http
-          .get('/api/payments/my')
-          .set(ownerHeaders());
+        const res = await http.get('/api/payments/my').set(ownerHeaders());
 
         expect(res.status).toBe(200);
         expect(res.body).toEqual([]);
@@ -1080,9 +1064,7 @@ describe('Payment E2E — Complete Suite', () => {
       });
 
       it('P-43 GET /payments/my returns the new transaction after checkout', async () => {
-        const res = await http
-          .get('/api/payments/my')
-          .set(ownerHeaders());
+        const res = await http.get('/api/payments/my').set(ownerHeaders());
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(1);
@@ -1095,9 +1077,7 @@ describe('Payment E2E — Complete Suite', () => {
       });
 
       it('P-44 response DTO excludes sensitive fields (paymentUrl, rawIpnPayload)', async () => {
-        const res = await http
-          .get('/api/payments/my')
-          .set(ownerHeaders());
+        const res = await http.get('/api/payments/my').set(ownerHeaders());
 
         const item = res.body[0];
         expect(item).not.toHaveProperty('paymentUrl');
@@ -1106,9 +1086,7 @@ describe('Payment E2E — Complete Suite', () => {
       });
 
       it('P-45 response DTO includes all required fields', async () => {
-        const res = await http
-          .get('/api/payments/my')
-          .set(ownerHeaders());
+        const res = await http.get('/api/payments/my').set(ownerHeaders());
 
         const item = res.body[0];
         expect(item).toHaveProperty('id');
@@ -1136,9 +1114,7 @@ describe('Payment E2E — Complete Suite', () => {
           .query(ipnPayload);
         expect(ipnRes.body.RspCode).toBe('00');
 
-        const res = await http
-          .get('/api/payments/my')
-          .set(ownerHeaders());
+        const res = await http.get('/api/payments/my').set(ownerHeaders());
 
         expect(res.status).toBe(200);
         const item = res.body[0];
@@ -1161,7 +1137,10 @@ describe('Payment E2E — Complete Suite', () => {
           const res = await http
             .post('/api/carts/my/checkout')
             .set(ownerHeaders())
-            .send({ deliveryAddress: DELIVERY_ADDRESS, paymentMethod: 'vnpay' });
+            .send({
+              deliveryAddress: DELIVERY_ADDRESS,
+              paymentMethod: 'vnpay',
+            });
           expect(res.status).toBe(201);
           await delay(50); // Ensure distinct createdAt values
         }
@@ -1172,9 +1151,7 @@ describe('Payment E2E — Complete Suite', () => {
       });
 
       it('P-47 returns multiple transactions ordered newest-first', async () => {
-        const res = await http
-          .get('/api/payments/my')
-          .set(ownerHeaders());
+        const res = await http.get('/api/payments/my').set(ownerHeaders());
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(2);
@@ -1199,9 +1176,7 @@ describe('Payment E2E — Complete Suite', () => {
         // both test users have the 'restaurant' role but checkout as 'owner'.
         // The DB isolation is verified at the query level (findByCustomerId filters by customerId).
         // Instead, we verify the DB-level invariant: all returned transactions have the same customerId.
-        const res = await http
-          .get('/api/payments/my')
-          .set(ownerHeaders());
+        const res = await http.get('/api/payments/my').set(ownerHeaders());
 
         expect(res.status).toBe(200);
         // Verify no sensitive cross-user fields are exposed
@@ -1236,7 +1211,7 @@ describe('Payment E2E — Complete Suite', () => {
 
       // Step 2: Verify awaiting_ipn in DB
       const pre = await getPaymentTransaction(txnRef);
-      expect(pre!.status).toBe('awaiting_ipn');
+      expect(pre.status).toBe('awaiting_ipn');
 
       // Step 3: Simulate VNPay IPN
       const ipnPayload = buildIpnPayload(
@@ -1246,14 +1221,16 @@ describe('Payment E2E — Complete Suite', () => {
         {},
         `VNP_E2E_${Date.now()}`,
       );
-      const ipnRes = await http.get('/api/payments/vnpay/ipn').query(ipnPayload);
+      const ipnRes = await http
+        .get('/api/payments/vnpay/ipn')
+        .query(ipnPayload);
       expect(ipnRes.body.RspCode).toBe('00');
 
       // Step 4: PaymentTransaction → completed
       const post = await getPaymentTransaction(txnRef);
-      expect(post!.status).toBe('completed');
-      expect(post!.paidAt).not.toBeNull();
-      expect(post!.orderId).toBe(orderId);
+      expect(post.status).toBe('completed');
+      expect(post.paidAt).not.toBeNull();
+      expect(post.orderId).toBe(orderId);
 
       // Step 5: Return URL shows completed
       const returnParams = buildReturnParams(txnRef, 15000, hashSecret, '00');

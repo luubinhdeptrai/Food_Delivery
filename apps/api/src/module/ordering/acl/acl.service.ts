@@ -36,7 +36,7 @@ export class AclService {
         `Menu item snapshot not found: ${menuItemId}`,
       );
     }
-    return snapshot as MenuItemSnapshotResponseDto;
+    return snapshot;
   }
 
   /**
@@ -48,9 +48,7 @@ export class AclService {
     ids: string[],
   ): Promise<MenuItemSnapshotResponseDto[]> {
     if (ids.length === 0) return [];
-    return this.menuItemSnapshotRepo.findManyByIds(ids) as Promise<
-      MenuItemSnapshotResponseDto[]
-    >;
+    return this.menuItemSnapshotRepo.findManyByIds(ids);
   }
 
   // ---------------------------------------------------------------------------
@@ -66,7 +64,7 @@ export class AclService {
         `Restaurant snapshot not found: ${restaurantId}`,
       );
     }
-    return snapshot as RestaurantSnapshotResponseDto;
+    return snapshot;
   }
 
   /**
@@ -77,9 +75,7 @@ export class AclService {
     ids: string[],
   ): Promise<RestaurantSnapshotResponseDto[]> {
     if (ids.length === 0) return [];
-    return this.restaurantSnapshotRepo.findManyByIds(ids) as Promise<
-      RestaurantSnapshotResponseDto[]
-    >;
+    return this.restaurantSnapshotRepo.findManyByIds(ids);
   }
 
   // ---------------------------------------------------------------------------

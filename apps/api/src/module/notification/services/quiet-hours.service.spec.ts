@@ -60,7 +60,7 @@ describe('QuietHoursService', () => {
   function makeHCMTime(localHour: number): Date {
     // UTC offset for 'Asia/Ho_Chi_Minh' is +07:00.
     // We derive the UTC hour by subtracting 7 (mod 24).
-    const utcHour = ((localHour - 7) % 24 + 24) % 24;
+    const utcHour = (((localHour - 7) % 24) + 24) % 24;
     const d = new Date('2025-01-15T00:00:00.000Z'); // fixed date, any date
     d.setUTCHours(utcHour, 0, 0, 0);
     return d;
@@ -164,7 +164,11 @@ describe('QuietHoursService', () => {
     });
 
     it('returns false when both are null', () => {
-      const prefs = { quietHoursStart: null, quietHoursEnd: null, timezone: TZ };
+      const prefs = {
+        quietHoursStart: null,
+        quietHoursEnd: null,
+        timezone: TZ,
+      };
       expect(service.isQuietHours(prefs, makeHCMTime(12))).toBe(false);
     });
 

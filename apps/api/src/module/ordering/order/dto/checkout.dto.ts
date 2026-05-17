@@ -138,13 +138,15 @@ export class CheckoutResponseDto {
   status!: string;
 
   @ApiProperty({
-    description: 'Net payable amount = itemsTotal + shippingFee − discountAmount (integer VND)',
+    description:
+      'Net payable amount = itemsTotal + shippingFee − discountAmount (integer VND)',
     example: 135000,
   })
   totalAmount!: number;
 
   @ApiProperty({
-    description: 'Delivery fee computed from the closest eligible delivery zone (integer VND)',
+    description:
+      'Delivery fee computed from the closest eligible delivery zone (integer VND)',
     example: 20000,
   })
   shippingFee!: number;

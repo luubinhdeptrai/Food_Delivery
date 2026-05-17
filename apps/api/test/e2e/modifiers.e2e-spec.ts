@@ -839,9 +839,7 @@ describe('Modifier Group & Option CRUD (E2E)', () => {
       await new Promise((r) => setTimeout(r, 100));
 
       const snapshot = await getSnapshot(menuItemId);
-      const group = (snapshot!.modifiers as MenuItemModifierSnapshot[]).find(
-        (g) => g.groupId === gId,
-      );
+      const group = snapshot!.modifiers.find((g) => g.groupId === gId);
       expect(group).toBeDefined();
       expect(group!.options.length).toBe(2);
     });

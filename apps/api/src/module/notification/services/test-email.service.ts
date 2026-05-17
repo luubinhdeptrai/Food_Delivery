@@ -1,5 +1,8 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { EMAIL_PROVIDER, type IEmailProvider } from '../channels/email/email-provider.interface';
+import {
+  EMAIL_PROVIDER,
+  type IEmailProvider,
+} from '../channels/email/email-provider.interface';
 import { EmailTemplateService } from '../channels/email/email-template.service';
 import type { TestEmailResponseDto } from '../dto/test-email.dto';
 

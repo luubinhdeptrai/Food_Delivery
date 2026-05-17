@@ -79,7 +79,7 @@ describe('Restaurant CRUD (E2E)', () => {
         name: 'E2E Admin',
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     adminToken = (adminSignUp.body?.token ??
       adminSignUp.body?.session?.token) as string;
 

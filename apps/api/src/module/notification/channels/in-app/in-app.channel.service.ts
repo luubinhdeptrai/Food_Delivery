@@ -1,12 +1,14 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import type { Notification } from '../../domain/notification.schema';
 import { NotificationGateway } from '../../gateway/notification.gateway';
-import {
-  WS_NOTIFICATION_CREATED,
-} from '../../gateway/notification-payload.dto';
+import { WS_NOTIFICATION_CREATED } from '../../gateway/notification-payload.dto';
 import type { NotificationPayload } from '../../gateway/notification-payload.dto';
 import { RedisService } from '@/lib/redis/redis.service';
-import type { INotificationChannel, DeliveryContext, DeliveryResult } from '../channel.interface';
+import type {
+  INotificationChannel,
+  DeliveryContext,
+  DeliveryResult,
+} from '../channel.interface';
 
 /**
  * InAppChannelService
@@ -65,8 +67,7 @@ export class InAppChannelService implements INotificationChannel {
           type: notification.type,
           title: notification.title,
           body: notification.body,
-          data:
-            (notification.data as Record<string, string> | null) ?? undefined,
+          data: notification.data ?? undefined,
           orderId: notification.orderId ?? undefined,
           createdAt: notification.createdAt.toISOString(),
           isRead: notification.isRead,

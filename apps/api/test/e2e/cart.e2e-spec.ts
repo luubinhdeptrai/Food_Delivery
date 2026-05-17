@@ -453,7 +453,11 @@ describe('Cart API (E2E)', () => {
       const item = (
         res.body.items as {
           cartItemId: string;
-          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          selectedModifiers: {
+            optionId: string;
+            optionName: string;
+            price: number;
+          }[];
           subtotal: number;
         }[]
       ).find((i) => i.cartItemId === cartItemId);
@@ -495,7 +499,11 @@ describe('Cart API (E2E)', () => {
       const item = (
         res.body.items as {
           cartItemId: string;
-          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          selectedModifiers: {
+            optionId: string;
+            optionName: string;
+            price: number;
+          }[];
         }[]
       ).find((i) => i.cartItemId === cartItemId);
       const optionIds = item!.selectedModifiers.map((m) => m.optionId);
@@ -726,7 +734,11 @@ describe('Cart API (E2E)', () => {
       expect(res.status).toBe(201);
       const item = (
         res.body.items as {
-          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          selectedModifiers: {
+            optionId: string;
+            optionName: string;
+            price: number;
+          }[];
           subtotal: number;
         }[]
       )[0];
@@ -758,7 +770,11 @@ describe('Cart API (E2E)', () => {
       expect(res.status).toBe(201);
       const item = (
         res.body.items as {
-          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          selectedModifiers: {
+            optionId: string;
+            optionName: string;
+            price: number;
+          }[];
           subtotal: number;
         }[]
       )[0];
@@ -784,15 +800,19 @@ describe('Cart API (E2E)', () => {
           unitPrice: 15.0,
           quantity: 1,
           selectedModifiers: [
-            { groupId: reqGroupId, optionId: altOptId },     // Whole Wheat: 500
-            { groupId: optGroupId, optionId: optOptAId },   // Extra Cheese: 1000
+            { groupId: reqGroupId, optionId: altOptId }, // Whole Wheat: 500
+            { groupId: optGroupId, optionId: optOptAId }, // Extra Cheese: 1000
           ],
         });
 
       expect(res.status).toBe(201);
       const item = (
         res.body.items as {
-          selectedModifiers: { optionId: string; optionName: string; price: number }[];
+          selectedModifiers: {
+            optionId: string;
+            optionName: string;
+            price: number;
+          }[];
           subtotal: number;
         }[]
       )[0];

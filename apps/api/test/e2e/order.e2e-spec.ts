@@ -530,7 +530,7 @@ describe('Order placement E2E', () => {
         await delay(200);
       }
 
-      expect(checkoutRes!.status).toBe(422);
+      expect(checkoutRes.status).toBe(422);
     });
 
     it('O-15 returns 422 when a cart item is unavailable in the ACL snapshot', async () => {

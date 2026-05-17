@@ -150,9 +150,7 @@ export class NotificationGateway
     // BOTH the join here AND sendToUser() must use the SAME room string.
     const room = `room:user:${userId}`;
     await client.join(room);
-    this.logger.log(
-      `[Gateway] Socket joined ${room} socketId=${client.id}`,
-    );
+    this.logger.log(`[Gateway] Socket joined ${room} socketId=${client.id}`);
 
     // Presence: INCR reference count so multi-tab users stay online until
     // ALL tabs disconnect. markOnline absorbs Redis errors internally.
@@ -330,6 +328,10 @@ export class NotificationGateway
     // server.sockets is a Map<SocketId, Socket> scoped to the /notifications
     // namespace — .size gives the count of currently connected clients.
     const count = this.server.sockets.size;
-    this.logger.log({ event: 'websocket.connections', namespace: '/notifications', count });
+    this.logger.log({
+      event: 'websocket.connections',
+      namespace: '/notifications',
+      count,
+    });
   }
 }

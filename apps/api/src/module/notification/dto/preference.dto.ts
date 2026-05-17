@@ -70,7 +70,9 @@ export class UpdateNotificationPreferenceDto {
     nullable: true,
   })
   @IsOptional()
-  @ValidateIf((o: UpdateNotificationPreferenceDto) => o.quietHoursStart !== null)
+  @ValidateIf(
+    (o: UpdateNotificationPreferenceDto) => o.quietHoursStart !== null,
+  )
   @IsInt()
   @Min(0)
   @Max(23)
@@ -93,7 +95,8 @@ export class UpdateNotificationPreferenceDto {
   quietHoursEnd?: number | null;
 
   @ApiPropertyOptional({
-    description: 'Notification types to mute (still persisted to DB, delivery skipped)',
+    description:
+      'Notification types to mute (still persisted to DB, delivery skipped)',
     enum: notificationTypeEnum.enumValues,
     isArray: true,
     example: ['order_preparing', 'order_picked_up'],
@@ -137,7 +140,9 @@ export class NotificationPreferenceResponseDto {
   @ApiProperty({ description: 'Push notifications enabled' })
   pushEnabled!: boolean;
 
-  @ApiProperty({ description: 'In-app notifications enabled (inbox + WebSocket)' })
+  @ApiProperty({
+    description: 'In-app notifications enabled (inbox + WebSocket)',
+  })
   inAppEnabled!: boolean;
 
   @ApiProperty({ description: 'Email notifications enabled' })

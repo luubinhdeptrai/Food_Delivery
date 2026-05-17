@@ -54,7 +54,10 @@ function makeNotification(overrides: Partial<Notification> = {}): Notification {
   };
 }
 
-function makeToken(token: string, overrides: Partial<DeviceToken> = {}): DeviceToken {
+function makeToken(
+  token: string,
+  overrides: Partial<DeviceToken> = {},
+): DeviceToken {
   return {
     id: `token-uuid-${token}`,
     userId: 'user-uuid-001',
@@ -84,7 +87,11 @@ describe('PushChannelService', () => {
       deactivate: jest.fn().mockResolvedValue(undefined),
     };
     pushProvider = {
-      send: jest.fn().mockResolvedValue({ successCount: 1, failureCount: 0, invalidTokens: [] }),
+      send: jest.fn().mockResolvedValue({
+        successCount: 1,
+        failureCount: 0,
+        invalidTokens: [],
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -122,7 +129,11 @@ describe('PushChannelService', () => {
   // ─── Fan-out to all active tokens ──────────────────────────────────────────
 
   it('passes all active token strings to provider.send', async () => {
-    const tokens = [makeToken('token-abc'), makeToken('token-def'), makeToken('token-ghi')];
+    const tokens = [
+      makeToken('token-abc'),
+      makeToken('token-def'),
+      makeToken('token-ghi'),
+    ];
     deviceTokenRepo.findActiveByUserId.mockResolvedValue(tokens);
 
     await service.deliver(makeNotification(), CONTEXT);
@@ -140,7 +151,9 @@ describe('PushChannelService', () => {
       body: 'Push body text',
       data: { screen: 'OrderDetail', orderId: 'abc' },
     });
-    deviceTokenRepo.findActiveByUserId.mockResolvedValue([makeToken('token-x')]);
+    deviceTokenRepo.findActiveByUserId.mockResolvedValue([
+      makeToken('token-x'),
+    ]);
 
     await service.deliver(notif, CONTEXT);
 
@@ -155,7 +168,9 @@ describe('PushChannelService', () => {
 
   it('passes null data as undefined to provider (not as null)', async () => {
     const notif = makeNotification({ data: null });
-    deviceTokenRepo.findActiveByUserId.mockResolvedValue([makeToken('token-x')]);
+    deviceTokenRepo.findActiveByUserId.mockResolvedValue([
+      makeToken('token-x'),
+    ]);
 
     await service.deliver(notif, CONTEXT);
 
@@ -167,8 +182,15 @@ describe('PushChannelService', () => {
   // ─── Success path ──────────────────────────────────────────────────────────
 
   it('returns { success: true } when at least one token delivered', async () => {
-    deviceTokenRepo.findActiveByUserId.mockResolvedValue([makeToken('token-1'), makeToken('token-2')]);
-    pushProvider.send.mockResolvedValue({ successCount: 1, failureCount: 1, invalidTokens: [] });
+    deviceTokenRepo.findActiveByUserId.mockResolvedValue([
+      makeToken('token-1'),
+      makeToken('token-2'),
+    ]);
+    pushProvider.send.mockResolvedValue({
+      successCount: 1,
+      failureCount: 1,
+      invalidTokens: [],
+    });
 
     const result = await service.deliver(makeNotification(), CONTEXT);
 
@@ -176,8 +198,15 @@ describe('PushChannelService', () => {
   });
 
   it('returns { success: true } when all tokens delivered (full success)', async () => {
-    deviceTokenRepo.findActiveByUserId.mockResolvedValue([makeToken('token-1'), makeToken('token-2')]);
-    pushProvider.send.mockResolvedValue({ successCount: 2, failureCount: 0, invalidTokens: [] });
+    deviceTokenRepo.findActiveByUserId.mockResolvedValue([
+      makeToken('token-1'),
+      makeToken('token-2'),
+    ]);
+    pushProvider.send.mockResolvedValue({
+      successCount: 2,
+      failureCount: 0,
+      invalidTokens: [],
+    });
 
     const result = await service.deliver(makeNotification(), CONTEXT);
 
@@ -187,8 +216,14 @@ describe('PushChannelService', () => {
   // ─── Failure path ──────────────────────────────────────────────────────────
 
   it('returns FCM_SEND_ERROR when successCount is 0', async () => {
-    deviceTokenRepo.findActiveByUserId.mockResolvedValue([makeToken('token-1')]);
-    pushProvider.send.mockResolvedValue({ successCount: 0, failureCount: 1, invalidTokens: [] });
+    deviceTokenRepo.findActiveByUserId.mockResolvedValue([
+      makeToken('token-1'),
+    ]);
+    pushProvider.send.mockResolvedValue({
+      successCount: 0,
+      failureCount: 1,
+      invalidTokens: [],
+    });
 
     const result = await service.deliver(makeNotification(), CONTEXT);
 
@@ -202,7 +237,11 @@ describe('PushChannelService', () => {
   // ─── Invalid token deactivation ────────────────────────────────────────────
 
   it('deactivates each invalid token returned by the provider', async () => {
-    const tokens = [makeToken('valid-token'), makeToken('stale-token'), makeToken('another-stale')];
+    const tokens = [
+      makeToken('valid-token'),
+      makeToken('stale-token'),
+      makeToken('another-stale'),
+    ];
     deviceTokenRepo.findActiveByUserId.mockResolvedValue(tokens);
     pushProvider.send.mockResolvedValue({
       successCount: 1,
@@ -212,14 +251,26 @@ describe('PushChannelService', () => {
 
     await service.deliver(makeNotification(), CONTEXT);
 
-    expect(deviceTokenRepo.deactivate).toHaveBeenCalledWith('user-uuid-001', 'stale-token');
-    expect(deviceTokenRepo.deactivate).toHaveBeenCalledWith('user-uuid-001', 'another-stale');
+    expect(deviceTokenRepo.deactivate).toHaveBeenCalledWith(
+      'user-uuid-001',
+      'stale-token',
+    );
+    expect(deviceTokenRepo.deactivate).toHaveBeenCalledWith(
+      'user-uuid-001',
+      'another-stale',
+    );
     expect(deviceTokenRepo.deactivate).toHaveBeenCalledTimes(2);
   });
 
   it('does NOT deactivate any token when invalidTokens is empty', async () => {
-    deviceTokenRepo.findActiveByUserId.mockResolvedValue([makeToken('good-token')]);
-    pushProvider.send.mockResolvedValue({ successCount: 1, failureCount: 0, invalidTokens: [] });
+    deviceTokenRepo.findActiveByUserId.mockResolvedValue([
+      makeToken('good-token'),
+    ]);
+    pushProvider.send.mockResolvedValue({
+      successCount: 1,
+      failureCount: 0,
+      invalidTokens: [],
+    });
 
     await service.deliver(makeNotification(), CONTEXT);
 
@@ -246,7 +297,9 @@ describe('PushChannelService', () => {
   // ─── Token lookup failure ──────────────────────────────────────────────────
 
   it('returns FCM_SEND_ERROR when device token lookup throws', async () => {
-    deviceTokenRepo.findActiveByUserId.mockRejectedValue(new Error('DB connection lost'));
+    deviceTokenRepo.findActiveByUserId.mockRejectedValue(
+      new Error('DB connection lost'),
+    );
 
     const result = await service.deliver(makeNotification(), CONTEXT);
 
@@ -261,7 +314,9 @@ describe('PushChannelService', () => {
   // ─── Provider exception ────────────────────────────────────────────────────
 
   it('returns FCM_SEND_ERROR when provider.send throws', async () => {
-    deviceTokenRepo.findActiveByUserId.mockResolvedValue([makeToken('token-a')]);
+    deviceTokenRepo.findActiveByUserId.mockResolvedValue([
+      makeToken('token-a'),
+    ]);
     pushProvider.send.mockRejectedValue(new Error('FCM API unreachable'));
 
     const result = await service.deliver(makeNotification(), CONTEXT);
@@ -274,7 +329,11 @@ describe('PushChannelService', () => {
   });
 
   it('never throws even on catastrophic failure', async () => {
-    deviceTokenRepo.findActiveByUserId.mockRejectedValue(new Error('Catastrophic'));
-    await expect(service.deliver(makeNotification(), CONTEXT)).resolves.toBeDefined();
+    deviceTokenRepo.findActiveByUserId.mockRejectedValue(
+      new Error('Catastrophic'),
+    );
+    await expect(
+      service.deliver(makeNotification(), CONTEXT),
+    ).resolves.toBeDefined();
   });
 });

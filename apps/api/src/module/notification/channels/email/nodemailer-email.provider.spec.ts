@@ -15,7 +15,7 @@ function makeConfigService(overrides: Record<string, unknown> = {}) {
   const defaults: Record<string, unknown> = {
     SMTP_HOST: 'smtp.gmail.com',
     SMTP_PORT: 587,
-    SMTP_SECURE: false,          // boolean — already transformed by env schema
+    SMTP_SECURE: false, // boolean — already transformed by env schema
     SMTP_USER: 'test@example.com',
     SMTP_PASS: 'app-password',
     SMTP_FROM: 'test@example.com',
@@ -76,7 +76,10 @@ describe('NodemailerEmailProvider', () => {
   describe('constructor', () => {
     it('creates a transporter with the configured SMTP options', () => {
       expect(mockCreateTransport).toHaveBeenCalledTimes(1);
-      const callArg = mockCreateTransport.mock.calls[0][0] as Record<string, unknown>;
+      const callArg = mockCreateTransport.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
       expect(callArg.host).toBe('smtp.gmail.com');
       expect(callArg.port).toBe(587);
       expect(callArg.secure).toBe(false);
@@ -87,7 +90,10 @@ describe('NodemailerEmailProvider', () => {
     });
 
     it('sets requireTLS=true when secure=false (STARTTLS path)', () => {
-      const callArg = mockCreateTransport.mock.calls[0][0] as Record<string, unknown>;
+      const callArg = mockCreateTransport.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
       expect(callArg.requireTLS).toBe(true);
     });
 
@@ -106,7 +112,10 @@ describe('NodemailerEmailProvider', () => {
         ],
       }).compile();
 
-      const callArg = mockCreateTransport.mock.calls[0][0] as Record<string, unknown>;
+      const callArg = mockCreateTransport.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
       expect(callArg.requireTLS).toBe(false);
       await mod.close();
     });
@@ -155,7 +164,10 @@ describe('NodemailerEmailProvider', () => {
     });
 
     it('sets connectionTimeout and greetingTimeout on the transporter', () => {
-      const callArg = mockCreateTransport.mock.calls[0][0] as Record<string, unknown>;
+      const callArg = mockCreateTransport.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
       expect(callArg.connectionTimeout).toBe(10_000);
       expect(callArg.greetingTimeout).toBe(10_000);
     });
@@ -182,7 +194,10 @@ describe('NodemailerEmailProvider', () => {
     });
 
     it('logs an ERROR when verify() fails', async () => {
-      const logSpy = jest.spyOn((provider as unknown as { logger: { error: jest.Mock } }).logger, 'error');
+      const logSpy = jest.spyOn(
+        (provider as unknown as { logger: { error: jest.Mock } }).logger,
+        'error',
+      );
       mockVerify.mockRejectedValueOnce(new Error('DNS lookup failed'));
       await provider.onModuleInit();
       expect(logSpy).toHaveBeenCalledWith(

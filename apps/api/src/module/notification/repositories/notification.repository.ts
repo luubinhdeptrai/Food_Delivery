@@ -1,6 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import type { SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import * as schema from '@/drizzle/schema';
@@ -78,7 +77,7 @@ export class NotificationRepository {
           eq(notifications.channel, 'in_app'),
           filters?.unreadOnly ? eq(notifications.isRead, false) : undefined,
           filters?.type ? eq(notifications.type, filters.type) : undefined,
-        ) as SQL,
+        ),
       )
       .orderBy(desc(notifications.createdAt))
       .limit(limit)
@@ -105,7 +104,7 @@ export class NotificationRepository {
           eq(notifications.channel, 'in_app'),
           filters?.unreadOnly ? eq(notifications.isRead, false) : undefined,
           filters?.type ? eq(notifications.type, filters.type) : undefined,
-        ) as SQL,
+        ),
       );
     return result[0]?.count ?? 0;
   }
@@ -178,7 +177,12 @@ export class NotificationRepository {
   async updateStatus(
     notificationId: string,
     status: NotificationStatus,
-    extra?: Partial<Pick<Notification, 'sentAt' | 'lastAttemptAt' | 'nextRetryAt' | 'deliveryAttempts'>>,
+    extra?: Partial<
+      Pick<
+        Notification,
+        'sentAt' | 'lastAttemptAt' | 'nextRetryAt' | 'deliveryAttempts'
+      >
+    >,
   ): Promise<void> {
     await this.db
       .update(notifications)

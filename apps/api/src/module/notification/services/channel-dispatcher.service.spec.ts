@@ -60,7 +60,9 @@ function makeNotification(overrides: Partial<Notification> = {}): Notification {
   };
 }
 
-function makeContext(overrides: Partial<DeliveryContext> = {}): DeliveryContext {
+function makeContext(
+  overrides: Partial<DeliveryContext> = {},
+): DeliveryContext {
   return {
     recipientId: 'user-uuid-001',
     email: null,
@@ -98,7 +100,10 @@ describe('ChannelDispatcherService', () => {
         { provide: EmailChannelService, useValue: emailChannel },
         { provide: PushChannelService, useValue: pushChannel },
         { provide: NotificationRepository, useValue: notificationRepo },
-        { provide: NotificationDeliveryLogRepository, useValue: deliveryLogRepo },
+        {
+          provide: NotificationDeliveryLogRepository,
+          useValue: deliveryLogRepo,
+        },
         { provide: UserPresenceService, useValue: presenceService },
       ],
     }).compile();
@@ -111,7 +116,10 @@ describe('ChannelDispatcherService', () => {
   it('routes in_app notification to InAppChannelService', async () => {
     const notif = makeNotification({ channel: 'in_app' });
     await service.dispatch(notif, makeContext());
-    expect(inAppChannel.deliver).toHaveBeenCalledWith(notif, expect.objectContaining({ recipientId: notif.recipientId }));
+    expect(inAppChannel.deliver).toHaveBeenCalledWith(
+      notif,
+      expect.objectContaining({ recipientId: notif.recipientId }),
+    );
     expect(emailChannel.deliver).not.toHaveBeenCalled();
     expect(pushChannel.deliver).not.toHaveBeenCalled();
   });
@@ -119,7 +127,10 @@ describe('ChannelDispatcherService', () => {
   it('routes email notification to EmailChannelService', async () => {
     const notif = makeNotification({ channel: 'email' });
     await service.dispatch(notif, makeContext());
-    expect(emailChannel.deliver).toHaveBeenCalledWith(notif, expect.any(Object));
+    expect(emailChannel.deliver).toHaveBeenCalledWith(
+      notif,
+      expect.any(Object),
+    );
     expect(inAppChannel.deliver).not.toHaveBeenCalled();
     expect(pushChannel.deliver).not.toHaveBeenCalled();
   });
@@ -136,7 +147,9 @@ describe('ChannelDispatcherService', () => {
 
   it('silently skips and does not throw for an unregistered channel', async () => {
     const notif = makeNotification({ channel: 'sms' });
-    await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+    await expect(
+      service.dispatch(notif, makeContext()),
+    ).resolves.toBeUndefined();
     expect(deliveryLogRepo.log).not.toHaveBeenCalled();
     expect(notificationRepo.updateStatus).not.toHaveBeenCalled();
   });
@@ -144,13 +157,20 @@ describe('ChannelDispatcherService', () => {
   // ─── Adapter exception isolation ──────────────────────────────────────────
 
   it('catches adapter exception and records failure result without rethrowing', async () => {
-    inAppChannel.deliver.mockRejectedValue(new Error('Unexpected adapter crash'));
+    inAppChannel.deliver.mockRejectedValue(
+      new Error('Unexpected adapter crash'),
+    );
     const notif = makeNotification({ channel: 'in_app' });
 
-    await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+    await expect(
+      service.dispatch(notif, makeContext()),
+    ).resolves.toBeUndefined();
 
     expect(deliveryLogRepo.log).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'failed', errorCode: 'ADAPTER_EXCEPTION' }),
+      expect.objectContaining({
+        status: 'failed',
+        errorCode: 'ADAPTER_EXCEPTION',
+      }),
     );
     expect(notificationRepo.updateStatus).toHaveBeenCalledWith(
       notif.id,
@@ -275,17 +295,23 @@ describe('ChannelDispatcherService', () => {
 
   it('does not throw even if both log write and status update fail', async () => {
     deliveryLogRepo.log.mockRejectedValue(new Error('DB write failed'));
-    notificationRepo.updateStatus.mockRejectedValue(new Error('Status update failed'));
+    notificationRepo.updateStatus.mockRejectedValue(
+      new Error('Status update failed'),
+    );
     const notif = makeNotification({ channel: 'in_app' });
 
-    await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+    await expect(
+      service.dispatch(notif, makeContext()),
+    ).resolves.toBeUndefined();
   });
 
   it('does not throw even if status update alone fails', async () => {
     notificationRepo.updateStatus.mockRejectedValue(new Error('DB error'));
     const notif = makeNotification({ channel: 'in_app' });
 
-    await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+    await expect(
+      service.dispatch(notif, makeContext()),
+    ).resolves.toBeUndefined();
   });
 
   // ─── Push suppression (Rule 1: online user → suppress push) ────────────────────────────
@@ -337,7 +363,10 @@ describe('ChannelDispatcherService', () => {
       presenceService.isOnline.mockResolvedValue(false);
       const notif = makeNotification({ channel: 'push' });
       await service.dispatch(notif, makeContext());
-      expect(pushChannel.deliver).toHaveBeenCalledWith(notif, expect.any(Object));
+      expect(pushChannel.deliver).toHaveBeenCalledWith(
+        notif,
+        expect.any(Object),
+      );
     });
 
     it('does NOT check presence for in_app channel', async () => {
@@ -355,7 +384,9 @@ describe('ChannelDispatcherService', () => {
     it('delivers push as fallback when presence check throws unexpectedly', async () => {
       // isOnline should never throw (it absorbs errors), but if it somehow does,
       // the dispatcher's internal catch should still deliver push.
-      presenceService.isOnline.mockRejectedValue(new Error('Unexpected presence error'));
+      presenceService.isOnline.mockRejectedValue(
+        new Error('Unexpected presence error'),
+      );
       const notif = makeNotification({ channel: 'push' });
       await service.dispatch(notif, makeContext());
       // Should fall through to normal push delivery
@@ -366,14 +397,18 @@ describe('ChannelDispatcherService', () => {
       presenceService.isOnline.mockResolvedValue(true);
       deliveryLogRepo.log.mockRejectedValue(new Error('DB error'));
       const notif = makeNotification({ channel: 'push' });
-      await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+      await expect(
+        service.dispatch(notif, makeContext()),
+      ).resolves.toBeUndefined();
     });
 
     it('does not throw when suppression status update fails', async () => {
       presenceService.isOnline.mockResolvedValue(true);
       notificationRepo.updateStatus.mockRejectedValue(new Error('DB error'));
       const notif = makeNotification({ channel: 'push' });
-      await expect(service.dispatch(notif, makeContext())).resolves.toBeUndefined();
+      await expect(
+        service.dispatch(notif, makeContext()),
+      ).resolves.toBeUndefined();
     });
   });
 });

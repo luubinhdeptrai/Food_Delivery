@@ -1,5 +1,9 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { PUSH_PROVIDER, type IPushProvider, type PushSendResult } from '../channels/push/push-provider.interface';
+import {
+  PUSH_PROVIDER,
+  type IPushProvider,
+  type PushSendResult,
+} from '../channels/push/push-provider.interface';
 
 /**
  * TestPushService
@@ -31,9 +35,19 @@ export class TestPushService {
    * @param title   Notification title
    * @param body    Notification body text
    */
-  async send(token: string, title: string, body: string): Promise<PushSendResult> {
-    this.logger.log(`[TestPush] Sending test push to token: ${token.substring(0, 20)}...`);
-    const result = await this.pushProvider.send({ tokens: [token], title, body });
+  async send(
+    token: string,
+    title: string,
+    body: string,
+  ): Promise<PushSendResult> {
+    this.logger.log(
+      `[TestPush] Sending test push to token: ${token.substring(0, 20)}...`,
+    );
+    const result = await this.pushProvider.send({
+      tokens: [token],
+      title,
+      body,
+    });
     this.logger.log(
       `[TestPush] Result: success=${result.successCount} failure=${result.failureCount} invalid=${result.invalidTokens.length}`,
     );

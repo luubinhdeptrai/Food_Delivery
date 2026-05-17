@@ -12,7 +12,8 @@ import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
  */
 export class TestPushDto {
   @ApiProperty({
-    description: 'FCM registration token obtained from the browser or mobile client',
+    description:
+      'FCM registration token obtained from the browser or mobile client',
     example: 'fqpk9P_...',
   })
   @IsString()
@@ -46,7 +47,9 @@ export class TestPushDto {
  * Response from the test push endpoint.
  */
 export class TestPushResponseDto {
-  @ApiProperty({ description: 'Number of tokens that received the push notification' })
+  @ApiProperty({
+    description: 'Number of tokens that received the push notification',
+  })
   successCount!: number;
 
   @ApiProperty({ description: 'Number of tokens that failed delivery' })

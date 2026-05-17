@@ -158,24 +158,33 @@ beforeAll(async () => {
   const ownerRes = await signUpUser(http, N4_OWNER_EMAIL, 'N4 Owner');
   ownerToken = ownerRes.token;
   ownerId = ownerRes.userId;
-  await db.update(userTable).set({ role: 'restaurant' }).where(eq(userTable.id, ownerId));
+  await db
+    .update(userTable)
+    .set({ role: 'restaurant' })
+    .where(eq(userTable.id, ownerId));
 
   const customerRes = await signUpUser(http, N4_CUSTOMER_EMAIL, 'N4 Customer');
   customerToken = customerRes.token;
   customerId = customerRes.userId;
 
-  const customer2Res = await signUpUser(http, N4_CUSTOMER2_EMAIL, 'N4 Customer2');
+  const customer2Res = await signUpUser(
+    http,
+    N4_CUSTOMER2_EMAIL,
+    'N4 Customer2',
+  );
   customer2Token = customer2Res.token;
   customer2Id = customer2Res.userId;
 
   // Clear notifications + delivery logs + tokens from any prior test run
   await db.delete(notificationDeliveryLogs);
-  await db.delete(notifications).where(
-    inArray(notifications.recipientId, [customerId, ownerId, customer2Id]),
-  );
-  await db.delete(deviceTokens).where(
-    inArray(deviceTokens.userId, [customerId, ownerId, customer2Id]),
-  );
+  await db
+    .delete(notifications)
+    .where(
+      inArray(notifications.recipientId, [customerId, ownerId, customer2Id]),
+    );
+  await db
+    .delete(deviceTokens)
+    .where(inArray(deviceTokens.userId, [customerId, ownerId, customer2Id]));
 
   // Seed the restaurant for event-driven tests
   await seedBaseRestaurant(ownerId);
@@ -323,7 +332,9 @@ describe('§1 Push Token CRUD', () => {
     expect(res.status).toBe(200);
     expect(res.body.tokens).toBeInstanceOf(Array);
     expect(res.body.tokens.length).toBeGreaterThan(0);
-    const item = res.body.tokens.find((t: any) => t.tokenSuffix.endsWith(testToken.slice(-8)));
+    const item = res.body.tokens.find((t: any) =>
+      t.tokenSuffix.endsWith(testToken.slice(-8)),
+    );
     expect(item).toBeDefined();
     expect(item).toMatchObject({
       platform: 'web',
@@ -459,7 +470,14 @@ describe('§3 Multi-Channel Dispatch — In-App + Push', () => {
         150000,
         15000,
         'cod',
-        [{ menuItemId: '11111111-1111-4111-8111-111111111111', name: 'Phở', quantity: 1, unitPrice: 135000 }],
+        [
+          {
+            menuItemId: '11111111-1111-4111-8111-111111111111',
+            name: 'Phở',
+            quantity: 1,
+            unitPrice: 135000,
+          },
+        ],
         { street: '1 Test St', district: 'Q1', city: 'HCM' },
         undefined,
         undefined,
@@ -644,7 +662,14 @@ describe('§5 Push Disabled Preference', () => {
         75000,
         10000,
         'cod',
-        [{ menuItemId: '22222222-2222-4222-8222-222222222222', name: 'Bún bò', quantity: 1, unitPrice: 65000 }],
+        [
+          {
+            menuItemId: '22222222-2222-4222-8222-222222222222',
+            name: 'Bún bò',
+            quantity: 1,
+            unitPrice: 65000,
+          },
+        ],
         { street: '2 Test St', district: 'Q3', city: 'HCM' },
         undefined,
         undefined,
@@ -706,7 +731,14 @@ describe('§6 Multi-Device Push Fan-Out', () => {
         120000,
         12000,
         'cod',
-        [{ menuItemId: '33333333-3333-4333-8333-333333333333', name: 'Cơm tấm', quantity: 3, unitPrice: 36000 }],
+        [
+          {
+            menuItemId: '33333333-3333-4333-8333-333333333333',
+            name: 'Cơm tấm',
+            quantity: 3,
+            unitPrice: 36000,
+          },
+        ],
         { street: '3 Test St', district: 'Q5', city: 'HCM' },
         undefined,
         undefined,

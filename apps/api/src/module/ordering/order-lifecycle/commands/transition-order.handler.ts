@@ -74,8 +74,7 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
     // -------------------------------------------------------------------------
     // 3. Validate transition exists in the TRANSITIONS map
     // -------------------------------------------------------------------------
-    const transitionKey =
-      `${order.status}→${toStatus}` as `${typeof order.status}→${typeof toStatus}`;
+    const transitionKey = `${order.status}→${toStatus}`;
     const rule = TRANSITIONS[transitionKey];
     if (!rule) {
       throw new UnprocessableEntityException(
@@ -265,13 +264,7 @@ export class TransitionOrderHandler implements ICommandHandler<TransitionOrderCo
         snapshot.name,
         snapshot.address,
         order.customerId,
-        order.deliveryAddress as {
-          street?: string;
-          district?: string;
-          city?: string;
-          latitude?: number;
-          longitude?: number;
-        },
+        order.deliveryAddress,
       ),
     );
   }

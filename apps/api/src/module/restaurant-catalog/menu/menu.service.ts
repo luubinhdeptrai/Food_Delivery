@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   ConflictException,
   ForbiddenException,
@@ -159,7 +154,7 @@ export class MenuService {
     restaurantId: string,
   ): Promise<MenuCategory[]> {
     await this.restaurantService.findOne(restaurantId);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+
     return this.repo.findCategoriesByRestaurant(restaurantId);
   }
 
@@ -184,7 +179,6 @@ export class MenuService {
     const category = await this.repo.findCategoryById(id);
     if (!category) throw new NotFoundException(`Category ${id} not found`);
     const restaurant = await this.restaurantService.findOne(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
       category.restaurantId,
     );
     if (!isAdmin && restaurant.ownerId !== requesterId) {

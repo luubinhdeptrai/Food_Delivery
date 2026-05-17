@@ -25,9 +25,7 @@ import { NotificationRestaurantAclRepository } from './notification-restaurant-a
  */
 @Injectable()
 @EventsHandler(RestaurantUpdatedEvent)
-export class NotificationRestaurantSnapshotProjector
-  implements IEventHandler<RestaurantUpdatedEvent>
-{
+export class NotificationRestaurantSnapshotProjector implements IEventHandler<RestaurantUpdatedEvent> {
   private readonly logger = new Logger(
     NotificationRestaurantSnapshotProjector.name,
   );

@@ -69,7 +69,10 @@ export class UserPresenceService {
   async markOnline(userId: string): Promise<void> {
     try {
       const count = await this.redisService.incr(this.key(userId));
-      await this.redisService.expire(this.key(userId), UserPresenceService.TTL_SECONDS);
+      await this.redisService.expire(
+        this.key(userId),
+        UserPresenceService.TTL_SECONDS,
+      );
       this.logger.debug(
         `[Presence] markOnline: userId=${userId} connectionCount=${count}`,
       );

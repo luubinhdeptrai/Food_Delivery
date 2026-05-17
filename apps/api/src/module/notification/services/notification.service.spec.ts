@@ -64,7 +64,10 @@ import { QuietHoursService } from './quiet-hours.service';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { RedisService } from '@/lib/redis/redis.service';
 import { DEFAULT_PREFERENCES } from '../domain/notification-preference.schema';
-import type { Notification, NotificationChannel } from '../domain/notification.schema';
+import type {
+  Notification,
+  NotificationChannel,
+} from '../domain/notification.schema';
 import type { NotificationPreference } from '../domain/notification-preference.schema';
 import type { SendFromEventParams } from './notification.service';
 
@@ -72,7 +75,9 @@ import type { SendFromEventParams } from './notification.service';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeNotificationRow(overrides: Partial<Notification> = {}): Notification {
+function makeNotificationRow(
+  overrides: Partial<Notification> = {},
+): Notification {
   return {
     id: 'notif-uuid-svc-001',
     recipientId: 'user-uuid-001',
@@ -97,7 +102,9 @@ function makeNotificationRow(overrides: Partial<Notification> = {}): Notificatio
   };
 }
 
-function makePreferenceRow(overrides: Partial<NotificationPreference> = {}): NotificationPreference {
+function makePreferenceRow(
+  overrides: Partial<NotificationPreference> = {},
+): NotificationPreference {
   return {
     id: 'pref-uuid-001',
     userId: 'user-uuid-001',
@@ -116,7 +123,9 @@ function makePreferenceRow(overrides: Partial<NotificationPreference> = {}): Not
   };
 }
 
-function makeSendParams(overrides: Partial<SendFromEventParams> = {}): SendFromEventParams {
+function makeSendParams(
+  overrides: Partial<SendFromEventParams> = {},
+): SendFromEventParams {
   return {
     type: 'order_placed',
     recipientId: 'user-uuid-001',
@@ -146,9 +155,17 @@ describe('NotificationService', () => {
     updateStatus: jest.Mock;
   };
   let preferenceRepo: { findByUserId: jest.Mock; upsert: jest.Mock };
-  let deviceTokenRepo: { registerOrRefresh: jest.Mock; deactivate: jest.Mock; findByUserId: jest.Mock };
+  let deviceTokenRepo: {
+    registerOrRefresh: jest.Mock;
+    deactivate: jest.Mock;
+    findByUserId: jest.Mock;
+  };
   let templateService: { render: jest.Mock };
-  let redisService: { del: jest.Mock; get: jest.Mock; setWithExpiry: jest.Mock };
+  let redisService: {
+    del: jest.Mock;
+    get: jest.Mock;
+    setWithExpiry: jest.Mock;
+  };
   let channelDispatcher: { dispatch: jest.Mock };
   let gateway: { sendToUser: jest.Mock };
   let quietHours: { isQuietHours: jest.Mock };
@@ -176,7 +193,9 @@ describe('NotificationService', () => {
       findByUserId: jest.fn().mockResolvedValue([]),
     };
     templateService = {
-      render: jest.fn().mockReturnValue({ title: 'Rendered Title', body: 'Rendered body.' }),
+      render: jest
+        .fn()
+        .mockReturnValue({ title: 'Rendered Title', body: 'Rendered body.' }),
     };
     redisService = {
       del: jest.fn().mockResolvedValue(undefined),
@@ -217,7 +236,6 @@ describe('NotificationService', () => {
   // =========================================================================
 
   describe('sendFromEvent', () => {
-
     it('persists one row per enabled channel and returns the count', async () => {
       // Both channels enabled (default preferences)
       const rows = [
@@ -228,7 +246,9 @@ describe('NotificationService', () => {
         .mockResolvedValueOnce(rows[0])
         .mockResolvedValueOnce(rows[1]);
 
-      const count = await service.sendFromEvent(makeSendParams({ channels: ['in_app', 'push'] }));
+      const count = await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'push'] }),
+      );
 
       expect(count).toBe(2);
       expect(notificationRepo.insertIfNotExists).toHaveBeenCalledTimes(2);
@@ -240,13 +260,18 @@ describe('NotificationService', () => {
 
       await service.sendFromEvent(makeSendParams({ channels: ['in_app'] }));
 
-      expect(channelDispatcher.dispatch).toHaveBeenCalledWith(row, expect.objectContaining({ recipientId: 'user-uuid-001' }));
+      expect(channelDispatcher.dispatch).toHaveBeenCalledWith(
+        row,
+        expect.objectContaining({ recipientId: 'user-uuid-001' }),
+      );
     });
 
     it('does NOT fire dispatch for duplicate rows (insertIfNotExists returns null)', async () => {
       notificationRepo.insertIfNotExists.mockResolvedValue(null);
 
-      const count = await service.sendFromEvent(makeSendParams({ channels: ['in_app', 'push'] }));
+      const count = await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'push'] }),
+      );
 
       expect(count).toBe(0);
       expect(channelDispatcher.dispatch).not.toHaveBeenCalled();
@@ -263,7 +288,9 @@ describe('NotificationService', () => {
       );
 
       const insertCall = notificationRepo.insertIfNotExists.mock.calls[0][0];
-      expect(insertCall.idempotencyKey).toBe('notif:payment_confirmed:order-xyz:user-abc:email');
+      expect(insertCall.idempotencyKey).toBe(
+        'notif:payment_confirmed:order-xyz:user-abc:email',
+      );
     });
 
     it('assigns 90-day expiresAt for in_app channel', async () => {
@@ -284,7 +311,9 @@ describe('NotificationService', () => {
         .mockResolvedValueOnce(makeNotificationRow({ channel: 'email' }))
         .mockResolvedValueOnce(makeNotificationRow({ channel: 'push' }));
 
-      await service.sendFromEvent(makeSendParams({ channels: ['email', 'push'] }));
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['email', 'push'] }),
+      );
 
       const emailCall = notificationRepo.insertIfNotExists.mock.calls.find(
         (c) => c[0].channel === 'email',
@@ -299,10 +328,16 @@ describe('NotificationService', () => {
     it('renders template once and uses title/body for all channels', async () => {
       templateService.render.mockReturnValue({ title: 'T', body: 'B' });
       notificationRepo.insertIfNotExists
-        .mockResolvedValueOnce(makeNotificationRow({ channel: 'in_app', title: 'T', body: 'B' }))
-        .mockResolvedValueOnce(makeNotificationRow({ channel: 'push', title: 'T', body: 'B' }));
+        .mockResolvedValueOnce(
+          makeNotificationRow({ channel: 'in_app', title: 'T', body: 'B' }),
+        )
+        .mockResolvedValueOnce(
+          makeNotificationRow({ channel: 'push', title: 'T', body: 'B' }),
+        );
 
-      await service.sendFromEvent(makeSendParams({ channels: ['in_app', 'push'] }));
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'push'] }),
+      );
 
       expect(templateService.render).toHaveBeenCalledTimes(1);
       // Both inserts use the same rendered title/body
@@ -313,7 +348,9 @@ describe('NotificationService', () => {
     });
 
     it('includes context.email from preference row in dispatch call', async () => {
-      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ email: 'test@example.com' }));
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ email: 'test@example.com' }),
+      );
       const row = makeNotificationRow({ channel: 'email' });
       notificationRepo.insertIfNotExists.mockResolvedValue(row);
 
@@ -340,7 +377,9 @@ describe('NotificationService', () => {
     });
 
     it('resolves email from user table when preference row has no email', async () => {
-      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ email: null }));
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ email: null }),
+      );
       userEmailRepo.findEmailByUserId.mockResolvedValue('fallback@example.com');
       const row = makeNotificationRow({ channel: 'email' });
       notificationRepo.insertIfNotExists.mockResolvedValue(row);
@@ -354,23 +393,34 @@ describe('NotificationService', () => {
     });
 
     it('backfills email into notification_preferences after resolving from user table', async () => {
-      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ email: null }));
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ email: null }),
+      );
       userEmailRepo.findEmailByUserId.mockResolvedValue('backfill@example.com');
       preferenceRepo.upsert.mockResolvedValue(undefined);
-      notificationRepo.insertIfNotExists.mockResolvedValue(makeNotificationRow({ channel: 'email' }));
+      notificationRepo.insertIfNotExists.mockResolvedValue(
+        makeNotificationRow({ channel: 'email' }),
+      );
 
       await service.sendFromEvent(makeSendParams({ channels: ['email'] }));
 
       // Give the fire-and-forget upsert a tick to run
       await new Promise((r) => setImmediate(r));
       expect(preferenceRepo.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: 'user-uuid-001', email: 'backfill@example.com' }),
+        expect.objectContaining({
+          userId: 'user-uuid-001',
+          email: 'backfill@example.com',
+        }),
       );
     });
 
     it('does NOT call userEmailRepo when preference row already has an email', async () => {
-      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ email: 'already@example.com' }));
-      notificationRepo.insertIfNotExists.mockResolvedValue(makeNotificationRow({ channel: 'email' }));
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ email: 'already@example.com' }),
+      );
+      notificationRepo.insertIfNotExists.mockResolvedValue(
+        makeNotificationRow({ channel: 'email' }),
+      );
 
       await service.sendFromEvent(makeSendParams({ channels: ['email'] }));
 
@@ -391,39 +441,47 @@ describe('NotificationService', () => {
   // =========================================================================
 
   describe('isChannelEnabled (via sendFromEvent)', () => {
-
     it('skips push channel when pushEnabled=false in preferences', async () => {
-      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ pushEnabled: false }));
-
-      await service.sendFromEvent(makeSendParams({ channels: ['in_app', 'push'] }));
-
-      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
-        (c) => c[0].channel,
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ pushEnabled: false }),
       );
+
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'push'] }),
+      );
+
+      const insertedChannels =
+        notificationRepo.insertIfNotExists.mock.calls.map((c) => c[0].channel);
       expect(insertedChannels).toContain('in_app');
       expect(insertedChannels).not.toContain('push');
     });
 
     it('skips email channel when emailEnabled=false in preferences', async () => {
-      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ emailEnabled: false }));
-
-      await service.sendFromEvent(makeSendParams({ channels: ['in_app', 'email'] }));
-
-      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
-        (c) => c[0].channel,
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ emailEnabled: false }),
       );
+
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'email'] }),
+      );
+
+      const insertedChannels =
+        notificationRepo.insertIfNotExists.mock.calls.map((c) => c[0].channel);
       expect(insertedChannels).toContain('in_app');
       expect(insertedChannels).not.toContain('email');
     });
 
     it('skips in_app channel when inAppEnabled=false', async () => {
-      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ inAppEnabled: false }));
-
-      await service.sendFromEvent(makeSendParams({ channels: ['in_app', 'push'] }));
-
-      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
-        (c) => c[0].channel,
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ inAppEnabled: false }),
       );
+
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'push'] }),
+      );
+
+      const insertedChannels =
+        notificationRepo.insertIfNotExists.mock.calls.map((c) => c[0].channel);
       expect(insertedChannels).not.toContain('in_app');
     });
 
@@ -432,7 +490,9 @@ describe('NotificationService', () => {
         makePreferenceRow({ inAppEnabled: false, pushEnabled: false }),
       );
 
-      const count = await service.sendFromEvent(makeSendParams({ channels: ['in_app', 'push'] }));
+      const count = await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'push'] }),
+      );
 
       expect(count).toBe(0);
       expect(notificationRepo.insertIfNotExists).not.toHaveBeenCalled();
@@ -477,7 +537,9 @@ describe('NotificationService', () => {
     it('falls back to DEFAULT_PREFERENCES when no preference row', async () => {
       preferenceRepo.findByUserId.mockResolvedValue(null);
 
-      await service.sendFromEvent(makeSendParams({ channels: ['in_app', 'push'] }));
+      await service.sendFromEvent(
+        makeSendParams({ channels: ['in_app', 'push'] }),
+      );
 
       // DEFAULT_PREFERENCES has inAppEnabled:true and pushEnabled:true
       expect(notificationRepo.insertIfNotExists).toHaveBeenCalledTimes(2);
@@ -489,7 +551,6 @@ describe('NotificationService', () => {
   // =========================================================================
 
   describe('quiet hours push suppression (via sendFromEvent)', () => {
-
     it('suppresses push channel when QuietHoursService.isQuietHours returns true', async () => {
       preferenceRepo.findByUserId.mockResolvedValue(
         makePreferenceRow({ quietHoursStart: 22, quietHoursEnd: 7 }),
@@ -497,12 +558,14 @@ describe('NotificationService', () => {
       quietHours.isQuietHours.mockReturnValue(true);
 
       await service.sendFromEvent(
-        makeSendParams({ type: 'order_status_changed', channels: ['in_app', 'push'] }),
+        makeSendParams({
+          type: 'order_status_changed',
+          channels: ['in_app', 'push'],
+        }),
       );
 
-      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
-        (c) => c[0].channel,
-      );
+      const insertedChannels =
+        notificationRepo.insertIfNotExists.mock.calls.map((c) => c[0].channel);
       expect(insertedChannels).toContain('in_app');
       expect(insertedChannels).not.toContain('push');
     });
@@ -513,9 +576,7 @@ describe('NotificationService', () => {
       );
       quietHours.isQuietHours.mockReturnValue(true);
 
-      await service.sendFromEvent(
-        makeSendParams({ channels: ['in_app'] }),
-      );
+      await service.sendFromEvent(makeSendParams({ channels: ['in_app'] }));
 
       expect(notificationRepo.insertIfNotExists).toHaveBeenCalledWith(
         expect.objectContaining({ channel: 'in_app' }),
@@ -535,9 +596,8 @@ describe('NotificationService', () => {
         makeSendParams({ channels: ['in_app', 'email', 'push'] }),
       );
 
-      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
-        (c) => c[0].channel,
-      );
+      const insertedChannels =
+        notificationRepo.insertIfNotExists.mock.calls.map((c) => c[0].channel);
       expect(insertedChannels).toContain('in_app');
       expect(insertedChannels).toContain('email');
       expect(insertedChannels).not.toContain('push');
@@ -553,12 +613,14 @@ describe('NotificationService', () => {
         .mockResolvedValueOnce(makeNotificationRow({ channel: 'push' }));
 
       await service.sendFromEvent(
-        makeSendParams({ type: 'system_announcement', channels: ['in_app', 'push'] }),
+        makeSendParams({
+          type: 'system_announcement',
+          channels: ['in_app', 'push'],
+        }),
       );
 
-      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
-        (c) => c[0].channel,
-      );
+      const insertedChannels =
+        notificationRepo.insertIfNotExists.mock.calls.map((c) => c[0].channel);
       // system_announcement bypasses ALL preference gates including quiet hours
       expect(insertedChannels).toContain('in_app');
       expect(insertedChannels).toContain('push');
@@ -576,12 +638,14 @@ describe('NotificationService', () => {
         .mockResolvedValueOnce(makeNotificationRow({ channel: 'push' }));
 
       await service.sendFromEvent(
-        makeSendParams({ type: 'new_order_received', channels: ['in_app', 'push'] }),
+        makeSendParams({
+          type: 'new_order_received',
+          channels: ['in_app', 'push'],
+        }),
       );
 
-      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
-        (c) => c[0].channel,
-      );
+      const insertedChannels =
+        notificationRepo.insertIfNotExists.mock.calls.map((c) => c[0].channel);
       expect(insertedChannels).toContain('in_app');
       expect(insertedChannels).toContain('push');
       expect(quietHours.isQuietHours).not.toHaveBeenCalled();
@@ -589,7 +653,11 @@ describe('NotificationService', () => {
 
     it('quiet hours check is skipped entirely when pushEnabled=false (push already filtered)', async () => {
       preferenceRepo.findByUserId.mockResolvedValue(
-        makePreferenceRow({ pushEnabled: false, quietHoursStart: 22, quietHoursEnd: 7 }),
+        makePreferenceRow({
+          pushEnabled: false,
+          quietHoursStart: 22,
+          quietHoursEnd: 7,
+        }),
       );
       quietHours.isQuietHours.mockReturnValue(true);
 
@@ -614,9 +682,8 @@ describe('NotificationService', () => {
         makeSendParams({ type: 'order_placed', channels: ['in_app', 'push'] }),
       );
 
-      const insertedChannels = notificationRepo.insertIfNotExists.mock.calls.map(
-        (c) => c[0].channel,
-      );
+      const insertedChannels =
+        notificationRepo.insertIfNotExists.mock.calls.map((c) => c[0].channel);
       expect(insertedChannels).toContain('in_app');
       expect(insertedChannels).toContain('push');
     });
@@ -627,7 +694,6 @@ describe('NotificationService', () => {
   // =========================================================================
 
   describe('getPreferences', () => {
-
     it('returns DEFAULT_PREFERENCES shape when no preference row exists', async () => {
       preferenceRepo.findByUserId.mockResolvedValue(null);
 
@@ -661,14 +727,21 @@ describe('NotificationService', () => {
   });
 
   describe('updatePreferences', () => {
-
     it('upserts with merged values and returns the updated DTO', async () => {
-      const existing = makePreferenceRow({ pushEnabled: true, emailEnabled: true });
+      const existing = makePreferenceRow({
+        pushEnabled: true,
+        emailEnabled: true,
+      });
       preferenceRepo.findByUserId.mockResolvedValue(existing);
-      const updated = makePreferenceRow({ pushEnabled: false, emailEnabled: true });
+      const updated = makePreferenceRow({
+        pushEnabled: false,
+        emailEnabled: true,
+      });
       preferenceRepo.upsert.mockResolvedValue(updated);
 
-      const result = await service.updatePreferences('user-001', { pushEnabled: false });
+      const result = await service.updatePreferences('user-001', {
+        pushEnabled: false,
+      });
 
       expect(preferenceRepo.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -685,7 +758,9 @@ describe('NotificationService', () => {
       const savedRow = makePreferenceRow({ timezone: 'Europe/London' });
       preferenceRepo.upsert.mockResolvedValue(savedRow);
 
-      await service.updatePreferences('user-001', { timezone: 'Europe/London' });
+      await service.updatePreferences('user-001', {
+        timezone: 'Europe/London',
+      });
 
       const upsertCall = preferenceRepo.upsert.mock.calls[0][0];
       // Should have default values for fields not provided
@@ -694,7 +769,9 @@ describe('NotificationService', () => {
     });
 
     it('passes null email to upsert when dto.email is explicitly null', async () => {
-      preferenceRepo.findByUserId.mockResolvedValue(makePreferenceRow({ email: 'old@example.com' }));
+      preferenceRepo.findByUserId.mockResolvedValue(
+        makePreferenceRow({ email: 'old@example.com' }),
+      );
       const savedRow = makePreferenceRow({ email: null });
       preferenceRepo.upsert.mockResolvedValue(savedRow);
 
@@ -710,9 +787,11 @@ describe('NotificationService', () => {
   // =========================================================================
 
   describe('registerPushToken', () => {
-
     it('calls deviceTokenRepo.registerOrRefresh with correct data', async () => {
-      await service.registerPushToken('user-001', { token: 'fcm-token-abc', platform: 'android' });
+      await service.registerPushToken('user-001', {
+        token: 'fcm-token-abc',
+        platform: 'android',
+      });
 
       expect(deviceTokenRepo.registerOrRefresh).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -734,11 +813,13 @@ describe('NotificationService', () => {
   });
 
   describe('removePushToken', () => {
-
     it('calls deviceTokenRepo.deactivate with userId and token', async () => {
       await service.removePushToken('user-001', 'fcm-token-xyz');
 
-      expect(deviceTokenRepo.deactivate).toHaveBeenCalledWith('user-001', 'fcm-token-xyz');
+      expect(deviceTokenRepo.deactivate).toHaveBeenCalledWith(
+        'user-001',
+        'fcm-token-xyz',
+      );
     });
 
     it('returns { removed: true }', async () => {
@@ -752,7 +833,6 @@ describe('NotificationService', () => {
   // =========================================================================
 
   describe('markRead', () => {
-
     it('returns false when repo.markRead returns null (not found or wrong owner)', async () => {
       notificationRepo.markRead.mockResolvedValue(null);
       const result = await service.markRead('user-001', 'notif-uuid');
@@ -760,7 +840,9 @@ describe('NotificationService', () => {
     });
 
     it('returns true and emits WS event when repo marks successfully', async () => {
-      const row = makeNotificationRow({ readAt: new Date('2024-01-01T12:00:00Z') });
+      const row = makeNotificationRow({
+        readAt: new Date('2024-01-01T12:00:00Z'),
+      });
       notificationRepo.markRead.mockResolvedValue(row);
 
       const result = await service.markRead('user-001', 'notif-uuid');
@@ -788,7 +870,6 @@ describe('NotificationService', () => {
   });
 
   describe('markAllRead', () => {
-
     it('returns the count of updated rows', async () => {
       notificationRepo.markAllRead.mockResolvedValue(5);
       const result = await service.markAllRead('user-001');
@@ -826,7 +907,6 @@ describe('NotificationService', () => {
   });
 
   describe('getUnreadCount', () => {
-
     it('returns cached count from Redis without hitting DB', async () => {
       redisService.get.mockResolvedValue('7');
 
@@ -889,8 +969,22 @@ describe('NotificationService', () => {
 
     it('returns multiple tokens sorted by caller order', async () => {
       (deviceTokenRepo as any).findByUserId.mockResolvedValue([
-        { id: 'uuid-1', token: 'token-aaaaaa11', platform: 'web',     isActive: true,  lastSeenAt: new Date(), createdAt: new Date() },
-        { id: 'uuid-2', token: 'token-bbbbbb22', platform: 'android', isActive: false, lastSeenAt: new Date(), createdAt: new Date() },
+        {
+          id: 'uuid-1',
+          token: 'token-aaaaaa11',
+          platform: 'web',
+          isActive: true,
+          lastSeenAt: new Date(),
+          createdAt: new Date(),
+        },
+        {
+          id: 'uuid-2',
+          token: 'token-bbbbbb22',
+          platform: 'android',
+          isActive: false,
+          lastSeenAt: new Date(),
+          createdAt: new Date(),
+        },
       ]);
       const result = await service.getMyTokens('user-001');
       expect(result.tokens).toHaveLength(2);

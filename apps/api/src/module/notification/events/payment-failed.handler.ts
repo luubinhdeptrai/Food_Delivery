@@ -17,9 +17,7 @@ import { NotificationService } from '../services/notification.service';
  */
 @Injectable()
 @EventsHandler(PaymentFailedEvent)
-export class PaymentFailedNotificationHandler
-  implements IEventHandler<PaymentFailedEvent>
-{
+export class PaymentFailedNotificationHandler implements IEventHandler<PaymentFailedEvent> {
   private readonly logger = new Logger(PaymentFailedNotificationHandler.name);
 
   constructor(private readonly notificationService: NotificationService) {}

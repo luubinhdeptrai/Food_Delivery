@@ -60,7 +60,11 @@ import { user as userTable } from '../../src/module/auth/auth.schema';
 const OH_CUSTOMER_EMAIL = 'oh-customer@test.soli';
 const OH_SHIPPER_EMAIL = 'oh-shipper@test.soli';
 const OH_ADMIN_EMAIL = 'oh-admin@test.soli';
-const OH_EXTRA_EMAILS = [OH_CUSTOMER_EMAIL, OH_SHIPPER_EMAIL, OH_ADMIN_EMAIL] as const;
+const OH_EXTRA_EMAILS = [
+  OH_CUSTOMER_EMAIL,
+  OH_SHIPPER_EMAIL,
+  OH_ADMIN_EMAIL,
+] as const;
 
 // ─── Timing helper ────────────────────────────────────────────────────────────
 // Required after HTTP mutations that fire async CQRS events (restaurant patch,
@@ -244,12 +248,20 @@ describe('Order History E2E (Phase 7)', () => {
     setAuthManager(testAuth);
 
     // 4. Create extra suite actors
-    const customerResult = await signUpUser(http, OH_CUSTOMER_EMAIL, 'OH Customer');
+    const customerResult = await signUpUser(
+      http,
+      OH_CUSTOMER_EMAIL,
+      'OH Customer',
+    );
     customerToken = customerResult.token;
     customerId = customerResult.userId;
     // Customer gets NO role update → resolveRole() → 'customer'
 
-    const shipperResult = await signUpUser(http, OH_SHIPPER_EMAIL, 'OH Shipper');
+    const shipperResult = await signUpUser(
+      http,
+      OH_SHIPPER_EMAIL,
+      'OH Shipper',
+    );
     shipperToken = shipperResult.token;
     shipperId = shipperResult.userId;
     await db
@@ -281,7 +293,11 @@ describe('Order History E2E (Phase 7)', () => {
     const itemRes = await http
       .post('/api/menu-items')
       .set(ownerHeaders())
-      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Test Burger', price: 10000 });
+      .send({
+        restaurantId: TEST_RESTAURANT_ID,
+        name: 'Test Burger',
+        price: 10000,
+      });
     expect(itemRes.status).toBe(201);
     menuItemId = itemRes.body.id as string;
     await delay(200);
@@ -298,9 +314,17 @@ describe('Order History E2E (Phase 7)', () => {
     //    → picked_up → delivering → delivered
     orderDeliveredId = await placeOrder(http, customerToken, menuItemId);
     {
-      const r1 = await confirmOrder(http, orderDeliveredId, testAuth.ownerToken);
+      const r1 = await confirmOrder(
+        http,
+        orderDeliveredId,
+        testAuth.ownerToken,
+      );
       expect(r1.status).toBe(200);
-      const r2 = await startPreparing(http, orderDeliveredId, testAuth.ownerToken);
+      const r2 = await startPreparing(
+        http,
+        orderDeliveredId,
+        testAuth.ownerToken,
+      );
       expect(r2.status).toBe(200);
       const r3 = await markReady(http, orderDeliveredId, testAuth.ownerToken);
       expect(r3.status).toBe(200);
@@ -328,7 +352,11 @@ describe('Order History E2E (Phase 7)', () => {
     //    pending → confirmed
     orderConfirmedId = await placeOrder(http, customerToken, menuItemId);
     {
-      const r1 = await confirmOrder(http, orderConfirmedId, testAuth.ownerToken);
+      const r1 = await confirmOrder(
+        http,
+        orderConfirmedId,
+        testAuth.ownerToken,
+      );
       expect(r1.status).toBe(200);
     }
   }, 60_000); // generous timeout for full lifecycle seeding
@@ -345,7 +373,9 @@ describe('Order History E2E (Phase 7)', () => {
 
   describe('§1 GET /api/orders/my — customer order list', () => {
     it('OH-01 returns 200 with paginated list for authenticated customer', async () => {
-      const res = await http.get('/api/orders/my').set(authHeader(customerToken));
+      const res = await http
+        .get('/api/orders/my')
+        .set(authHeader(customerToken));
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -379,7 +409,7 @@ describe('Order History E2E (Phase 7)', () => {
       });
     });
 
-    it('OH-03 returns only the authenticated user\'s own orders', async () => {
+    it("OH-03 returns only the authenticated user's own orders", async () => {
       // The restaurant owner placed NO orders as a customer — their list must be empty
       const res = await http.get('/api/orders/my').set(ownerHeaders());
 
@@ -395,9 +425,13 @@ describe('Order History E2E (Phase 7)', () => {
 
       expect(res.status).toBe(200);
       expect(
-        (res.body.data as Array<{ status: string }>).every((o) => o.status === 'delivered'),
+        (res.body.data as Array<{ status: string }>).every(
+          (o) => o.status === 'delivered',
+        ),
       ).toBe(true);
-      const ids = (res.body.data as Array<{ orderId: string }>).map((o) => o.orderId);
+      const ids = (res.body.data as Array<{ orderId: string }>).map(
+        (o) => o.orderId,
+      );
       expect(ids).toContain(orderDeliveredId);
     });
 
@@ -482,7 +516,7 @@ describe('Order History E2E (Phase 7)', () => {
       });
     });
 
-    it('OH-13 returns 404 (not 403) when accessing another customer\'s order (info-leak prevention)', async () => {
+    it("OH-13 returns 404 (not 403) when accessing another customer's order (info-leak prevention)", async () => {
       // The restaurant owner did not place orderDeliveredId — accessing it returns 404
       const res = await http
         .get(`/api/orders/my/${orderDeliveredId}`)
@@ -529,7 +563,7 @@ describe('Order History E2E (Phase 7)', () => {
       });
     });
 
-    it('OH-21 returns 404 when accessing another customer\'s order reorder', async () => {
+    it("OH-21 returns 404 when accessing another customer's order reorder", async () => {
       const res = await http
         .get(`/api/orders/my/${orderDeliveredId}/reorder`)
         .set(ownerHeaders());
@@ -564,7 +598,7 @@ describe('Order History E2E (Phase 7)', () => {
       expect(res.body.total).toBeGreaterThanOrEqual(3);
     });
 
-    it('OH-31 all returned orders belong to the owner\'s restaurant', async () => {
+    it("OH-31 all returned orders belong to the owner's restaurant", async () => {
       const res = await http.get('/api/restaurant/orders').set(ownerHeaders());
 
       expect(res.status).toBe(200);
@@ -582,7 +616,9 @@ describe('Order History E2E (Phase 7)', () => {
 
       expect(res.status).toBe(200);
       expect(
-        (res.body.data as Array<{ status: string }>).every((o) => o.status === 'delivered'),
+        (res.body.data as Array<{ status: string }>).every(
+          (o) => o.status === 'delivered',
+        ),
       ).toBe(true);
     });
 
@@ -599,7 +635,9 @@ describe('Order History E2E (Phase 7)', () => {
     it('OH-34 returns 403 for restaurant-role user who owns no restaurant (no snapshot)', async () => {
       // otherUserHeaders() has 'restaurant' role but their userId ≠ restaurant.ownerId
       // → service snapshot lookup returns null → 403
-      const res = await http.get('/api/restaurant/orders').set(otherUserHeaders());
+      const res = await http
+        .get('/api/restaurant/orders')
+        .set(otherUserHeaders());
 
       expect(res.status).toBe(403);
     });
@@ -651,7 +689,9 @@ describe('Order History E2E (Phase 7)', () => {
         .set(ownerHeaders());
 
       expect(res.status).toBe(200);
-      const ids = (res.body as Array<{ orderId: string }>).map((o) => o.orderId);
+      const ids = (res.body as Array<{ orderId: string }>).map(
+        (o) => o.orderId,
+      );
       expect(ids).toContain(orderConfirmedId);
     });
 
@@ -661,7 +701,9 @@ describe('Order History E2E (Phase 7)', () => {
         .set(ownerHeaders());
 
       expect(res.status).toBe(200);
-      const ids = (res.body as Array<{ orderId: string }>).map((o) => o.orderId);
+      const ids = (res.body as Array<{ orderId: string }>).map(
+        (o) => o.orderId,
+      );
       expect(ids).toContain(orderReadyId);
     });
 
@@ -671,7 +713,9 @@ describe('Order History E2E (Phase 7)', () => {
         .set(ownerHeaders());
 
       expect(res.status).toBe(200);
-      const ids = (res.body as Array<{ orderId: string }>).map((o) => o.orderId);
+      const ids = (res.body as Array<{ orderId: string }>).map(
+        (o) => o.orderId,
+      );
       expect(ids).not.toContain(orderDeliveredId);
     });
 
@@ -704,7 +748,9 @@ describe('Order History E2E (Phase 7)', () => {
         .set(authHeader(shipperToken));
 
       expect(res.status).toBe(200);
-      const ids = (res.body as Array<{ orderId: string }>).map((o) => o.orderId);
+      const ids = (res.body as Array<{ orderId: string }>).map(
+        (o) => o.orderId,
+      );
       expect(ids).toContain(orderReadyId);
     });
 
@@ -714,7 +760,9 @@ describe('Order History E2E (Phase 7)', () => {
         .set(authHeader(shipperToken));
 
       expect(res.status).toBe(200);
-      const ids = (res.body as Array<{ orderId: string }>).map((o) => o.orderId);
+      const ids = (res.body as Array<{ orderId: string }>).map(
+        (o) => o.orderId,
+      );
       expect(ids).not.toContain(orderDeliveredId);
     });
 
@@ -724,7 +772,9 @@ describe('Order History E2E (Phase 7)', () => {
         .set(authHeader(shipperToken));
 
       expect(res.status).toBe(200);
-      const ids = (res.body as Array<{ orderId: string }>).map((o) => o.orderId);
+      const ids = (res.body as Array<{ orderId: string }>).map(
+        (o) => o.orderId,
+      );
       expect(ids).not.toContain(orderConfirmedId);
     });
 
@@ -804,7 +854,9 @@ describe('Order History E2E (Phase 7)', () => {
         .set(authHeader(shipperToken));
 
       expect(res.status).toBe(200);
-      const ids = (res.body.data as Array<{ orderId: string }>).map((o) => o.orderId);
+      const ids = (res.body.data as Array<{ orderId: string }>).map(
+        (o) => o.orderId,
+      );
       expect(ids).toContain(orderDeliveredId);
     });
 
@@ -815,7 +867,9 @@ describe('Order History E2E (Phase 7)', () => {
 
       expect(res.status).toBe(200);
       expect(
-        (res.body.data as Array<{ status: string }>).every((o) => o.status === 'delivered'),
+        (res.body.data as Array<{ status: string }>).every(
+          (o) => o.status === 'delivered',
+        ),
       ).toBe(true);
     });
 
@@ -842,7 +896,9 @@ describe('Order History E2E (Phase 7)', () => {
 
   describe('§9 GET /api/admin/orders — admin order list', () => {
     it('OH-80 returns 200 with paginated list for admin', async () => {
-      const res = await http.get('/api/admin/orders').set(authHeader(adminToken));
+      const res = await http
+        .get('/api/admin/orders')
+        .set(authHeader(adminToken));
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -867,7 +923,7 @@ describe('Order History E2E (Phase 7)', () => {
       ).toBe(true);
     });
 
-    it('OH-82 filters by ?customerId returns only that customer\'s orders', async () => {
+    it("OH-82 filters by ?customerId returns only that customer's orders", async () => {
       const res = await http
         .get(`/api/admin/orders?customerId=${customerId}`)
         .set(authHeader(adminToken));
@@ -883,7 +939,9 @@ describe('Order History E2E (Phase 7)', () => {
 
       expect(res.status).toBe(200);
       expect(
-        (res.body.data as Array<{ status: string }>).every((o) => o.status === 'delivered'),
+        (res.body.data as Array<{ status: string }>).every(
+          (o) => o.status === 'delivered',
+        ),
       ).toBe(true);
     });
 

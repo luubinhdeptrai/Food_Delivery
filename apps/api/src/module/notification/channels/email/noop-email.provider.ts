@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { IEmailProvider, EmailSendOptions } from './email-provider.interface';
+import type {
+  IEmailProvider,
+  EmailSendOptions,
+} from './email-provider.interface';
 
 /**
  * NoopEmailProvider

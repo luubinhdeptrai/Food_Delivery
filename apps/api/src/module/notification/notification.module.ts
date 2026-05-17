@@ -140,7 +140,9 @@ import { OrderCancelledAfterPaymentNotificationHandler } from './events/order-ca
     {
       provide: PUSH_PROVIDER,
       useFactory: (configService: ConfigService) => {
-        const keyPath = configService.get<string>('FIREBASE_SERVICE_ACCOUNT_PATH');
+        const keyPath = configService.get<string>(
+          'FIREBASE_SERVICE_ACCOUNT_PATH',
+        );
         if (keyPath && process.env.NODE_ENV !== 'test') {
           return new FirebasePushProvider(keyPath);
         }

@@ -33,7 +33,8 @@ export class CreateDeliveryZoneDto {
   radiusKm!: number;
 
   @ApiProperty({
-    description: 'Base delivery fee in VND (integer, multiple of 1000; 0 = free)',
+    description:
+      'Base delivery fee in VND (integer, multiple of 1000; 0 = free)',
     minimum: 0,
     example: 15000,
   })
@@ -41,7 +42,8 @@ export class CreateDeliveryZoneDto {
   baseFee!: number;
 
   @ApiProperty({
-    description: 'Additional fee per kilometre in VND (integer, multiple of 1000; 0 = flat-rate only)',
+    description:
+      'Additional fee per kilometre in VND (integer, multiple of 1000; 0 = flat-rate only)',
     minimum: 0,
     example: 3000,
   })

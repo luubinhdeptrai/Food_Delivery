@@ -5,9 +5,7 @@ import {
   type Notification,
 } from '../domain/notification.schema';
 import type { NotificationPreference } from '../domain/notification-preference.schema';
-import {
-  DEFAULT_PREFERENCES,
-} from '../domain/notification-preference.schema';
+import { DEFAULT_PREFERENCES } from '../domain/notification-preference.schema';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationPreferenceRepository } from '../repositories/notification-preference.repository';
 import { UserEmailRepository } from '../repositories/user-email.repository';
@@ -16,9 +14,7 @@ import { NotificationTemplateService } from './notification-template.service';
 import { ChannelDispatcherService } from './channel-dispatcher.service';
 import { QuietHoursService } from './quiet-hours.service';
 import { NotificationGateway } from '../gateway/notification.gateway';
-import {
-  WS_NOTIFICATION_READ,
-} from '../gateway/notification-payload.dto';
+import { WS_NOTIFICATION_READ } from '../gateway/notification-payload.dto';
 import { RedisService } from '@/lib/redis/redis.service';
 import type {
   NotificationInboxQueryDto,
@@ -224,7 +220,8 @@ export class NotificationService {
       let resolvedEmail: string | null = prefRow?.email ?? null;
 
       if (!resolvedEmail && enabledChannels.includes('email')) {
-        const authEmail = await this.userEmailRepo.findEmailByUserId(recipientId);
+        const authEmail =
+          await this.userEmailRepo.findEmailByUserId(recipientId);
         if (authEmail) {
           resolvedEmail = authEmail;
           this.logger.log(
@@ -232,23 +229,30 @@ export class NotificationService {
           );
           // Backfill: upsert the email into notification_preferences so the
           // next event delivery is fast (no user table lookup needed).
-          void this.preferenceRepo.upsert({
-            userId: recipientId,
-            email: authEmail,
-            // Merge with existing prefs or use defaults — only email column changes.
-            pushEnabled: prefRow?.pushEnabled ?? DEFAULT_PREFERENCES.pushEnabled,
-            inAppEnabled: prefRow?.inAppEnabled ?? DEFAULT_PREFERENCES.inAppEnabled,
-            emailEnabled: prefRow?.emailEnabled ?? DEFAULT_PREFERENCES.emailEnabled,
-            smsEnabled: prefRow?.smsEnabled ?? DEFAULT_PREFERENCES.smsEnabled,
-            quietHoursStart: prefRow?.quietHoursStart ?? DEFAULT_PREFERENCES.quietHoursStart,
-            quietHoursEnd: prefRow?.quietHoursEnd ?? DEFAULT_PREFERENCES.quietHoursEnd,
-            mutedTypes: prefRow?.mutedTypes ?? DEFAULT_PREFERENCES.mutedTypes,
-            timezone: prefRow?.timezone ?? DEFAULT_PREFERENCES.timezone,
-          }).catch((upsertErr: Error) => {
-            this.logger.warn(
-              `[Notification] Failed to backfill email into notification_preferences for userId=${recipientId}: ${upsertErr.message}`,
-            );
-          });
+          void this.preferenceRepo
+            .upsert({
+              userId: recipientId,
+              email: authEmail,
+              // Merge with existing prefs or use defaults — only email column changes.
+              pushEnabled:
+                prefRow?.pushEnabled ?? DEFAULT_PREFERENCES.pushEnabled,
+              inAppEnabled:
+                prefRow?.inAppEnabled ?? DEFAULT_PREFERENCES.inAppEnabled,
+              emailEnabled:
+                prefRow?.emailEnabled ?? DEFAULT_PREFERENCES.emailEnabled,
+              smsEnabled: prefRow?.smsEnabled ?? DEFAULT_PREFERENCES.smsEnabled,
+              quietHoursStart:
+                prefRow?.quietHoursStart ?? DEFAULT_PREFERENCES.quietHoursStart,
+              quietHoursEnd:
+                prefRow?.quietHoursEnd ?? DEFAULT_PREFERENCES.quietHoursEnd,
+              mutedTypes: prefRow?.mutedTypes ?? DEFAULT_PREFERENCES.mutedTypes,
+              timezone: prefRow?.timezone ?? DEFAULT_PREFERENCES.timezone,
+            })
+            .catch((upsertErr: Error) => {
+              this.logger.warn(
+                `[Notification] Failed to backfill email into notification_preferences for userId=${recipientId}: ${upsertErr.message}`,
+              );
+            });
         } else {
           this.logger.warn(
             `[Notification] No email found for recipientId=${recipientId} in notification_preferences or user table — email channel will be skipped`,
@@ -384,7 +388,7 @@ export class NotificationService {
       type: row.type,
       title: row.title,
       body: row.body,
-      data: (row.data as Record<string, string> | null) ?? undefined,
+      data: row.data ?? undefined,
       orderId: row.orderId ?? undefined,
       isRead: row.isRead,
       readAt: row.readAt?.toISOString(),
@@ -630,7 +634,9 @@ export class NotificationService {
    *
    * Phase N-4
    */
-  async getPreferences(userId: string): Promise<NotificationPreferenceResponseDto> {
+  async getPreferences(
+    userId: string,
+  ): Promise<NotificationPreferenceResponseDto> {
     const row = await this.preferenceRepo.findByUserId(userId);
     if (!row) {
       return {
@@ -666,10 +672,8 @@ export class NotificationService {
     // Compute effective base values (existing row or system defaults)
     const base = {
       pushEnabled: existing?.pushEnabled ?? DEFAULT_PREFERENCES.pushEnabled,
-      inAppEnabled:
-        existing?.inAppEnabled ?? DEFAULT_PREFERENCES.inAppEnabled,
-      emailEnabled:
-        existing?.emailEnabled ?? DEFAULT_PREFERENCES.emailEnabled,
+      inAppEnabled: existing?.inAppEnabled ?? DEFAULT_PREFERENCES.inAppEnabled,
+      emailEnabled: existing?.emailEnabled ?? DEFAULT_PREFERENCES.emailEnabled,
       smsEnabled: existing?.smsEnabled ?? DEFAULT_PREFERENCES.smsEnabled,
       quietHoursStart:
         existing?.quietHoursStart ?? DEFAULT_PREFERENCES.quietHoursStart,
@@ -694,14 +698,12 @@ export class NotificationService {
         dto.quietHoursEnd !== undefined
           ? dto.quietHoursEnd
           : base.quietHoursEnd,
-      mutedTypes: dto.mutedTypes ?? (base.mutedTypes as NotificationType[]),
+      mutedTypes: dto.mutedTypes ?? base.mutedTypes,
       email: dto.email !== undefined ? dto.email : base.email,
       timezone: dto.timezone ?? base.timezone,
     });
 
-    this.logger.log(
-      `[Notification] Preferences updated for userId=${userId}`,
-    );
+    this.logger.log(`[Notification] Preferences updated for userId=${userId}`);
     return this.toPreferenceDto(updated);
   }
 

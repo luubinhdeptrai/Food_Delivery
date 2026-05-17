@@ -116,9 +116,7 @@ describe('DeviceTokenCleanupTask', () => {
   // ── Error handling ───────────────────────────────────────────────────────────
 
   it('continues to Pass 2 even when Pass 1 (inactive cleanup) throws', async () => {
-    repo.deleteStaleInactive.mockRejectedValue(
-      new Error('DB connection lost'),
-    );
+    repo.deleteStaleInactive.mockRejectedValue(new Error('DB connection lost'));
     repo.deleteStaleActive.mockResolvedValue(7);
 
     const result = await task.cleanupStaleTokens();

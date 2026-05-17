@@ -20,9 +20,7 @@ import { NotificationRestaurantAclRepository } from '../acl/notification-restaur
  */
 @Injectable()
 @EventsHandler(OrderPlacedEvent)
-export class OrderPlacedNotificationHandler
-  implements IEventHandler<OrderPlacedEvent>
-{
+export class OrderPlacedNotificationHandler implements IEventHandler<OrderPlacedEvent> {
   private readonly logger = new Logger(OrderPlacedNotificationHandler.name);
 
   constructor(

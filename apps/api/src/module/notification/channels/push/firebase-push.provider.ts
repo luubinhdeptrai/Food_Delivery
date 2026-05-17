@@ -32,7 +32,7 @@ interface ServiceAccountJson {
  * FCM error codes that indicate a token is permanently invalid.
  * These tokens should be deactivated immediately — retrying would waste quota.
  *https://firebase.google.com/docs/cloud-messaging/send-message#admin_sdk_error_codes
- * Reference: 
+ * Reference:
  */
 const FCM_INVALID_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',
@@ -130,7 +130,8 @@ export class FirebasePushProvider implements IPushProvider {
   }
 
   constructor(serviceAccountPath: string) {
-    const resolvedPath = FirebasePushProvider.resolveKeyPath(serviceAccountPath);
+    const resolvedPath =
+      FirebasePushProvider.resolveKeyPath(serviceAccountPath);
 
     // Singleton guard — Firebase Admin throws if you call initializeApp twice
     if (getApps().length === 0) {
@@ -155,6 +156,7 @@ export class FirebasePushProvider implements IPushProvider {
           `FirebasePushProvider: Failed to initialise Firebase Admin SDK from ` +
             `"${resolvedPath}": ${(err as Error).message}. ` +
             `Check the FIREBASE_SERVICE_ACCOUNT_PATH value in your .env file.`,
+          { cause: err },
         );
       }
     } else {
@@ -187,7 +189,10 @@ export class FirebasePushProvider implements IPushProvider {
         validate_only: true,
         message: {
           token: 'fcm-permission-check-dummy-token',
-          notification: { title: 'Permission check', body: 'validate_only=true' },
+          notification: {
+            title: 'Permission check',
+            body: 'validate_only=true',
+          },
         },
       });
 
@@ -207,7 +212,9 @@ export class FirebasePushProvider implements IPushProvider {
             (res) => {
               let data = '';
               res.on('data', (chunk: Buffer) => (data += chunk.toString()));
-              res.on('end', () => resolve({ status: res.statusCode ?? 0, body: data }));
+              res.on('end', () =>
+                resolve({ status: res.statusCode ?? 0, body: data }),
+              );
             },
           );
           req.on('error', reject);
@@ -225,32 +232,34 @@ export class FirebasePushProvider implements IPushProvider {
       } else if (result.status === 403) {
         this.logger.error(
           `[FirebasePush] ====================================================\n` +
-          `[FirebasePush] FCM PERMISSION CHECK FAILED — push notifications WILL NOT be delivered!\n` +
-          `[FirebasePush]\n` +
-          `[FirebasePush] Error: ${JSON.parse(result.body).error?.message ?? result.body}\n` +
-          `[FirebasePush]\n` +
-          `[FirebasePush] The service account lacks the 'cloudmessaging.messages.create' permission.\n` +
-          `[FirebasePush] Fix (choose ONE option):\n` +
-          `[FirebasePush]\n` +
-          `[FirebasePush] OPTION A — Enable FCM API (most common fix):\n` +
-          `[FirebasePush]   1. Open: https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=${projectId}\n` +
-          `[FirebasePush]   2. Click "ENABLE"\n` +
-          `[FirebasePush]\n` +
-          `[FirebasePush] OPTION B — Grant IAM role to current service account:\n` +
-          `[FirebasePush]   1. Open: https://console.cloud.google.com/iam-admin/iam?project=${projectId}\n` +
-          `[FirebasePush]   2. Find '${(this.app.options.credential as unknown as { serviceAccountId?: string }).serviceAccountId ?? 'your-service-account'}'\n` +
-          `[FirebasePush]   3. Add role: "Firebase Cloud Messaging Admin"\n` +
-          `[FirebasePush]\n` +
-          `[FirebasePush] OPTION C — Use the default Firebase Admin SDK service account:\n` +
-          `[FirebasePush]   1. Open: https://console.firebase.google.com/project/${projectId}/settings/serviceaccounts/adminsdk\n` +
-          `[FirebasePush]   2. Click "Generate new private key"\n` +
-          `[FirebasePush]   3. Save as apps/api/soli-food-delivery-FCM-key.json\n` +
-          `[FirebasePush] ====================================================`,
+            `[FirebasePush] FCM PERMISSION CHECK FAILED — push notifications WILL NOT be delivered!\n` +
+            `[FirebasePush]\n` +
+            `[FirebasePush] Error: ${JSON.parse(result.body).error?.message ?? result.body}\n` +
+            `[FirebasePush]\n` +
+            `[FirebasePush] The service account lacks the 'cloudmessaging.messages.create' permission.\n` +
+            `[FirebasePush] Fix (choose ONE option):\n` +
+            `[FirebasePush]\n` +
+            `[FirebasePush] OPTION A — Enable FCM API (most common fix):\n` +
+            `[FirebasePush]   1. Open: https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=${projectId}\n` +
+            `[FirebasePush]   2. Click "ENABLE"\n` +
+            `[FirebasePush]\n` +
+            `[FirebasePush] OPTION B — Grant IAM role to current service account:\n` +
+            `[FirebasePush]   1. Open: https://console.cloud.google.com/iam-admin/iam?project=${projectId}\n` +
+            `[FirebasePush]   2. Find '${(this.app.options.credential as unknown as { serviceAccountId?: string }).serviceAccountId ?? 'your-service-account'}'\n` +
+            `[FirebasePush]   3. Add role: "Firebase Cloud Messaging Admin"\n` +
+            `[FirebasePush]\n` +
+            `[FirebasePush] OPTION C — Use the default Firebase Admin SDK service account:\n` +
+            `[FirebasePush]   1. Open: https://console.firebase.google.com/project/${projectId}/settings/serviceaccounts/adminsdk\n` +
+            `[FirebasePush]   2. Click "Generate new private key"\n` +
+            `[FirebasePush]   3. Save as apps/api/soli-food-delivery-FCM-key.json\n` +
+            `[FirebasePush] ====================================================`,
         );
       }
     } catch {
       // Network error during validation — not critical, don't block
-      this.logger.warn('[FirebasePush] FCM permission pre-check skipped (network error)');
+      this.logger.warn(
+        '[FirebasePush] FCM permission pre-check skipped (network error)',
+      );
     }
   }
 
@@ -286,14 +295,16 @@ export class FirebasePushProvider implements IPushProvider {
         title,
         body,
         // Merge caller-supplied data, ensuring all values are strings
-        ...(data ? Object.fromEntries(
-          Object.entries(data).map(([k, v]) => [k, String(v)])
-        ) : {}),
+        ...(data
+          ? Object.fromEntries(
+              Object.entries(data).map(([k, v]) => [k, String(v)]),
+            )
+          : {}),
         // Click-through URL — defaults to app root
         link: String(data?.link ?? '/'),
         // Default icon path — callers can override via data.icon
         icon: String(data?.icon ?? '/icons/notification-icon.png'),
-      };  
+      };
 
       const message: MulticastMessage = {
         tokens,
@@ -322,7 +333,9 @@ export class FirebasePushProvider implements IPushProvider {
         },
       };
 
-      const batchResponse = await getMessaging(this.app).sendEachForMulticast(message);
+      const batchResponse = await getMessaging(this.app).sendEachForMulticast(
+        message,
+      );
 
       // Classify per-token results
       const invalidTokens: string[] = [];
@@ -337,8 +350,8 @@ export class FirebasePushProvider implements IPushProvider {
             // Log once with actionable fix steps — do NOT deactivate tokens.
             this.logger.error(
               `[FirebasePush] FCM PERMISSION ERROR: ${r.error.message}\n` +
-              `[FirebasePush] The service account cannot send FCM messages.\n` +
-              `[FirebasePush] Fix: See startup log for step-by-step GCP Console instructions.`,
+                `[FirebasePush] The service account cannot send FCM messages.\n` +
+                `[FirebasePush] Fix: See startup log for step-by-step GCP Console instructions.`,
             );
           } else {
             // Transient FCM error (quota, internal) — log but don't deactivate

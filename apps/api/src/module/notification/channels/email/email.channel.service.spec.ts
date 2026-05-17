@@ -65,7 +65,9 @@ describe('EmailChannelService', () => {
 
   beforeEach(async () => {
     emailTemplateService = {
-      render: jest.fn().mockReturnValue({ html: RENDERED_HTML, text: RENDERED_TEXT }),
+      render: jest
+        .fn()
+        .mockReturnValue({ html: RENDERED_HTML, text: RENDERED_TEXT }),
     };
     emailProvider = {
       sendMail: jest.fn().mockResolvedValue(undefined),
@@ -107,17 +109,26 @@ describe('EmailChannelService', () => {
 
   it('calls EmailTemplateService.render with notification title and body', async () => {
     const notif = makeNotification({ title: 'Test Title', body: 'Test Body' });
-    const context: DeliveryContext = { recipientId: 'user-001', email: 'user@example.com' };
+    const context: DeliveryContext = {
+      recipientId: 'user-001',
+      email: 'user@example.com',
+    };
 
     await service.deliver(notif, context);
 
-    expect(emailTemplateService.render).toHaveBeenCalledWith('Test Title', 'Test Body');
+    expect(emailTemplateService.render).toHaveBeenCalledWith(
+      'Test Title',
+      'Test Body',
+    );
   });
 
   // ─── Provider call ─────────────────────────────────────────────────────────
 
   it('calls emailProvider.sendMail with correct params', async () => {
-    const notif = makeNotification({ title: 'Payment OK', body: 'Payment confirmed.' });
+    const notif = makeNotification({
+      title: 'Payment OK',
+      body: 'Payment confirmed.',
+    });
     const email = 'recipient@example.com';
     const context: DeliveryContext = { recipientId: 'user-001', email };
 
@@ -135,7 +146,10 @@ describe('EmailChannelService', () => {
 
   it('returns { success: true } when provider sendMail resolves', async () => {
     emailProvider.sendMail.mockResolvedValue(undefined);
-    const context: DeliveryContext = { recipientId: 'user-001', email: 'ok@example.com' };
+    const context: DeliveryContext = {
+      recipientId: 'user-001',
+      email: 'ok@example.com',
+    };
 
     const result = await service.deliver(makeNotification(), context);
 
@@ -146,7 +160,10 @@ describe('EmailChannelService', () => {
 
   it('maps "SMTP_NOT_CONFIGURED" error to SMTP_NOT_CONFIGURED errorCode', async () => {
     emailProvider.sendMail.mockRejectedValue(new Error('SMTP_NOT_CONFIGURED'));
-    const context: DeliveryContext = { recipientId: 'user-001', email: 'user@example.com' };
+    const context: DeliveryContext = {
+      recipientId: 'user-001',
+      email: 'user@example.com',
+    };
 
     const result = await service.deliver(makeNotification(), context);
 
@@ -158,8 +175,13 @@ describe('EmailChannelService', () => {
   });
 
   it('maps any other error to SMTP_SEND_ERROR errorCode', async () => {
-    emailProvider.sendMail.mockRejectedValue(new Error('ECONNRESET: Connection reset by peer'));
-    const context: DeliveryContext = { recipientId: 'user-001', email: 'user@example.com' };
+    emailProvider.sendMail.mockRejectedValue(
+      new Error('ECONNRESET: Connection reset by peer'),
+    );
+    const context: DeliveryContext = {
+      recipientId: 'user-001',
+      email: 'user@example.com',
+    };
 
     const result = await service.deliver(makeNotification(), context);
 
@@ -171,8 +193,13 @@ describe('EmailChannelService', () => {
   });
 
   it('maps authentication error to SMTP_SEND_ERROR, not SMTP_NOT_CONFIGURED', async () => {
-    emailProvider.sendMail.mockRejectedValue(new Error('535 Authentication failed'));
-    const context: DeliveryContext = { recipientId: 'user-001', email: 'user@example.com' };
+    emailProvider.sendMail.mockRejectedValue(
+      new Error('535 Authentication failed'),
+    );
+    const context: DeliveryContext = {
+      recipientId: 'user-001',
+      email: 'user@example.com',
+    };
 
     const result = await service.deliver(makeNotification(), context);
 
@@ -183,14 +210,22 @@ describe('EmailChannelService', () => {
 
   it('never throws even on catastrophic provider failure', async () => {
     emailProvider.sendMail.mockRejectedValue(new Error('Catastrophic failure'));
-    const context: DeliveryContext = { recipientId: 'user-001', email: 'user@example.com' };
+    const context: DeliveryContext = {
+      recipientId: 'user-001',
+      email: 'user@example.com',
+    };
 
-    await expect(service.deliver(makeNotification(), context)).resolves.toBeDefined();
+    await expect(
+      service.deliver(makeNotification(), context),
+    ).resolves.toBeDefined();
   });
 
   it('returns false success (not undefined) when provider throws', async () => {
     emailProvider.sendMail.mockRejectedValue(new Error('Any error'));
-    const context: DeliveryContext = { recipientId: 'user-001', email: 'user@example.com' };
+    const context: DeliveryContext = {
+      recipientId: 'user-001',
+      email: 'user@example.com',
+    };
 
     const result = await service.deliver(makeNotification(), context);
 

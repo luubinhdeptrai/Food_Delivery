@@ -1,7 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import type { IEmailProvider, EmailSendOptions } from './email-provider.interface';
+import type {
+  IEmailProvider,
+  EmailSendOptions,
+} from './email-provider.interface';
 
 /**
  * NodemailerEmailProvider

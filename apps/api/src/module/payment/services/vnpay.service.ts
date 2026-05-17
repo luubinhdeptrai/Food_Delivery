@@ -218,7 +218,7 @@ export class VNPayService implements OnModuleInit {
 
     const {
       vnp_SecureHash: receivedHash,
-      vnp_SecureHashType: _hashType, // eslint-disable-line @typescript-eslint/no-unused-vars -- must exclude from signData
+      vnp_SecureHashType: _hashType,
       ...paramsWithoutHash
     } = query;
 
@@ -288,7 +288,7 @@ export class VNPayService implements OnModuleInit {
   } {
     const {
       vnp_SecureHash: receivedHash,
-      vnp_SecureHashType: _hashType, // eslint-disable-line @typescript-eslint/no-unused-vars -- must exclude from signData
+      vnp_SecureHashType: _hashType,
       ...paramsWithoutHash
     } = query;
 

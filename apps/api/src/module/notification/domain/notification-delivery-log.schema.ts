@@ -62,6 +62,7 @@ export const notificationDeliveryLogs = pgTable(
   ],
 );
 
-export type NotificationDeliveryLog = typeof notificationDeliveryLogs.$inferSelect;
+export type NotificationDeliveryLog =
+  typeof notificationDeliveryLogs.$inferSelect;
 export type NewNotificationDeliveryLog =
   typeof notificationDeliveryLogs.$inferInsert;

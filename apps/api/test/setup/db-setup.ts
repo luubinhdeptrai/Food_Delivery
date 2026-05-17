@@ -64,9 +64,7 @@ export function getTestDb(): NodePgDatabase<typeof schema> {
       'Set TEST_DATABASE_URL (or DATABASE_URL) before running E2E tests.',
     );
   }
-  _db = drizzle({ connection: { connectionString: url } }) as NodePgDatabase<
-    typeof schema
-  >;
+  _db = drizzle({ connection: { connectionString: url } });
   return _db;
 }
 

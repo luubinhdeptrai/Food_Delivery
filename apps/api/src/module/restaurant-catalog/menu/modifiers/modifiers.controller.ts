@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Controller,
   Get,
@@ -163,7 +160,6 @@ export class ModifiersController {
     @Session() session: UserSession,
     @Body() dto: UpdateModifierGroupDto,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return this.service.updateGroup(
       groupId,
       menuItemId,
@@ -188,7 +184,6 @@ export class ModifiersController {
     @Param('groupId', ParseUUIDPipe) groupId: string,
     @Session() session: UserSession,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return this.service.removeGroup(
       groupId,
       menuItemId,

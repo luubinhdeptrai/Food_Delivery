@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import {
   notificationTypeEnum,
@@ -86,14 +93,16 @@ export class NotificationItemDto {
   body!: string;
 
   @ApiPropertyOptional({
-    description: 'Structured metadata for deep linking (key-value string pairs)',
+    description:
+      'Structured metadata for deep linking (key-value string pairs)',
     type: 'object',
     additionalProperties: { type: 'string' },
   })
   data?: Record<string, string>;
 
   @ApiPropertyOptional({
-    description: 'Associated order UUID (when notification relates to an order)',
+    description:
+      'Associated order UUID (when notification relates to an order)',
     format: 'uuid',
   })
   orderId?: string;
@@ -102,11 +111,14 @@ export class NotificationItemDto {
   isRead!: boolean;
 
   @ApiPropertyOptional({
-    description: 'ISO8601 timestamp when this notification was read (null if unread)',
+    description:
+      'ISO8601 timestamp when this notification was read (null if unread)',
   })
   readAt?: string;
 
-  @ApiProperty({ description: 'ISO8601 timestamp when the notification was created' })
+  @ApiProperty({
+    description: 'ISO8601 timestamp when the notification was created',
+  })
   createdAt!: string;
 }
 
@@ -118,16 +130,21 @@ export class NotificationItemDto {
  * separate request.
  */
 export class NotificationInboxResponseDto {
-  @ApiProperty({ type: [NotificationItemDto], description: 'Notification items on this page' })
+  @ApiProperty({
+    type: [NotificationItemDto],
+    description: 'Notification items on this page',
+  })
   items!: NotificationItemDto[];
 
   @ApiProperty({
-    description: 'Total number of notifications matching the applied filters (for pagination UI)',
+    description:
+      'Total number of notifications matching the applied filters (for pagination UI)',
   })
   total!: number;
 
   @ApiProperty({
-    description: 'Total unread in-app notification count for the current user (badge value)',
+    description:
+      'Total unread in-app notification count for the current user (badge value)',
   })
   unreadCount!: number;
 
@@ -138,7 +155,8 @@ export class NotificationInboxResponseDto {
   limit!: number;
 
   @ApiProperty({
-    description: 'Whether additional items exist after this page (offset + items.length < total)',
+    description:
+      'Whether additional items exist after this page (offset + items.length < total)',
   })
   hasMore!: boolean;
 }
@@ -147,7 +165,9 @@ export class NotificationInboxResponseDto {
  * Response for GET /notifications/my/unread-count.
  */
 export class UnreadCountResponseDto {
-  @ApiProperty({ description: 'Total unread in-app notifications for the current user' })
+  @ApiProperty({
+    description: 'Total unread in-app notifications for the current user',
+  })
   count!: number;
 }
 

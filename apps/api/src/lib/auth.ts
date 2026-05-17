@@ -25,7 +25,7 @@ export const auth = betterAuth({
       adminRoles: ['admin'],
     }),
     phoneNumber({
-      sendOTP: async ({ phoneNumber, code }, _request) => {
+      sendOTP: ({ phoneNumber, code }, _request) => {
         // TODO: Implement real SMS provider (Twilio, Vonage, etc.)
         console.log(`[AUTH] Sending OTP ${code} to ${phoneNumber}`);
       },

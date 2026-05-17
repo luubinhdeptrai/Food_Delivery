@@ -1,14 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
-import { eq, and, count, inArray } from 'drizzle-orm';
+import { eq, and, count } from 'drizzle-orm';
 import {
   menuItems,
   menuCategories,
   type MenuItem,
   type MenuCategory,
   type NewMenuCategory,
-  menuItemStatusEnum,
 } from '@/module/restaurant-catalog/menu/menu.schema';
 import type {
   CreateMenuItemDto,
@@ -66,12 +63,7 @@ export class MenuRepository {
     // Apply status filter unless caller explicitly requests all items.
     // Public endpoint defaults to 'available' so customers never see unavailable items.
     if (status !== 'all') {
-      conditions.push(
-        eq(
-          menuItems.status,
-          status as (typeof menuItemStatusEnum.enumValues)[number],
-        ),
-      );
+      conditions.push(eq(menuItems.status, status));
     }
 
     const whereClause = and(...conditions);
@@ -148,7 +140,7 @@ export class MenuRepository {
     const data: NewMenuCategory = {
       restaurantId: dto.restaurantId,
       name: dto.name,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       displayOrder: dto.displayOrder ?? 0,
     };
 

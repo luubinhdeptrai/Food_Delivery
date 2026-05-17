@@ -40,7 +40,7 @@ export const notificationPreferences = pgTable('notification_preferences', {
   // Example: quietHoursStart=22, quietHoursEnd=7 means 22:00–06:59 is quiet.
   // Overnight ranges (start > end) are supported in isQuietHours().
   quietHoursStart: integer('quiet_hours_start'), // 0–23, null = disabled
-  quietHoursEnd: integer('quiet_hours_end'),     // 0–23, null = disabled
+  quietHoursEnd: integer('quiet_hours_end'), // 0–23, null = disabled
 
   // ---- Muted notification types ----
   // JSONB array of NotificationType values the user has muted.
@@ -58,12 +58,18 @@ export const notificationPreferences = pgTable('notification_preferences', {
   // Used by isQuietHours() to compute local hour from UTC now.
   timezone: text('timezone').notNull().default('Asia/Ho_Chi_Minh'),
 
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export type NotificationPreference = typeof notificationPreferences.$inferSelect;
-export type NewNotificationPreference = typeof notificationPreferences.$inferInsert;
+export type NotificationPreference =
+  typeof notificationPreferences.$inferSelect;
+export type NewNotificationPreference =
+  typeof notificationPreferences.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // DEFAULT_PREFERENCES

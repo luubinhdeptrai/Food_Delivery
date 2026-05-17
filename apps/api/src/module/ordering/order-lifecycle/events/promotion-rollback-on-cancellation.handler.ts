@@ -35,8 +35,7 @@ import {
  */
 @Injectable()
 @EventsHandler(OrderStatusChangedEvent)
-export class PromotionRollbackOnCancellationHandler implements IEventHandler<OrderStatusChangedEvent>
-{
+export class PromotionRollbackOnCancellationHandler implements IEventHandler<OrderStatusChangedEvent> {
   private readonly logger = new Logger(
     PromotionRollbackOnCancellationHandler.name,
   );

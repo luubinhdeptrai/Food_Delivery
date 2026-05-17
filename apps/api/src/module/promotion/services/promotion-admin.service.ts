@@ -242,9 +242,12 @@ export class PromotionAdminService {
       // Unique constraint violation on code — DrizzleQueryError wraps the pg error
       const errMsg =
         err instanceof Error
-          ? `${err.message} ${err.cause instanceof Error ? err.cause.message : String(err.cause ?? '')}`
+          ? `${err.message}${err.cause instanceof Error ? ` Cause: ${err.cause.message}` : ''}`
           : '';
-      if (errMsg.includes('coupon_codes_code_unique') || errMsg.includes('duplicate key')) {
+      if (
+        errMsg.includes('coupon_codes_code_unique') ||
+        errMsg.includes('duplicate key')
+      ) {
         throw new ConflictException(
           'One or more coupon codes already exist. All codes must be globally unique.',
         );

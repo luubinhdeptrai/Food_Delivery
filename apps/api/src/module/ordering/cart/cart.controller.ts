@@ -327,7 +327,6 @@ export class CartController {
 
   private toResponse(cart: Cart): CartResponseDto {
     const items = cart.items.map((item) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const modifiersTotal = (item.selectedModifiers ?? []).reduce(
         (sum, m) => sum + m.price,
         0,

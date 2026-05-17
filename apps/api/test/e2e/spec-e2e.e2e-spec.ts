@@ -81,7 +81,11 @@ const ADDR_NO_GPS = {
   district: 'District 1',
   city: 'Ho Chi Minh City',
 };
-const ADDR_NEARBY = { ...ADDR_NO_GPS, latitude: NEARBY_LAT, longitude: NEARBY_LNG };
+const ADDR_NEARBY = {
+  ...ADDR_NO_GPS,
+  latitude: NEARBY_LAT,
+  longitude: NEARBY_LNG,
+};
 const ADDR_FAR = { ...ADDR_NO_GPS, latitude: FAR_LAT, longitude: FAR_LNG };
 
 // ── Zone fee constants ────────────────────────────────────────────────────────
@@ -169,7 +173,11 @@ describe('SoLi Full Integration E2E', () => {
     setAuthManager(testAuth);
 
     // 3. Extra actors
-    const customer = await signUpUser(http, SPEC_CUSTOMER_EMAIL, 'Spec Customer');
+    const customer = await signUpUser(
+      http,
+      SPEC_CUSTOMER_EMAIL,
+      'Spec Customer',
+    );
     customerToken = customer.token;
     customerId = customer.userId;
     // default role resolves to 'customer' — no DB update needed
@@ -234,16 +242,21 @@ describe('SoLi Full Integration E2E', () => {
     const basicRes = await http
       .post('/api/menu-items')
       .set(ownerHeaders())
-      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Plain Burger', price: 10000 });
+      .send({
+        restaurantId: TEST_RESTAURANT_ID,
+        name: 'Plain Burger',
+        price: 10000,
+      });
     expect(basicRes.status).toBe(201);
     basicItemId = basicRes.body.id as string;
     await delay(200);
 
     // 7. Menu item with modifiers — create item then attach groups + options
-    const modRes = await http
-      .post('/api/menu-items')
-      .set(ownerHeaders())
-      .send({ restaurantId: TEST_RESTAURANT_ID, name: 'Fancy Burger', price: 15000 });
+    const modRes = await http.post('/api/menu-items').set(ownerHeaders()).send({
+      restaurantId: TEST_RESTAURANT_ID,
+      name: 'Fancy Burger',
+      price: 15000,
+    });
     expect(modRes.status).toBe(201);
     modItemId = modRes.body.id as string;
     await delay(200);
@@ -258,14 +271,18 @@ describe('SoLi Full Integration E2E', () => {
     await delay(200);
 
     const roaRes = await http
-      .post(`/api/menu-items/${modItemId}/modifier-groups/${reqGroupId}/options`)
+      .post(
+        `/api/menu-items/${modItemId}/modifier-groups/${reqGroupId}/options`,
+      )
       .set(ownerHeaders())
       .send({ name: 'White', price: 0, isDefault: true });
     expect(roaRes.status).toBe(201);
     reqOptAId = roaRes.body.id as string;
 
     const robRes = await http
-      .post(`/api/menu-items/${modItemId}/modifier-groups/${reqGroupId}/options`)
+      .post(
+        `/api/menu-items/${modItemId}/modifier-groups/${reqGroupId}/options`,
+      )
       .set(ownerHeaders())
       .send({ name: 'Wheat', price: 500, isDefault: false });
     expect(robRes.status).toBe(201);
@@ -282,14 +299,18 @@ describe('SoLi Full Integration E2E', () => {
     await delay(200);
 
     const ooaRes = await http
-      .post(`/api/menu-items/${modItemId}/modifier-groups/${optGroupId}/options`)
+      .post(
+        `/api/menu-items/${modItemId}/modifier-groups/${optGroupId}/options`,
+      )
       .set(ownerHeaders())
       .send({ name: 'Cheese', price: 1000, isDefault: false });
     expect(ooaRes.status).toBe(201);
     optOptAId = ooaRes.body.id as string;
 
     const oobRes = await http
-      .post(`/api/menu-items/${modItemId}/modifier-groups/${optGroupId}/options`)
+      .post(
+        `/api/menu-items/${modItemId}/modifier-groups/${optGroupId}/options`,
+      )
       .set(ownerHeaders())
       .send({ name: 'Bacon', price: 1500, isDefault: false });
     expect(oobRes.status).toBe(201);
@@ -332,7 +353,7 @@ describe('SoLi Full Integration E2E', () => {
           address: '42 API Street, District 3, HCMC',
           phone: '+84-090-000-0042',
           latitude: 10.78,
-          longitude: 106.70,
+          longitude: 106.7,
           cuisineType: 'Vietnamese',
         });
       expect(res.status).toBe(201);
@@ -342,7 +363,7 @@ describe('SoLi Full Integration E2E', () => {
         ),
         name: 'Spec Test Bistro',
         latitude: 10.78,
-        longitude: 106.70,
+        longitude: 106.7,
       });
       newRestaurantId = res.body.id as string;
       await delay(200); // wait for RestaurantUpdatedEvent snapshot
@@ -395,7 +416,12 @@ describe('SoLi Full Integration E2E', () => {
       const res = await http
         .post(`/api/restaurants/${newRestaurantId}/delivery-zones`)
         .set(otherUserHeaders())
-        .send({ name: 'Near Zone', radiusKm: 5, baseFee: 10000, perKmRate: 2000 });
+        .send({
+          name: 'Near Zone',
+          radiusKm: 5,
+          baseFee: 10000,
+          perKmRate: 2000,
+        });
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({
         id: expect.any(String),
@@ -565,17 +591,14 @@ describe('SoLi Full Integration E2E', () => {
 
     /** Convenience: add basicItemId to cart. */
     const addBasic = (token: string, qty = 1) =>
-      http
-        .post('/api/carts/my/items')
-        .set(authH(token))
-        .send({
-          menuItemId: basicItemId,
-          restaurantId: TEST_RESTAURANT_ID,
-          restaurantName: 'E2E Test Restaurant',
-          itemName: 'Plain Burger',
-          unitPrice: 10.0,
-          quantity: qty,
-        });
+      http.post('/api/carts/my/items').set(authH(token)).send({
+        menuItemId: basicItemId,
+        restaurantId: TEST_RESTAURANT_ID,
+        restaurantName: 'E2E Test Restaurant',
+        itemName: 'Plain Burger',
+        unitPrice: 10.0,
+        quantity: qty,
+      });
 
     it('C-01 GET /api/carts/my returns null body when cart is empty', async () => {
       const res = await http.get('/api/carts/my').set(authH(customerToken));
@@ -747,9 +770,7 @@ describe('SoLi Full Integration E2E', () => {
 
     it('C-11 DELETE /api/carts/my clears entire cart → 204', async () => {
       await addBasic(customerToken);
-      const res = await http
-        .delete('/api/carts/my')
-        .set(authH(customerToken));
+      const res = await http.delete('/api/carts/my').set(authH(customerToken));
       expect(res.status).toBe(204);
       const cartRes = await http.get('/api/carts/my').set(authH(customerToken));
       expect(cartRes.body?.cartId).toBeUndefined();
@@ -999,10 +1020,7 @@ describe('SoLi Full Integration E2E', () => {
     const deliver = (id: string, t: string) =>
       http.patch(`/api/orders/${id}/deliver`).set(authH(t));
     const cancelOrder = (id: string, t: string, reason = 'Test reason') =>
-      http
-        .patch(`/api/orders/${id}/cancel`)
-        .set(authH(t))
-        .send({ reason });
+      http.patch(`/api/orders/${id}/cancel`).set(authH(t)).send({ reason });
     const refund = (id: string, t: string, reason = 'Refund reason') =>
       http.post(`/api/orders/${id}/refund`).set(authH(t)).send({ reason });
 
@@ -1132,7 +1150,11 @@ describe('SoLi Full Integration E2E', () => {
       });
 
       it('L-12 customer can cancel pending order → status=cancelled', async () => {
-        const res = await cancelOrder(orderId, customerToken, 'Changed my mind');
+        const res = await cancelOrder(
+          orderId,
+          customerToken,
+          'Changed my mind',
+        );
         expect(res.status).toBe(200);
         expect(res.body.status).toBe('cancelled');
       });
@@ -1208,9 +1230,7 @@ describe('SoLi Full Integration E2E', () => {
       });
 
       it('L-18 unauthenticated confirm → 401', async () => {
-        const res = await http.patch(
-          `/api/orders/${pendingOrderId}/confirm`,
-        );
+        const res = await http.patch(`/api/orders/${pendingOrderId}/confirm`);
         expect(res.status).toBe(401);
       });
 
@@ -1422,9 +1442,7 @@ describe('SoLi Full Integration E2E', () => {
 
     describe('§6.1 Customer history', () => {
       it('H-01 GET /api/orders/my returns paginated list containing customer orders', async () => {
-        const res = await http
-          .get('/api/orders/my')
-          .set(authH(customerToken));
+        const res = await http.get('/api/orders/my').set(authH(customerToken));
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({
           data: expect.any(Array),
@@ -1432,9 +1450,9 @@ describe('SoLi Full Integration E2E', () => {
           limit: 20,
           offset: 0,
         });
-        const orderIds = (
-          res.body.data as { orderId: string }[]
-        ).map((o) => o.orderId);
+        const orderIds = (res.body.data as { orderId: string }[]).map(
+          (o) => o.orderId,
+        );
         expect(orderIds).toContain(pendingOrderId);
         expect(orderIds).toContain(deliveredOrderId);
       });
@@ -1444,9 +1462,9 @@ describe('SoLi Full Integration E2E', () => {
           .get('/api/orders/my?status=pending')
           .set(authH(customerToken));
         expect(res.status).toBe(200);
-        const statuses = (
-          res.body.data as { status: string }[]
-        ).map((o) => o.status);
+        const statuses = (res.body.data as { status: string }[]).map(
+          (o) => o.status,
+        );
         expect(statuses.every((s) => s === 'pending')).toBe(true);
       });
 
@@ -1455,9 +1473,9 @@ describe('SoLi Full Integration E2E', () => {
           .get('/api/orders/my?status=delivered')
           .set(authH(customerToken));
         expect(res.status).toBe(200);
-        const orderIds = (
-          res.body.data as { orderId: string }[]
-        ).map((o) => o.orderId);
+        const orderIds = (res.body.data as { orderId: string }[]).map(
+          (o) => o.orderId,
+        );
         expect(orderIds).toContain(deliveredOrderId);
       });
 
@@ -1538,9 +1556,9 @@ describe('SoLi Full Integration E2E', () => {
           data: expect.any(Array),
           total: expect.any(Number),
         });
-        const orderIds = (
-          res.body.data as { orderId: string }[]
-        ).map((o) => o.orderId);
+        const orderIds = (res.body.data as { orderId: string }[]).map(
+          (o) => o.orderId,
+        );
         expect(orderIds).toContain(deliveredOrderId);
       });
 
@@ -1551,7 +1569,9 @@ describe('SoLi Full Integration E2E', () => {
         expect(res.status).toBe(200);
         expect(res.body).toBeInstanceOf(Array);
         // Verify only active statuses are returned
-        const statuses = (res.body as { status: string }[]).map((o) => o.status);
+        const statuses = (res.body as { status: string }[]).map(
+          (o) => o.status,
+        );
         const terminal = ['delivered', 'cancelled', 'refunded'];
         expect(statuses.every((s) => !terminal.includes(s))).toBe(true);
       });
@@ -1583,9 +1603,9 @@ describe('SoLi Full Integration E2E', () => {
           .get('/api/restaurant/orders?status=delivered')
           .set(ownerHeaders());
         expect(res.status).toBe(200);
-        const statuses = (
-          res.body.data as { status: string }[]
-        ).map((o) => o.status);
+        const statuses = (res.body.data as { status: string }[]).map(
+          (o) => o.status,
+        );
         expect(statuses.every((s) => s === 'delivered')).toBe(true);
       });
     });
@@ -1600,7 +1620,9 @@ describe('SoLi Full Integration E2E', () => {
         expect(res.status).toBe(200);
         expect(res.body).toBeInstanceOf(Array);
         // All returned orders should be in ready_for_pickup state
-        const statuses = (res.body as { status: string }[]).map((o) => o.status);
+        const statuses = (res.body as { status: string }[]).map(
+          (o) => o.status,
+        );
         expect(statuses.every((s) => s === 'ready_for_pickup')).toBe(true);
       });
 
@@ -1628,9 +1650,9 @@ describe('SoLi Full Integration E2E', () => {
           data: expect.any(Array),
           total: expect.any(Number),
         });
-        const orderIds = (
-          res.body.data as { orderId: string }[]
-        ).map((o) => o.orderId);
+        const orderIds = (res.body.data as { orderId: string }[]).map(
+          (o) => o.orderId,
+        );
         expect(orderIds).toContain(deliveredOrderId);
       });
 
@@ -1653,17 +1675,15 @@ describe('SoLi Full Integration E2E', () => {
 
     describe('§6.4 Admin order management', () => {
       it('H-21 GET /api/admin/orders returns all orders', async () => {
-        const res = await http
-          .get('/api/admin/orders')
-          .set(authH(adminToken));
+        const res = await http.get('/api/admin/orders').set(authH(adminToken));
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({
           data: expect.any(Array),
           total: expect.any(Number),
         });
-        const orderIds = (
-          res.body.data as { orderId: string }[]
-        ).map((o) => o.orderId);
+        const orderIds = (res.body.data as { orderId: string }[]).map(
+          (o) => o.orderId,
+        );
         expect(orderIds).toContain(deliveredOrderId);
         expect(orderIds).toContain(pendingOrderId);
       });
@@ -1673,9 +1693,9 @@ describe('SoLi Full Integration E2E', () => {
           .get('/api/admin/orders?status=delivered')
           .set(authH(adminToken));
         expect(res.status).toBe(200);
-        const statuses = (
-          res.body.data as { status: string }[]
-        ).map((o) => o.status);
+        const statuses = (res.body.data as { status: string }[]).map(
+          (o) => o.status,
+        );
         expect(statuses.every((s) => s === 'delivered')).toBe(true);
       });
 
@@ -1685,9 +1705,9 @@ describe('SoLi Full Integration E2E', () => {
           .set(authH(adminToken));
         expect(res.status).toBe(200);
         // All returned orders belong to this customer
-        const orderIds = (
-          res.body.data as { orderId: string }[]
-        ).map((o) => o.orderId);
+        const orderIds = (res.body.data as { orderId: string }[]).map(
+          (o) => o.orderId,
+        );
         expect(orderIds).toContain(deliveredOrderId);
       });
 
@@ -1727,9 +1747,7 @@ describe('SoLi Full Integration E2E', () => {
       });
 
       it('H-28 GET /api/admin/orders → 401 without token', async () => {
-        const res = await http
-          .get('/api/admin/orders')
-          .set(noAuthHeaders());
+        const res = await http.get('/api/admin/orders').set(noAuthHeaders());
         expect(res.status).toBe(401);
       });
 

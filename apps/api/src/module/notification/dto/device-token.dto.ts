@@ -1,11 +1,9 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import {
-  IsEnum,
-  IsNotEmpty,
-  IsString,
-  MaxLength,
-} from 'class-validator';
-import { devicePlatformEnum, type DevicePlatform } from '../domain/device-token.schema';
+  devicePlatformEnum,
+  type DevicePlatform,
+} from '../domain/device-token.schema';
 
 // ---------------------------------------------------------------------------
 // Request DTOs
@@ -111,10 +109,16 @@ export class PushTokenItemDto {
   @ApiProperty({ description: 'Whether this token is currently active' })
   isActive!: boolean;
 
-  @ApiProperty({ description: 'Last time this token was seen or refreshed', format: 'date-time' })
+  @ApiProperty({
+    description: 'Last time this token was seen or refreshed',
+    format: 'date-time',
+  })
   lastSeenAt!: string;
 
-  @ApiProperty({ description: 'When this token was first registered', format: 'date-time' })
+  @ApiProperty({
+    description: 'When this token was first registered',
+    format: 'date-time',
+  })
   createdAt!: string;
 }
 

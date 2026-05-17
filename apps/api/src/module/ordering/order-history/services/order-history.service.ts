@@ -103,7 +103,7 @@ function mapOrderToDetail(
     estimatedDeliveryMinutes: order.estimatedDeliveryMinutes ?? null,
     note: order.note ?? null,
     paymentUrl: order.paymentUrl ?? null,
-    deliveryAddress: order.deliveryAddress as OrderDetailDto['deliveryAddress'],
+    deliveryAddress: order.deliveryAddress,
     shipperId: order.shipperId ?? null,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),

@@ -20,32 +20,32 @@ import { sql } from 'drizzle-orm';
 // ---------------------------------------------------------------------------
 export const notificationTypeEnum = pgEnum('notification_type', [
   // --- Ordering events (customer-facing) ---
-  'order_placed',           // Customer: order successfully placed
-  'order_confirmed',        // Customer: restaurant accepted the order
-  'order_preparing',        // Customer: restaurant started cooking
+  'order_placed', // Customer: order successfully placed
+  'order_confirmed', // Customer: restaurant accepted the order
+  'order_preparing', // Customer: restaurant started cooking
   'order_ready_for_pickup', // Customer: food ready — shipper is coming (preparing → ready_for_pickup)
-  'order_picked_up',        // Customer: shipper collected the order
-  'order_delivering',       // Customer: shipper is en route
-  'order_delivered',        // Customer: order delivered successfully
-  'order_cancelled',        // Customer + Restaurant owner: order was cancelled
-  'order_refunded',         // Customer: refund processed (delivered → refunded)
+  'order_picked_up', // Customer: shipper collected the order
+  'order_delivering', // Customer: shipper is en route
+  'order_delivered', // Customer: order delivered successfully
+  'order_cancelled', // Customer + Restaurant owner: order was cancelled
+  'order_refunded', // Customer: refund processed (delivered → refunded)
 
   // --- Payment events ---
-  'payment_confirmed',      // Customer: VNPay payment succeeded
-  'payment_failed',         // Customer: VNPay payment failed; retry instructions
+  'payment_confirmed', // Customer: VNPay payment succeeded
+  'payment_failed', // Customer: VNPay payment failed; retry instructions
 
   // --- Refund events ---
-  'refund_initiated',       // Customer: refund process started after cancellation
-  'refund_completed',       // [RESERVED] Payment BC refund webhook — not yet available
+  'refund_initiated', // Customer: refund process started after cancellation
+  'refund_completed', // [RESERVED] Payment BC refund webhook — not yet available
 
   // --- Restaurant-facing events ---
-  'new_order_received',     // Restaurant owner: new order waiting for confirmation
+  'new_order_received', // Restaurant owner: new order waiting for confirmation
 
   // --- Shipper-facing events (Delivery BC — future) ---
-  'pickup_request',         // [RESERVED] Shipper: order ready to be picked up
+  'pickup_request', // [RESERVED] Shipper: order ready to be picked up
 
   // --- System ---
-  'system_announcement',    // Admin broadcast to all users
+  'system_announcement', // Admin broadcast to all users
 ]);
 
 export type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
@@ -60,7 +60,8 @@ export const notificationChannelEnum = pgEnum('notification_channel', [
   'sms',
 ]);
 
-export type NotificationChannel = (typeof notificationChannelEnum.enumValues)[number];
+export type NotificationChannel =
+  (typeof notificationChannelEnum.enumValues)[number];
 
 // ---------------------------------------------------------------------------
 // notification_status enum
@@ -71,15 +72,16 @@ export type NotificationChannel = (typeof notificationChannelEnum.enumValues)[nu
 //   sent    → read
 // ---------------------------------------------------------------------------
 export const notificationStatusEnum = pgEnum('notification_status', [
-  'pending',            // Created, not yet dispatched
-  'sent',               // Dispatched to channel provider (FCM ACKed, SMTP queued)
-  'delivered',          // Provider confirmed delivery (FCM delivery receipt)
-  'read',               // User opened or explicitly marked as read
-  'failed',             // Delivery failed; eligible for retry
+  'pending', // Created, not yet dispatched
+  'sent', // Dispatched to channel provider (FCM ACKed, SMTP queued)
+  'delivered', // Provider confirmed delivery (FCM delivery receipt)
+  'read', // User opened or explicitly marked as read
+  'failed', // Delivery failed; eligible for retry
   'permanently_failed', // Exhausted retries; archived for audit
 ]);
 
-export type NotificationStatus = (typeof notificationStatusEnum.enumValues)[number];
+export type NotificationStatus =
+  (typeof notificationStatusEnum.enumValues)[number];
 
 // ---------------------------------------------------------------------------
 // notifications
@@ -133,7 +135,9 @@ export const notifications = pgTable(
     nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
 
     // --- Timestamps ---
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     sentAt: timestamp('sent_at', { withTimezone: true }),
     // Set at creation: NOW() + 90 days. Cleanup cron deletes expired read rows.
     expiresAt: timestamp('expires_at', { withTimezone: true }),
@@ -153,11 +157,15 @@ export const notifications = pgTable(
 
     // Admin / support: look up all notifications for a specific order.
     // Partial index excludes NULL order_id rows (e.g. system_announcement).
-    index('notif_order_idx').on(t.orderId).where(sql`order_id IS NOT NULL`),
+    index('notif_order_idx')
+      .on(t.orderId)
+      .where(sql`order_id IS NOT NULL`),
 
     // Cleanup cron: find notifications due for deletion.
     // Partial index excludes rows with no expiry (e.g. unread critical alerts).
-    index('notif_expires_at_idx').on(t.expiresAt).where(sql`expires_at IS NOT NULL`),
+    index('notif_expires_at_idx')
+      .on(t.expiresAt)
+      .where(sql`expires_at IS NOT NULL`),
 
     // Retry worker (Phase N-6): find failed notifications due for retry.
     index('notif_retry_idx')

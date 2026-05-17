@@ -102,7 +102,9 @@ export class RestaurantSnapshotRepository {
    * Returns null when the owner has no registered restaurant in the snapshot
    * table (treat as forbidden at the service layer).
    */
-  async findByOwnerId(ownerId: string): Promise<OrderingRestaurantSnapshot | null> {
+  async findByOwnerId(
+    ownerId: string,
+  ): Promise<OrderingRestaurantSnapshot | null> {
     const result = await this.db
       .select()
       .from(orderingRestaurantSnapshots)

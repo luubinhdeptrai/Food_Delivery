@@ -41,7 +41,9 @@ export class NotificationPreferenceRepository {
    * Upsert user preferences.
    * ON CONFLICT (user_id) DO UPDATE: safe to call repeatedly (idempotent).
    */
-  async upsert(data: NewNotificationPreference): Promise<NotificationPreference> {
+  async upsert(
+    data: NewNotificationPreference,
+  ): Promise<NotificationPreference> {
     const result = await this.db
       .insert(notificationPreferences)
       .values(data)

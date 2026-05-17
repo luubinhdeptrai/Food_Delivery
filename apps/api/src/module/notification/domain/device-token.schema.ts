@@ -52,9 +52,13 @@ export const deviceTokens = pgTable(
     // Updated on each successful push. Used by cleanup cron (Phase N-5):
     //   DELETE WHERE is_active = false AND last_seen_at < NOW() - '30 days'
     //   DELETE WHERE is_active = true  AND last_seen_at < NOW() - '90 days'
-    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
 
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     // Prevent duplicate token registration for the same user.

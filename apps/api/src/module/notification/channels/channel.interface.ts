@@ -71,5 +71,8 @@ export interface DeliveryContext {
 // ---------------------------------------------------------------------------
 
 export interface INotificationChannel {
-  deliver(notification: Notification, context: DeliveryContext): Promise<DeliveryResult>;
+  deliver(
+    notification: Notification,
+    context: DeliveryContext,
+  ): Promise<DeliveryResult>;
 }

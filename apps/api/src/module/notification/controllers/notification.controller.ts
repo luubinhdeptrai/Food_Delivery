@@ -22,7 +22,11 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AllowAnonymous, Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import {
+  AllowAnonymous,
+  Session,
+  type UserSession,
+} from '@thallesp/nestjs-better-auth';
 import { NotificationService } from '../services/notification.service';
 import { TestPushService } from '../services/test-push.service';
 import {
@@ -135,7 +139,9 @@ export class NotificationController {
   async getUnreadCount(
     @Session() session: UserSession,
   ): Promise<UnreadCountResponseDto> {
-    const count = await this.notificationService.getUnreadCount(session.user.id);
+    const count = await this.notificationService.getUnreadCount(
+      session.user.id,
+    );
     return { count };
   }
 

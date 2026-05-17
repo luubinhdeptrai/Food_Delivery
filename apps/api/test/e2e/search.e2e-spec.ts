@@ -990,7 +990,7 @@ describe('Search API (E2E)', () => {
         (r) => r.distanceKm,
       );
       for (let i = 1; i < distances.length; i++) {
-        expect(distances[i]).toBeGreaterThanOrEqual(distances[i - 1]!);
+        expect(distances[i]).toBeGreaterThanOrEqual(distances[i - 1]);
       }
     });
   });
@@ -1262,7 +1262,7 @@ describe('Search API (E2E)', () => {
       }[];
       expect(restaurants.length).toBeGreaterThan(0);
       // R1 must be first (highest score — name contains "Phở")
-      expect(restaurants[0]!.id).toBe(S.R1);
+      expect(restaurants[0].id).toBe(S.R1);
     });
 
     it('RK-02: exact item name match ranks above partial match for items', async () => {
@@ -1305,7 +1305,7 @@ describe('Search API (E2E)', () => {
       expect(res.status).toBe(200);
       const restaurants = res.body.restaurants as { id: string }[];
       // R3 ("Cơm Tấm Sài Gòn") has name match — must appear first
-      expect(restaurants[0]!.id).toBe(S.R3);
+      expect(restaurants[0].id).toBe(S.R3);
     });
 
     it('RK-06: pagination preserves ranking order across pages', async () => {

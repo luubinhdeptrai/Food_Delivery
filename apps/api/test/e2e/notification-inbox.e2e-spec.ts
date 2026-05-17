@@ -38,10 +38,7 @@ import {
 } from '../setup/db-setup';
 import { TestAuthManager, TEST_PASSWORD } from '../helpers/test-auth';
 import { setAuthManager, ownerHeaders } from '../helpers/auth';
-import {
-  getNotificationsForUser,
-  getNotification,
-} from '../helpers/db';
+import { getNotificationsForUser, getNotification } from '../helpers/db';
 import { notifications } from '../../src/module/notification/domain/notification.schema';
 import { user as userTable } from '../../src/module/auth/auth.schema';
 import { OrderPlacedEvent } from '../../src/shared/events/order-placed.event';
@@ -138,14 +135,25 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
     const ownerRes = await signUpUser(http, NI_OWNER_EMAIL, 'NI Owner');
     ownerToken = ownerRes.token;
     ownerId = ownerRes.userId;
-    await db.update(userTable).set({ role: 'restaurant' }).where(eq(userTable.id, ownerId));
+    await db
+      .update(userTable)
+      .set({ role: 'restaurant' })
+      .where(eq(userTable.id, ownerId));
 
-    const customerRes = await signUpUser(http, NI_CUSTOMER_EMAIL, 'NI Customer');
+    const customerRes = await signUpUser(
+      http,
+      NI_CUSTOMER_EMAIL,
+      'NI Customer',
+    );
     customerToken = customerRes.token;
     customerId = customerRes.userId;
     // No role update → resolveRole() → 'customer'
 
-    const customer2Res = await signUpUser(http, NI_CUSTOMER2_EMAIL, 'NI Customer 2');
+    const customer2Res = await signUpUser(
+      http,
+      NI_CUSTOMER2_EMAIL,
+      'NI Customer 2',
+    );
     customer2Token = customer2Res.token;
     customer2Id = customer2Res.userId;
     // No role update → resolveRole() → 'customer'
@@ -188,7 +196,14 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
         15000,
         0,
         'cod',
-        [{ menuItemId: 'fake-item-id', name: 'Test Burger', quantity: 1, unitPrice: 15000 }],
+        [
+          {
+            menuItemId: 'fake-item-id',
+            name: 'Test Burger',
+            quantity: 1,
+            unitPrice: 15000,
+          },
+        ],
         { street: '123 Test St', district: 'D1', city: 'HCM' },
         undefined,
         undefined,
@@ -358,9 +373,9 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
       const inboxRes = await http
         .get('/api/notifications/my')
         .set(authHeader(customerToken));
-      const expectedUnread = (inboxRes.body.items as Array<Record<string, unknown>>).filter(
-        (n) => !n.isRead,
-      ).length;
+      const expectedUnread = (
+        inboxRes.body.items as Array<Record<string, unknown>>
+      ).filter((n) => !n.isRead).length;
 
       const countRes = await http
         .get('/api/notifications/my/unread-count')
@@ -373,7 +388,9 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
     it('NI-10 unread-count is consistent with inbox unreadCount field', async () => {
       const [inboxRes, countRes] = await Promise.all([
         http.get('/api/notifications/my').set(authHeader(customerToken)),
-        http.get('/api/notifications/my/unread-count').set(authHeader(customerToken)),
+        http
+          .get('/api/notifications/my/unread-count')
+          .set(authHeader(customerToken)),
       ]);
 
       expect(inboxRes.body.unreadCount).toBe(countRes.body.count);
@@ -430,7 +447,9 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
       const res = await http
         .get('/api/notifications/my?unreadOnly=true')
         .set(authHeader(customerToken));
-      const ids = (res.body.items as Array<Record<string, unknown>>).map((n) => n.id);
+      const ids = (res.body.items as Array<Record<string, unknown>>).map(
+        (n) => n.id,
+      );
       expect(ids).not.toContain(notificationId);
     });
   });
@@ -469,9 +488,9 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
       const res = await http
         .get('/api/notifications/my')
         .set(authHeader(customerToken));
-      const unreadItems = (res.body.items as Array<Record<string, unknown>>).filter(
-        (n) => !n.isRead,
-      );
+      const unreadItems = (
+        res.body.items as Array<Record<string, unknown>>
+      ).filter((n) => !n.isRead);
       expect(unreadItems).toHaveLength(0);
     });
 
@@ -524,9 +543,7 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
 
     it('NI-21 hasMore is true when more rows exist beyond current page', async () => {
       const total = (
-        await http
-          .get('/api/notifications/my')
-          .set(authHeader(customerToken))
+        await http.get('/api/notifications/my').set(authHeader(customerToken))
       ).body.total as number;
 
       if (total > 1) {
@@ -539,9 +556,7 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
 
     it('NI-22 hasMore is false on last page', async () => {
       const total = (
-        await http
-          .get('/api/notifications/my')
-          .set(authHeader(customerToken))
+        await http.get('/api/notifications/my').set(authHeader(customerToken))
       ).body.total as number;
 
       const res = await http
@@ -608,10 +623,9 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
   describe('§8 Cross-user isolation', () => {
     beforeAll(async () => {
       // Generate a notification for customer2 only
-      await publishOrderPlaced(
-        'b1000000-0000-4000-8000-000000000001',
-        { customerId: customer2Id },
-      );
+      await publishOrderPlaced('b1000000-0000-4000-8000-000000000001', {
+        customerId: customer2Id,
+      });
     });
 
     it('NI-27 customer2 inbox does not contain customer1 notifications', async () => {
@@ -623,10 +637,14 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
         .set(authHeader(customer2Token));
 
       expect(res.status).toBe(200);
-      const customer2Ids = (res.body.items as Array<Record<string, unknown>>).map((n) => n.id);
+      const customer2Ids = (
+        res.body.items as Array<Record<string, unknown>>
+      ).map((n) => n.id);
 
       // No overlap between the two users' notifications
-      const overlap = customer2Ids.filter((id) => customer1Ids.includes(id as string));
+      const overlap = customer2Ids.filter((id) =>
+        customer1Ids.includes(id as string),
+      );
       expect(overlap).toHaveLength(0);
     });
 
@@ -639,23 +657,28 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
         .set(authHeader(customerToken));
 
       expect(res.status).toBe(200);
-      const customer1Ids = (res.body.items as Array<Record<string, unknown>>).map((n) => n.id);
+      const customer1Ids = (
+        res.body.items as Array<Record<string, unknown>>
+      ).map((n) => n.id);
 
-      const overlap = customer1Ids.filter((id) => customer2Ids.includes(id as string));
+      const overlap = customer1Ids.filter((id) =>
+        customer2Ids.includes(id as string),
+      );
       expect(overlap).toHaveLength(0);
     });
 
-    it('NI-29 customer cannot mark another user\'s notification as read', async () => {
+    it("NI-29 customer cannot mark another user's notification as read", async () => {
       // Get a notification belonging to customer2
       const customer2Rows = await getNotificationsForUser(customer2Id);
-      const customer2NotifId = customer2Rows.find((r) => r.channel === 'in_app')?.id;
+      const customer2NotifId = customer2Rows.find(
+        (r) => r.channel === 'in_app',
+      )?.id;
 
       if (!customer2NotifId) {
         // No in-app notification for customer2 yet — generate one
-        await publishOrderPlaced(
-          'b2000000-0000-4000-8000-000000000002',
-          { customerId: customer2Id },
-        );
+        await publishOrderPlaced('b2000000-0000-4000-8000-000000000002', {
+          customerId: customer2Id,
+        });
         const updatedRows = await getNotificationsForUser(customer2Id);
         const freshId = updatedRows.find((r) => r.channel === 'in_app')?.id;
         if (!freshId) return; // Skip if still no row
@@ -692,10 +715,10 @@ describe('Notification Inbox REST API (Phase N-3)', () => {
 
       if (items.length === 0) {
         // Ensure we have at least one notification
-        await publishOrderPlaced(
-          'c1000000-0000-4000-8000-000000000001',
-        );
-        await http.patch('/api/notifications/my/read-all').set(authHeader(customerToken));
+        await publishOrderPlaced('c1000000-0000-4000-8000-000000000001');
+        await http
+          .patch('/api/notifications/my/read-all')
+          .set(authHeader(customerToken));
         return;
       }
 

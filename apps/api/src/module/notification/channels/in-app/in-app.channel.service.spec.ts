@@ -22,9 +22,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { InAppChannelService } from './in-app.channel.service';
 import { NotificationGateway } from '../../gateway/notification.gateway';
 import { RedisService } from '@/lib/redis/redis.service';
-import {
-  WS_NOTIFICATION_CREATED,
-} from '../../gateway/notification-payload.dto';
+import { WS_NOTIFICATION_CREATED } from '../../gateway/notification-payload.dto';
 import type { Notification } from '../../domain/notification.schema';
 import type { DeliveryContext } from '../channel.interface';
 
@@ -65,7 +63,11 @@ const CONTEXT: DeliveryContext = { recipientId: 'user-uuid-001', email: null };
 
 describe('InAppChannelService', () => {
   let service: InAppChannelService;
-  let redisService: { del: jest.Mock; setWithExpiry: jest.Mock; get: jest.Mock };
+  let redisService: {
+    del: jest.Mock;
+    setWithExpiry: jest.Mock;
+    get: jest.Mock;
+  };
   let gateway: { sendToUser: jest.Mock };
 
   beforeEach(async () => {
@@ -130,11 +132,16 @@ describe('InAppChannelService', () => {
   });
 
   it('includes data in WS payload when notification has data', async () => {
-    const notif = makeNotification({ data: { orderId: 'order-xyz', screen: 'OrderDetail' } });
+    const notif = makeNotification({
+      data: { orderId: 'order-xyz', screen: 'OrderDetail' },
+    });
     await service.deliver(notif, CONTEXT);
 
     const payload = gateway.sendToUser.mock.calls[0][2];
-    expect(payload.data).toEqual({ orderId: 'order-xyz', screen: 'OrderDetail' });
+    expect(payload.data).toEqual({
+      orderId: 'order-xyz',
+      screen: 'OrderDetail',
+    });
   });
 
   it('includes orderId in WS payload when notification has orderId', async () => {
@@ -177,7 +184,9 @@ describe('InAppChannelService', () => {
   });
 
   it('returns { success: true } even when gateway.sendToUser throws', async () => {
-    gateway.sendToUser.mockImplementation(() => { throw new Error('WS emit failed'); });
+    gateway.sendToUser.mockImplementation(() => {
+      throw new Error('WS emit failed');
+    });
     const result = await service.deliver(makeNotification(), CONTEXT);
     expect(result).toEqual({ success: true });
   });
@@ -194,8 +203,12 @@ describe('InAppChannelService', () => {
       ],
     }).compile();
 
-    const serviceWithoutGateway = moduleWithoutGateway.get<InAppChannelService>(InAppChannelService);
-    const result = await serviceWithoutGateway.deliver(makeNotification(), CONTEXT);
+    const serviceWithoutGateway =
+      moduleWithoutGateway.get<InAppChannelService>(InAppChannelService);
+    const result = await serviceWithoutGateway.deliver(
+      makeNotification(),
+      CONTEXT,
+    );
     expect(result).toEqual({ success: true });
   });
 
@@ -207,8 +220,11 @@ describe('InAppChannelService', () => {
       ],
     }).compile();
 
-    const serviceWithoutGateway = moduleWithoutGateway.get<InAppChannelService>(InAppChannelService);
+    const serviceWithoutGateway =
+      moduleWithoutGateway.get<InAppChannelService>(InAppChannelService);
     // Should not throw, WS is best-effort
-    await expect(serviceWithoutGateway.deliver(makeNotification(), CONTEXT)).resolves.toEqual({ success: true });
+    await expect(
+      serviceWithoutGateway.deliver(makeNotification(), CONTEXT),
+    ).resolves.toEqual({ success: true });
   });
 });

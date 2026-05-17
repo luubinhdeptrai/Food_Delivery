@@ -3,7 +3,10 @@ import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { OrderStatusChangedEvent } from '@/shared/events/order-status-changed.event';
 import { NotificationService } from '../services/notification.service';
 import { NotificationRestaurantAclRepository } from '../acl/notification-restaurant-acl.repository';
-import type { NotificationType, NotificationChannel } from '../domain/notification.schema';
+import type {
+  NotificationType,
+  NotificationChannel,
+} from '../domain/notification.schema';
 
 // ---------------------------------------------------------------------------
 // STATUS_TRANSITION_NOTIFICATION
@@ -121,9 +124,7 @@ export const STATUS_TRANSITION_NOTIFICATION: Partial<
 // ---------------------------------------------------------------------------
 @Injectable()
 @EventsHandler(OrderStatusChangedEvent)
-export class OrderStatusChangedNotificationHandler
-  implements IEventHandler<OrderStatusChangedEvent>
-{
+export class OrderStatusChangedNotificationHandler implements IEventHandler<OrderStatusChangedEvent> {
   private readonly logger = new Logger(
     OrderStatusChangedNotificationHandler.name,
   );
@@ -134,8 +135,7 @@ export class OrderStatusChangedNotificationHandler
   ) {}
 
   async handle(event: OrderStatusChangedEvent): Promise<void> {
-    const transitionKey =
-      `${event.fromStatus}→${event.toStatus}` as `${string}→${string}`;
+    const transitionKey = `${event.fromStatus}→${event.toStatus}`;
 
     this.logger.log(
       `OrderStatusChangedEvent received: orderId=${event.orderId} transition=${transitionKey} triggeredBy=${event.triggeredByRole}`,

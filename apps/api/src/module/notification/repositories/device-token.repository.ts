@@ -47,10 +47,7 @@ export class DeviceTokenRepository {
       .select()
       .from(deviceTokens)
       .where(
-        and(
-          eq(deviceTokens.userId, userId),
-          eq(deviceTokens.isActive, true),
-        ),
+        and(eq(deviceTokens.userId, userId), eq(deviceTokens.isActive, true)),
       );
   }
 
@@ -83,10 +80,7 @@ export class DeviceTokenRepository {
       .update(deviceTokens)
       .set({ isActive: false })
       .where(
-        and(
-          eq(deviceTokens.userId, userId),
-          eq(deviceTokens.token, token),
-        ),
+        and(eq(deviceTokens.userId, userId), eq(deviceTokens.token, token)),
       );
   }
 

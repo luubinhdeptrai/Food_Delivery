@@ -42,9 +42,7 @@ import { OrderCancelledAfterPaymentEvent } from '@/shared/events/order-cancelled
  */
 @Injectable()
 @EventsHandler(OrderCancelledAfterPaymentEvent)
-export class OrderCancelledAfterPaymentHandler
-  implements IEventHandler<OrderCancelledAfterPaymentEvent>
-{
+export class OrderCancelledAfterPaymentHandler implements IEventHandler<OrderCancelledAfterPaymentEvent> {
   private readonly logger = new Logger(OrderCancelledAfterPaymentHandler.name);
 
   constructor(private readonly txnRepo: PaymentTransactionRepository) {}

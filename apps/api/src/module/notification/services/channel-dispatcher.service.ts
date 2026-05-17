@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { Notification, NotificationStatus } from '../domain/notification.schema';
+import type {
+  Notification,
+  NotificationStatus,
+} from '../domain/notification.schema';
 import { NotificationRepository } from '../repositories/notification.repository';
 import { NotificationDeliveryLogRepository } from '../repositories/notification-delivery-log.repository';
 import { InAppChannelService } from '../channels/in-app/in-app.channel.service';
@@ -117,11 +120,12 @@ export class ChannelDispatcherService {
     if (notification.channel === 'push') {
       let isOnline = false;
       try {
-        isOnline = await this.presenceService.isOnline(notification.recipientId);
+        isOnline = await this.presenceService.isOnline(
+          notification.recipientId,
+        );
       } catch {
         // isOnline absorbs all errors internally and returns false — this
         // catch is a double-safety net and should never be reached.
-        isOnline = false;
       }
 
       if (isOnline) {

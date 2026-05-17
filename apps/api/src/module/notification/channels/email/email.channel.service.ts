@@ -1,9 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { Notification } from '../../domain/notification.schema';
 import { EmailTemplateService } from './email-template.service';
-import {
-  EMAIL_PROVIDER,
-} from './email-provider.interface';
+import { EMAIL_PROVIDER } from './email-provider.interface';
 import type { IEmailProvider } from './email-provider.interface';
 import type {
   INotificationChannel,
@@ -79,7 +77,9 @@ export class EmailChannelService implements INotificationChannel {
     } catch (err) {
       const msg = (err as Error).message;
       const errorCode =
-        msg === 'SMTP_NOT_CONFIGURED' ? 'SMTP_NOT_CONFIGURED' : 'SMTP_SEND_ERROR';
+        msg === 'SMTP_NOT_CONFIGURED'
+          ? 'SMTP_NOT_CONFIGURED'
+          : 'SMTP_SEND_ERROR';
       this.logger.warn(
         `[Email] Failed to send to <${context.email}> for notification ${notification.id}: ${msg}`,
       );
