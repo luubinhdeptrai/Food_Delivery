@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "344352194360",
+    "project_id": "soli-food-delivery",
+    "storage_bucket": "soli-food-delivery.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344352194360:android:8cfecb96a3e7564dfd4bcd",
+        "android_client_info": {
+          "package_name": "com.truongdanh.uitfood"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1m12T0mLxDWHcQ-0ujLnqC3tPnMPCk5c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
