@@ -3,6 +3,7 @@ import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { OrderStatusChangedEvent } from '@/shared/events/order-status-changed.event';
 import { NotificationService } from '../services/notification.service';
 import { NotificationRestaurantAclRepository } from '../acl/notification-restaurant-acl.repository';
+import type { OrderStatus } from '../../ordering/order/order.schema';
 import type {
   NotificationType,
   NotificationChannel,
@@ -28,7 +29,7 @@ interface TransitionNotificationConfig {
 }
 
 export const STATUS_TRANSITION_NOTIFICATION: Partial<
-  Record<`${string}→${string}`, TransitionNotificationConfig>
+  Record<`${OrderStatus}→${OrderStatus}`, TransitionNotificationConfig>
 > = {
   // T-01: Restaurant accepts the order (COD)
   'pending→confirmed': {
@@ -135,7 +136,9 @@ export class OrderStatusChangedNotificationHandler implements IEventHandler<Orde
   ) {}
 
   async handle(event: OrderStatusChangedEvent): Promise<void> {
-    const transitionKey = `${event.fromStatus}→${event.toStatus}`;
+    const fromStatus: OrderStatus = event.fromStatus;
+    const toStatus: OrderStatus = event.toStatus;
+    const transitionKey: `${OrderStatus}→${OrderStatus}` = `${fromStatus}→${toStatus}`;
 
     this.logger.log(
       `OrderStatusChangedEvent received: orderId=${event.orderId} transition=${transitionKey} triggeredBy=${event.triggeredByRole}`,
@@ -154,7 +157,7 @@ export class OrderStatusChangedNotificationHandler implements IEventHandler<Orde
 
   private async processNotification(
     event: OrderStatusChangedEvent,
-    transitionKey: `${string}→${string}`,
+    transitionKey: `${OrderStatus}→${OrderStatus}`,
   ): Promise<void> {
     const config = STATUS_TRANSITION_NOTIFICATION[transitionKey];
 
