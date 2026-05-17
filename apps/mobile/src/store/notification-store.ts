@@ -32,7 +32,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
 
       return {
         items: [notification, ...state.items],
-        unreadCount: state.unreadCount + 1,
+        unreadCount: state.unreadCount + (notification.isRead ? 0 : 1),
       };
     }),
 

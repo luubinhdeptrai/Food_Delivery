@@ -3,11 +3,10 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "dev": "expo start",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
-    "dev:dev": "expo start --dev-client",
+    "dev": "expo start --dev-client",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
@@ -67,6 +66,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "^7.28.6",
+    "@expo/config-plugins": "~55.0.9",
     "@types/react": "~19.2.14",
     "autoprefixer": "^10.4.21",
     "babel-preset-expo": "^55.0.12",

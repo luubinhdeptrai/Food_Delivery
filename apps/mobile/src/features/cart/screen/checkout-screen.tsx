@@ -84,7 +84,7 @@ export function SingleScreenCheckout() {
 
         <CheckoutPriceBreakdown summary={summary} />
 
-        <CheckoutPromoSection />
+        <CheckoutPromoSection onApply={(code) => console.log('Applying promo:', code)} />
 
         <CheckoutPaymentSection
           paymentMethod={selectedPaymentMethod ?? undefined}

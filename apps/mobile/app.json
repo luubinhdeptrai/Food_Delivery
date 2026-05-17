@@ -15,10 +15,7 @@
       }
     },
     "android": {
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ],
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -59,14 +56,11 @@
     "extra": {
       "geocoding": {
         "baseUrl": "https://photon.komoot.io",
-        "apiKey": {},
         "timeout": 5000,
         "retry": {
-          "maxRetries": 3,
-          "fallbackUrl": {}
+          "maxRetries": 3
         }
       },
-      "router": {},
       "eas": {
         "projectId": "0fad1c88-699b-4597-af1f-4e30f2d257b6"
       }

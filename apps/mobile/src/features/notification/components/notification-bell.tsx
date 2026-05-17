@@ -9,20 +9,23 @@ interface NotificationBellProps {
   color?: string;
 }
 
-export function NotificationBell({ size = 24, color = '#0d631b' }: NotificationBellProps) {
+export function NotificationBell({
+  size = 24,
+  color = '#0d631b',
+}: NotificationBellProps) {
   const router = useRouter();
   const unreadCount = useNotificationStore((state) => state.unreadCount);
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       onPress={() => router.push('/notifications')}
       className="relative p-2"
     >
       <Bell size={size} color={color} />
       {unreadCount > 0 && (
-        <View 
+        <View
           className="absolute top-1 right-1 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center px-1"
-          style={{ borderQueries: 2, borderColor: 'white' }}
+          style={{ borderWidth: 2, borderColor: 'white' }}
         >
           <Text className="text-white text-[10px] font-bold">
             {unreadCount > 99 ? '99+' : unreadCount}

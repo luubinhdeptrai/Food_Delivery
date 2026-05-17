@@ -69,7 +69,9 @@ export function OrderDetailScreen() {
             <View className="border-t border-surface-container mt-2 pt-4">
               <View className="flex-row justify-between mb-2">
                 <Text className="text-on-surface-variant" style={{ fontFamily: 'Inter_400Regular' }}>Subtotal</Text>
-                <Text className="text-on-surface" style={{ fontFamily: 'Inter_600SemiBold' }}>${(order.totalAmount - order.shippingFee).toFixed(2)}</Text>
+                <Text className="text-on-surface" style={{ fontFamily: 'Inter_600SemiBold' }}>
+                  ${((order as any).subtotal ?? order.items.reduce((sum, item) => sum + item.subtotal, 0)).toFixed(2)}
+                </Text>
               </View>
               <View className="flex-row justify-between mb-2">
                 <Text className="text-on-surface-variant" style={{ fontFamily: 'Inter_400Regular' }}>Shipping Fee</Text>

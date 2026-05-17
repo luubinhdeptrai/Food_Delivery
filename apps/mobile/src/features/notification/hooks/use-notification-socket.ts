@@ -6,7 +6,19 @@ import { NotificationPayload } from '../types';
 import { BASE_URL } from '@/src/lib/api-client';
 import Toast from 'react-native-toast-message';
 
-const WS_URL = BASE_URL.replace('/api', '');
+const getWsUrl = (baseUrl: string) => {
+  try {
+    const url = new URL(baseUrl);
+    if (url.pathname.startsWith('/api')) {
+      url.pathname = url.pathname.slice(4);
+    }
+    return url.toString().replace(/\/$/, '');
+  } catch (e) {
+    return baseUrl.replace('/api', '');
+  }
+};
+
+const WS_URL = getWsUrl(BASE_URL);
 
 export function useNotificationSocket() {
   const socketRef = useRef<Socket | null>(null);
@@ -23,7 +35,7 @@ export function useNotificationSocket() {
     // But the guide explicitly says auth: { token }. 
     // Let's assume the session object or a cookie value can be used as the token.
     
-    if (!session) return;
+    if (!session?.session) return;
 
     // Connect to the /notifications namespace
     const socket = io(`${WS_URL}/notifications`, {
@@ -95,7 +107,7 @@ export function useNotificationSocket() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [session]);
+  }, [session, addNotification, markReadInStore, markAllReadInStore]);
 
   return socketRef;
 }

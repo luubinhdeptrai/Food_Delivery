@@ -103,7 +103,7 @@ export function CheckoutPaymentSection({
           >
             {brand}
           </Text>
-          {last4 !== brand && (
+          {!!last4 && last4 !== brand && (
             <Text
               className="text-xs text-on-surface-variant mt-0.5"
               style={{ fontFamily: 'Inter_400Regular' }}

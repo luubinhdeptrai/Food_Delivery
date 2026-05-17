@@ -12,9 +12,13 @@ export function usePushToken() {
     let unsubscribe: (() => void) | undefined;
 
     if (session) {
-      registerPushToken().then((unsub) => {
-        unsubscribe = unsub;
-      });
+      registerPushToken()
+        .then((unsub) => {
+          unsubscribe = unsub;
+        })
+        .catch((error) => {
+          console.error('[PushToken] registerPushToken failed', error);
+        });
     }
 
     return () => {
@@ -34,7 +38,10 @@ async function registerPushToken() {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    if (finalStatus !== 'granted') return;
+    if (finalStatus !== 'granted') {
+      console.warn(`[PushToken] Notification permission denied. Final status: ${finalStatus}`);
+      return;
+    }
 
     // 2. Get FCM token (Firebase)
     // Note: This requires the app to be correctly configured with google-services.json/GoogleService-Info.plist

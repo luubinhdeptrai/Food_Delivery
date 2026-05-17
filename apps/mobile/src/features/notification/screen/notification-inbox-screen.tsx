@@ -8,6 +8,9 @@ import { useNotificationStore } from '@/src/store/notification-store';
 import { NotificationItem } from '../components/notification-item';
 import { NotificationPayload } from '../types';
 import { notificationApi } from '../api';
+import Toast from 'react-native-toast-message';
+
+const EMPTY_STATE_TEXT = "Chưa có thông báo nào. Đặt hàng ngay để nhận cập nhật!";
 
 export function NotificationInboxScreen() {
   const insets = useSafeAreaInsets();
@@ -23,6 +26,9 @@ export function NotificationInboxScreen() {
         await notificationApi.markAsRead(notification.id);
       } catch (err) {
         console.error('Failed to mark as read:', err);
+        // Rollback
+        refetch();
+        Toast.show({ type: 'error', text1: 'Failed to mark notification as read' });
       }
     }
 
@@ -39,6 +45,8 @@ export function NotificationInboxScreen() {
       await notificationApi.markAllAsRead();
     } catch (err) {
       console.error('Failed to mark all as read:', err);
+      refetch();
+      Toast.show({ type: 'error', text1: 'Failed to mark all as read' });
     }
   };
 
@@ -80,7 +88,7 @@ export function NotificationInboxScreen() {
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center py-20 px-10">
               <Text className="text-primary/50 text-center">
-                Chưa có thông báo nào. Đặt hàng ngay để nhận cập nhật!
+                {EMPTY_STATE_TEXT}
               </Text>
             </View>
           }

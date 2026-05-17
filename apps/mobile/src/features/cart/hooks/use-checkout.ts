@@ -78,25 +78,30 @@ export function useCheckout() {
     router.back();
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       Toast.show({ type: 'error', text1: 'Delivery address is required' });
       return;
     }
-    const { street, district, city } = selectedAddress;
+    if (!selectedPaymentMethod) {
+      Toast.show({ type: 'error', text1: 'Payment method is required' });
+      return;
+    }
+    const addressObj = selectedAddress as any;
     const dto: CheckoutDto = {
       deliveryAddress: {
-        street,
-        district,
-        city,
-        latitude,
-        longitude,
+        street: addressObj.street || (typeof selectedAddress === 'string' ? selectedAddress : ''),
+        district: addressObj.district || '',
+        city: addressObj.city || '',
+        latitude: latitude ?? undefined,
+        longitude: longitude ?? undefined,
       },
-      paymentMethod: selectedPaymentMethod?.id === 'vnpay' ? 'vnpay' : 'cod',
+      paymentMethod: selectedPaymentMethod.id === 'vnpay' ? 'vnpay' : 'cod',
       note: '', // Could be wired up to a note input
     };
 
-    const idempotencyKey = Date.now().toString(36) + Math.random().toString(36).substring(2);
+    const randomBytes = await Crypto.getRandomBytesAsync(16);
+    const idempotencyKey = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
     checkoutMutation.mutate({ dto, idempotencyKey });
   };
   const cartItems: CartItem[] =
