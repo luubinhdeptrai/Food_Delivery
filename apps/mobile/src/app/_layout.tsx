@@ -10,11 +10,22 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
+import messaging from '@react-native-firebase/messaging';
 
 import { useSession } from '@/src/lib/auth-client';
 import { LocationInitializer } from '@/src/features/location';
-import { useNotificationSocket, usePushToken } from '@/src/features/notification';
+import { 
+  useNotificationSocket, 
+  usePushToken,
+  useNotificationHandler
+} from '@/src/features/notification';
 import Toast from 'react-native-toast-message';
+
+// Register background handler
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  console.log('[BackgroundMessage] Received:', remoteMessage);
+  // No direct UI action here, but you can update local storage or just log it.
+});
 
 function RootNavigation() {
   const { data: session, isPending } = useSession();
@@ -24,6 +35,7 @@ function RootNavigation() {
   // Initialize notifications
   useNotificationSocket();
   usePushToken();
+  useNotificationHandler();
 
   useEffect(() => {
     if (isPending) return;

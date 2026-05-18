@@ -308,13 +308,32 @@ export class FirebasePushProvider implements IPushProvider {
 
       const message: MulticastMessage = {
         tokens,
-        // NO top-level `notification` key — data-only so onMessage() fires in foreground
+        // Top-level notification is OMITTED to keep web data-only
         data: fcmData,
-        // webpush section controls how the browser subscription is targeted and
-        // provides FCM HTTP v1 API web-specific options.
-        // NOTE: webpush.notification is intentionally omitted here — if included,
-        // the browser would auto-display a system notification AND the SW would
-        // receive the message, but onMessage() in the foreground would NOT fire.
+        // Platform-specific overrides for mobile to ensure OS banners show up
+        android: {
+          priority: 'high',
+          notification: {
+            title,
+            body,
+            channelId: 'default',
+            priority: 'high',
+            sound: 'default',
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              alert: {
+                title,
+                body,
+              },
+              sound: 'default',
+              badge: 1,
+            },
+          },
+        },
+        // webpush section remains data-only for foreground onMessage() consistency
         webpush: {
           fcmOptions: {
             // Absolute URL required for notification click deep-links.

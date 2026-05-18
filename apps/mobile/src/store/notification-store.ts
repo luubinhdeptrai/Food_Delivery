@@ -5,6 +5,7 @@ interface NotificationState {
   unreadCount: number;
   items: NotificationPayload[];
   isLoaded: boolean;
+  pushToken: string | null;
   
   // Actions
   setUnreadCount: (count: number) => void;
@@ -13,16 +14,20 @@ interface NotificationState {
   markReadInStore: (id: string) => void;
   markAllReadInStore: () => void;
   setLoaded: (loaded: boolean) => void;
+  setPushToken: (token: string | null) => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
   unreadCount: 0,
   items: [],
   isLoaded: false,
+  pushToken: null,
 
   setUnreadCount: (count) => set({ unreadCount: count }),
   
   setItems: (items) => set({ items }),
+  
+  setPushToken: (token) => set({ pushToken: token }),
 
   addNotification: (notification) =>
     set((state) => {

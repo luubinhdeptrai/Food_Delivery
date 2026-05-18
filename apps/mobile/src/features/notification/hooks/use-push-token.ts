@@ -4,15 +4,17 @@ import * as Notifications from 'expo-notifications';
 import { getMessaging, getToken, onTokenRefresh } from '@react-native-firebase/messaging';
 import { notificationApi } from '../api';
 import { useSession } from '@/src/lib/auth-client';
+import { useNotificationStore } from '@/src/store/notification-store';
 
 export function usePushToken() {
   const { data: session } = useSession();
+  const setPushToken = useNotificationStore((state) => state.setPushToken);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
     if (session) {
-      registerPushToken()
+      registerPushToken(setPushToken)
         .then((unsub) => {
           unsubscribe = unsub;
         })
@@ -26,11 +28,21 @@ export function usePushToken() {
         unsubscribe();
       }
     };
-  }, [session]);
+  }, [session, setPushToken]);
 }
 
-async function registerPushToken() {
+async function registerPushToken(setPushToken: (token: string) => void) {
   try {
+    // 0. Create channel (Required for Android 13+ permission prompt to show)
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
+
     // 1. Request permission (Expo)
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -44,12 +56,11 @@ async function registerPushToken() {
     }
 
     // 2. Get FCM token (Firebase)
-    // Note: This requires the app to be correctly configured with google-services.json/GoogleService-Info.plist
-    // If running in Expo Go, this might fail or require a dev client.
     const messaging = getMessaging();
     let token: string;
     try {
       token = await getToken(messaging);
+      setPushToken(token);
     } catch (error) {
       console.warn('[PushToken] Failed to get FCM token. Ensure Firebase is configured.', error);
       return;
@@ -59,11 +70,12 @@ async function registerPushToken() {
 
     // 3. Register with backend
     await notificationApi.registerPushToken(token, platform);
-    console.log('[PushToken] Registered successfully');
+    console.log('[PushToken] Registered successfully. Token:', token);
 
     // 4. Listen for token refresh
     const unsubscribe = onTokenRefresh(messaging, async (newToken) => {
       try {
+        setPushToken(newToken);
         await notificationApi.registerPushToken(newToken, platform);
       } catch (err) {
         console.error('[PushToken] Failed to refresh token:', err);

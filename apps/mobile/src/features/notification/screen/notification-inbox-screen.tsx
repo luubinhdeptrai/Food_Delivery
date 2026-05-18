@@ -8,6 +8,7 @@ import { useNotificationStore } from '@/src/store/notification-store';
 import { NotificationItem } from '../components/notification-item';
 import { NotificationPayload } from '../types';
 import { notificationApi } from '../api';
+import { useNotificationNavigation } from '../utils/navigation';
 import Toast from 'react-native-toast-message';
 
 const EMPTY_STATE_TEXT = "Chưa có thông báo nào. Đặt hàng ngay để nhận cập nhật!";
@@ -17,26 +18,22 @@ export function NotificationInboxScreen() {
   const router = useRouter();
   const { items, markReadInStore, markAllReadInStore } = useNotificationStore();
   const { isLoading, refetch } = useNotificationInbox();
+  const { navigateFromNotification } = useNotificationNavigation();
 
   const handleNotificationPress = async (notification: NotificationPayload) => {
-    // 1. Optimistic update
+    // 1. Mark as read
     if (!notification.isRead) {
       markReadInStore(notification.id);
       try {
         await notificationApi.markAsRead(notification.id);
       } catch (err) {
         console.error('Failed to mark as read:', err);
-        // Rollback
         refetch();
-        Toast.show({ type: 'error', text1: 'Failed to mark notification as read' });
       }
     }
 
-    // 2. Navigate based on type (Basic for now)
-    if (notification.orderId) {
-      // In a real app, navigate to order details
-      router.push('/(customer)/(tabs)/orders');
-    }
+    // 2. Navigate
+    navigateFromNotification(notification.type, notification.data || {});
   };
 
   const handleMarkAllAsRead = async () => {

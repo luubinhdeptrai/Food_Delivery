@@ -4,14 +4,28 @@ import { User, LogOut } from 'lucide-react-native';
 import { useSession } from '@/src/lib/auth-client';
 import { authApi } from '@/src/features/auth';
 import { useRouter } from 'expo-router';
+import { useNotificationStore } from '@/src/store/notification-store';
+import { notificationApi } from '@/src/features/notification/api';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { data: session } = useSession();
   const router = useRouter();
+  const { pushToken, setPushToken } = useNotificationStore();
 
   const handleSignOut = async () => {
     try {
+      // 1. Deregister push token (best effort)
+      if (pushToken) {
+        try {
+          await notificationApi.deregisterPushToken(pushToken);
+          setPushToken(null);
+        } catch (err) {
+          console.warn('[Profile] Failed to deregister push token:', err);
+        }
+      }
+
+      // 2. Sign out
       await authApi.signOut();
       router.replace('/(auth)');
     } catch (err) {

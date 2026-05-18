@@ -41,10 +41,9 @@ export function useNotificationSocket() {
 
     // Connect to the /notifications namespace
     const socket = io(`${WS_URL}/notifications`, {
-      // For now, let's pass a dummy token if we don't have the exact one,
-      // but in a real scenario we'd extract the session token.
-      // Better Auth session token is what the backend expects.
-      auth: { token: session.session.id },
+      // Use the actual session token, not the session ID.
+      // session.session.id is the database UUID, session.session.token is the secret.
+      auth: { token: session.session.token },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
