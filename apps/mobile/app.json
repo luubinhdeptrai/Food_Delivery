@@ -12,6 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.truongdanh.uitfood",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "We use your location to find nearby restaurants and improve delivery accuracy."
       }
     },
