@@ -14,9 +14,7 @@ permissions:
 jobs:
   validate:
     uses: ./.github/workflows/validate.yml
-    secrets:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+    secrets: inherit
 
   publish-docker:
     needs: validate
