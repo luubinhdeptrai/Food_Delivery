@@ -70,7 +70,7 @@ async function registerPushToken(setPushToken: (token: string) => void) {
 
     // 3. Register with backend
     await notificationApi.registerPushToken(token, platform);
-    console.log('[PushToken] Registered successfully. Token:', token);
+    
 
     // 4. Listen for token refresh
     const unsubscribe = onTokenRefresh(messaging, async (newToken) => {

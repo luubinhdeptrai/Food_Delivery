@@ -196,18 +196,18 @@ export class NotificationGateway
     // Diagnostic emit #2: 'notification.created' — fires immediately after connect.
     // This allows the client to verify it receives realtime notifications WITHOUT
     // needing to trigger a full payment flow. Remove in production if not desired.
-    this.server.to(room).emit(WS_NOTIFICATION_CREATED, {
-      id: 'diagnostic',
-      type: 'system_announcement',
-      title: 'Kết nối realtime thành công',
-      body: `WebSocket kết nối đến room ${room} thành công. Thông báo realtime đã sẵn sàng.`,
-      data: { diagnostic: 'true', room, socketId: client.id },
-      createdAt: new Date().toISOString(),
-      isRead: false,
-    });
-    this.logger.log(
-      `[Gateway] Diagnostic notification.created emitted to ${room} (socketId=${client.id})`,
-    );
+    // this.server.to(room).emit(WS_NOTIFICATION_CREATED, {
+    //   id: 'diagnostic',
+    //   type: 'system_announcement',
+    //   title: 'Kết nối realtime thành công',
+    //   body: `WebSocket kết nối đến room ${room} thành công. Thông báo realtime đã sẵn sàng.`,
+    //   data: { diagnostic: 'true', room, socketId: client.id },
+    //   createdAt: new Date().toISOString(),
+    //   isRead: false,
+    // });
+    // this.logger.log(
+    //   `[Gateway] Diagnostic notification.created emitted to ${room} (socketId=${client.id})`,
+    // );
   }
 
   async handleDisconnect(client: Socket): Promise<void> {

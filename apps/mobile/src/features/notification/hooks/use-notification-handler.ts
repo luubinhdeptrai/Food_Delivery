@@ -55,11 +55,6 @@ export function useNotificationHandler() {
     // Foreground message listener (Firebase)
     // Manually trigger a local notification so it shows up while the app is open
     const unsubscribeOnMessage = onMessage(messaging, async (remoteMessage) => {
-      console.log(
-        '[NotificationHandler] Foreground message received:',
-        remoteMessage,
-      );
-
       // If the backend sends a 'notification' object, Android might handle it.
       // But for consistent UX across platforms/versions, we can manually trigger it
       // if it wasn't already handled by the OS.
@@ -81,10 +76,6 @@ export function useNotificationHandler() {
     const unsubscribeOnMessageOpenedApp = onNotificationOpenedApp(
       messaging,
       (remoteMessage) => {
-        console.log(
-          '[NotificationHandler] Notification caused app to open from background:',
-          remoteMessage,
-        );
         if (remoteMessage.data) {
           navigateFromNotification(
             remoteMessage.data.type as NotificationType,
@@ -97,10 +88,6 @@ export function useNotificationHandler() {
     // Initial notification (App opened from quit state)
     getInitialNotification(messaging).then((remoteMessage) => {
       if (remoteMessage) {
-        console.log(
-          '[NotificationHandler] Notification caused app to open from quit state:',
-          remoteMessage,
-        );
         if (remoteMessage.data) {
           navigateFromNotification(
             remoteMessage.data.type as NotificationType,

@@ -27,7 +27,7 @@ import Toast from 'react-native-toast-message';
 
 // Register background handler
 setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
-  console.log('[BackgroundMessage] Received:', remoteMessage);
+  
 
   // If the app is in background or closed, we may need to manually trigger a notification
   // for data-only messages. For messages with a 'notification' block, Android handles them automatically.

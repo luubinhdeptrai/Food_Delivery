@@ -56,13 +56,13 @@ export function useNotificationSocket() {
     });
 
     socket.on('connect', () => {
-      console.log('[NotifSocket] Connected');
+      
     });
 
     socket.on(
       'connection:established',
       (data: { userId: string; room: string }) => {
-        console.log('[NotifSocket] Authenticated as', data.userId);
+        
       },
     );
 
@@ -100,7 +100,7 @@ export function useNotificationSocket() {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('[NotifSocket] Disconnected:', reason);
+      
     });
 
     socket.on('connect_error', (err) => {

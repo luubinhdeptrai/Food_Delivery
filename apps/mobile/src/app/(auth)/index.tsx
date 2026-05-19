@@ -14,7 +14,7 @@ export default function WelcomePage() {
 
   const handleGoogleSignIn = () => {
     // TODO: Implement Google OAuth with better-auth
-    console.log("Google Sign-In pressed");
+    
   };
 
   return (
