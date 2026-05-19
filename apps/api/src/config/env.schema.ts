@@ -85,9 +85,11 @@ export const envSchema = z.object({
     .min(1, 'CLOUDINARY_API_SECRET is required'),
 
   // ---------------------------------------------------------------------------
-  // CORS
+  // CORS (comma-separated origins)
   // ---------------------------------------------------------------------------
-  CORS_ORIGIN: z.string().default('*'),
+  CORS_ORIGIN: z
+    .string()
+    .default('http://localhost:5173,http://localhost:3000'),
 
   // ---------------------------------------------------------------------------
   // Payment session window — optional with a safe default
