@@ -6,7 +6,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { OrderTotals } from "@/features/orders/types/order.types";
+type OrderTotals = {
+  subtotal: number;
+  serviceFee: number;
+  deliveryFee: number;
+  tax: number;
+};
 
 type OrderDetailPaymentProps = {
   totals: OrderTotals;
@@ -14,7 +19,7 @@ type OrderDetailPaymentProps = {
 };
 
 function formatPrice(value: number) {
-  return `$${value.toFixed(2)}`;
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 }
 
 export function OrderDetailPayment({ totals, paymentMethod }: OrderDetailPaymentProps) {
