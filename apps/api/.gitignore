@@ -55,6 +55,10 @@ pids
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
+# Tpyescript
+*.tsbuildinfo
+
+
 # Firebase Admin SDK service account key files
 # These files contain private keys and must NEVER be committed.
 # Set FIREBASE_SERVICE_ACCOUNT_PATH in .env to point to the local copy.
