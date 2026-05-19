@@ -3,37 +3,10 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [master]
-  pull_request:
-    branches: [master]
 
 jobs:
-  setup:
-    name: Setup & Audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.1.2
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Security Audit
-        run: pnpm audit --audit-level high
-
-  check:
-    name: Lint, Typecheck & Test
-    needs: setup
+  validate:
+    name: Validate (Check, Scan, Test, Build)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -59,23 +32,23 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - name: Checkout
+      - name: Code (Checkout)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
+      - name: Install (Setup pnpm)
         uses: pnpm/action-setup@v4
         with:
           version: 11.1.2
 
-      - name: Setup Node
+      - name: Install (Setup Node)
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
 
-      - name: Install dependencies
+      - name: Install (Dependencies)
         run: pnpm install --frozen-lockfile
 
       - name: Turbo Cache
@@ -87,9 +60,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turbo-
 
-      - name: Lint, Typecheck, and Unit Test
-        run: |
-          pnpm turbo run lint typecheck test --affected --cache-dir=".turbo"
+      - name: Check (Lint & Typecheck)
+        run: pnpm turbo run lint typecheck --affected --cache-dir=".turbo"
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: Security Scan (Audit)
+        run: pnpm audit --audit-level high
+
+      - name: Unit Test
+        run: pnpm turbo run test --affected --cache-dir=".turbo"
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
@@ -97,19 +78,23 @@ jobs:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
-      - name: E2E Tests (API)
-        run: |
-          pnpm turbo run test:e2e --filter=api --cache-dir=".turbo"
+      - name: Build
+        run: pnpm turbo run build --affected --cache-dir=".turbo"
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: Test (E2E)
+        run: pnpm turbo run test:e2e --filter=api --cache-dir=".turbo"
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
           REDIS_URL: redis://localhost:6379
           NODE_ENV: test
 
-  docker:
-    name: Build & Push Docker Images
-    needs: check
+  package-publish-docker:
+    name: Package & Publish Docker
+    needs: validate
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
     permissions:
       contents: read
       packages: write
@@ -134,7 +119,6 @@ jobs:
           images: ghcr.io/${{ github.repository }}-api
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=sha,format=short
 
       - name: Build & Push API Image
@@ -142,7 +126,7 @@ jobs:
         with:
           context: .
           file: apps/api/Dockerfile
-          push: ${{ github.ref == 'refs/heads/master' }}
+          push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
@@ -155,7 +139,6 @@ jobs:
           images: ghcr.io/${{ github.repository }}-web
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=sha,format=short
 
       - name: Build & Push Web Image
@@ -163,27 +146,26 @@ jobs:
         with:
           context: .
           file: apps/web/Dockerfile
-          push: ${{ github.ref == 'refs/heads/master' }}
+          push: true
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  mobile-eas:
-    name: Mobile CD (EAS)
-    needs: check
+  package-mobile:
+    name: Package Mobile (EAS)
+    needs: validate
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || (github.ref == 'refs/heads/master' && github.event_name == 'push')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install pnpm
+      - name: Install (Setup pnpm)
         uses: pnpm/action-setup@v4
         with:
           version: 11.1.2
 
-      - name: Setup Node
+      - name: Install (Setup Node)
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -196,15 +178,9 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Install dependencies
+      - name: Install (Dependencies)
         run: pnpm install --frozen-lockfile
 
-      - name: Build Mobile (EAS Preview)
-        if: github.event_name == 'pull_request'
-        working-directory: apps/mobile
-        run: eas build --platform android --profile preview --non-interactive --no-wait
-
-      - name: Build Mobile (EAS Production)
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      - name: Package (EAS Build Production)
         working-directory: apps/mobile
         run: eas build --platform android --profile production --non-interactive --no-wait
