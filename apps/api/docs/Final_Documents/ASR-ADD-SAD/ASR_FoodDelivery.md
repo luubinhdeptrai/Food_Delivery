@@ -109,7 +109,7 @@ The following drivers shape the architecture and are referenced by ASRs througho
 | AD-10 | **Auditability of privileged actions** | Quality Attribute (Supportability), use-case logging requirements | Structured logger usage; `order_status_logs`, `payment_transactions`, `notification_delivery_logs` |
 | AD-11 | **Public endpoint abuse control** | QA-S-06, security requirements | Planned edge or Nest throttling for login, registration, and public search endpoints; current `apps/api` has no `@nestjs/throttler` registration |
 | AD-12 | **Post-commit compensation reliability** | QA-R-08; refund and promotion compensation flows | Post-commit module side effects for refund handling and promotion rollback must remain idempotent, failure-isolated, and operationally recoverable without implying distributed consistency infrastructure |
-| AD-13 | **Safe non-production identity bypass** | QA-S-04, QA-T-02; [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts) | Synthetic identity injection is allowed only in explicit dev/test contexts; production builds must gate or exclude the middleware before any request path can consume test-user headers |
+
 
 ---
 
@@ -345,18 +345,6 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Response Measure   | Protected endpoints deny missing or mismatched roles before service-layer mutation                                                         |
 | Architectural Tactics | Multi-role bitmap-equivalent (CSV) checked via OR-logic helper; Better Auth `admin()` plugin for admin scoping                           |
 
-### QA-S-04 — Dev-Only Identity Middleware Must Not Reach Production *[Not Implemented — Open Security Gap]*
-
-| Element            | Description                                                                                                                          |
-|--------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| Stimulus           | Production deployment containing development middleware that injects synthetic users from headers                                    |
-| Stimulus Source    | Deployment pipeline                                                                                                                  |
-| Environment        | Production                                                                                                                           |
-| Artifact           | [`DevTestUserMiddleware`](../../../src/lib/dev-test-user.middleware.ts)                                                              |
-| Response           | Middleware removed from the global middleware chain in `NODE_ENV=production`                                                         |
-| Response Measure   | 100 % of production builds reject `x-test-user-id` header; verified by deployment smoke test                                         |
-| **Current Gap**    | **`app.module.ts` registers this middleware unconditionally for ALL routes (`'*'`) with no `NODE_ENV` check. The middleware itself has no environment guard. Any caller who sends `x-test-user-id` in production would have `req.user` injected. Production builds must add environment gating before deployment.** |
-| Architectural Tactics | Add `if (process.env.NODE_ENV !== 'production')` guard in `AppModule.configure()`; enforce via CI gate on production Docker image (Planned) |
 
 ### QA-S-05 — Input Validation & Injection Resistance *[Implemented]*
 
@@ -565,16 +553,6 @@ Each scenario follows the SEI ATAM template: Source, Stimulus, Environment, Arti
 | Response Measure   | Existing e2e/spec coverage exercises payment, order, cart, ACL, promotion, and notification paths; coverage thresholds are not formalized |
 | Architectural Tactics | Provider abstractions allow `NoopEmailProvider` / `StubPushProvider` in tests; injectable `RedisService` permits mocking |
 
-### QA-T-02 — Test Authentication Bypass for E2E *[Partial]*
-
-| Element            | Description                                                                                                              |
-|--------------------|--------------------------------------------------------------------------------------------------------------------------|
-| Stimulus           | E2E suite executes against the running API                                                                               |
-| Stimulus Source    | Developer / CI                                                                                                            |
-| Environment        | Non-production                                                                                                            |
-| Artifact           | `DevTestUserMiddleware`                                                                                                   |
-| Response           | Synthetic user injected from `x-test-user-id`; roles granted for test scenarios                                          |
-| Response Measure   | Test setup uses request headers; production safety is not satisfied until QA-S-04 environment gating is implemented       |
 
 ---
 
@@ -795,7 +773,7 @@ Column definitions:
 
 | UC | Functional Area | Related QA Scenario(s) | Why Related | Architectural Concern |
 |----|-----------------|------------------------|-------------|----------------------|
-| UC-1 (Sign Up / Sign In / Forgot / Reset / RBAC) | Authentication & Account Management | QA-S-02, QA-S-03, QA-A-01, QA-S-04, QA-S-05, QA-S-06, QA-T-02, QA-U-01 | Authentication is the session trust boundary; RBAC controls protected surfaces; dev identity middleware creates an open production risk until gated; public auth endpoints need validation, throttling, and usability latency targets | Identity, authorization, input safety, test safety |
+| UC-1 (Sign Up / Sign In / Forgot / Reset / RBAC) | Authentication & Account Management | QA-S-02, QA-S-03, QA-A-01, QA-S-05, QA-S-06, QA-U-01 | Authentication is the session trust boundary; RBAC controls protected surfaces; dev identity middleware creates an open production risk until gated; public auth endpoints need validation, throttling, and usability latency targets | Identity, authorization, input safety, test safety |
 | UC-2 (Discover Restaurants & Food) | Foundation & Customer Ordering Core | QA-P-01, QA-SC-01, QA-S-05, QA-U-02 | Public search is the primary read-heavy catalog path; it must be fast, paginated, deterministic, scalable as stateless HTTP traffic, and input-safe | Search latency, throughput, predictable discovery |
 | UC-3 (View Restaurant Details) | Foundation & Customer Ordering Core | QA-P-01 | Detail reads are Catalog-owned and must meet the public detail latency target; checkout snapshot propagation is exercised by UC-7, UC-12, and UC-13 rather than by the read-only detail UC | Detail latency |
 | UC-4 (Add Item to Cart) | Foundation & Customer Ordering Core | QA-R-04, QA-SC-02, QA-S-02 | Cart writes enforce BR-2 before Redis persistence; cart data is scoped per authenticated customer and must remain O(1) per key | Cart invariant, Redis scaling, session scoping |
@@ -850,9 +828,8 @@ Column definitions:
 | QA-S-01 (VNPay Callback Integrity) | UC-9 | AD-2 | HMAC-SHA512 canonicalization and constant-time signature comparison before any DB mutation | [vnpay.service.ts](../../../src/module/payment/services/vnpay.service.ts); [process-ipn.handler.ts](../../../src/module/payment/commands/process-ipn.handler.ts) | Implemented |
 | QA-S-02 (Authentication & Session Management) | UC-1, UC-4, UC-5, UC-8, UC-20, UC-21, UC-22 | AD-3 | Better Auth bearer sessions with PostgreSQL persistence; session extraction on HTTP and WebSocket paths | [lib/auth.ts](../../../src/lib/auth.ts); [notification.gateway.ts](../../../src/module/notification/gateway/notification.gateway.ts) | Implemented |
 | QA-S-03 (Role-Based Authorization) | UC-1, UC-7, UC-11, UC-12, UC-13, UC-14, UC-15, UC-16, UC-18, UC-19, UC-23, UC-24, UC-26, UC-27, UC-28, UC-29, UC-30, UC-32, UC-33, UC-35 | AD-8 | `hasRole()` OR-logic, Better Auth `@Roles`, service-level ownership checks, and transition-map `allowedRoles` enforce role-specific surfaces | [role.util.ts](../../../src/module/auth/role.util.ts); [transitions.ts](../../../src/module/ordering/order-lifecycle/constants/transitions.ts) | Implemented |
-| QA-S-04 (Dev Middleware Not in Production) | UC-1 | AD-13 | Required tactic is explicit non-production gating of `DevTestUserMiddleware`; current code registers it globally with no `NODE_ENV` guard | [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts); [app.module.ts](../../../src/app.module.ts) | Not Implemented — Open Gap |
 | QA-S-05 (Input Validation & Injection Resistance) | UC-1, UC-2, UC-8, UC-12, UC-22, UC-23, UC-24 | AD-3 | Global `ValidationPipe({ transform: true })`, DTO validators, and Drizzle parameterized queries protect implemented request surfaces; Review text validation is planned | [main.ts](../../../src/main.ts); DTO files under [module](../../../src/module) | Implemented / Planned for UC-22 |
-| QA-S-06 (Rate Limiting on Public Endpoints) | UC-1, UC-2 | AD-11 | Edge or `@nestjs/throttler` rate limiting is planned; no Nest throttler module is registered | [app.module.ts](../../../src/app.module.ts) | Planned |
+| QA-S-06 (Rate Limiting on Public Endpoints) | UC-1 | AD-11 | Edge or `@nestjs/throttler` rate limiting is planned; no Nest throttler module is registered | [app.module.ts](../../../src/app.module.ts) | Planned |
 | QA-SC-01 (Horizontal Scaling of API Instances) | UC-2 | AD-4 | HTTP state is externalized to PostgreSQL/Redis; real-time delivery is the limiting architecture pressure because WebSocket room membership remains process-local, so scale-out needs sticky sessions or a Socket.IO Redis adapter | [redis.module.ts](../../../src/lib/redis/redis.module.ts); [notification.gateway.ts](../../../src/module/notification/gateway/notification.gateway.ts) | Partial |
 | QA-SC-02 (Cart & Idempotency Storage Scaling) | UC-4, UC-5, UC-8 | AD-6 | Redis per-customer cart key, sliding TTL, idempotency TTL key, and checkout lock keep hot cart/order state out of app memory | [cart.redis-repository.ts](../../../src/module/ordering/cart/cart.redis-repository.ts); [redis.service.ts](../../../src/lib/redis/redis.service.ts) | Implemented |
 | QA-FL-01 (Generalizing Payment Provider Integration) | UC-8, UC-9 | AD-3 | Ordering depends on a Payment port token, but the port method is VNPay-specific and must be generalized before adding non-VNPay providers without Ordering changes | [payment-initiation.port.ts](../../../src/shared/ports/payment-initiation.port.ts); [payment.service.ts](../../../src/module/payment/services/payment.service.ts) | Partial |
@@ -867,7 +844,6 @@ Column definitions:
 | QA-MA-01 (BC Boundary Enforcement) | UC-7, UC-8, UC-11, UC-12, UC-13, UC-23, UC-25, UC-26, UC-27 | AD-3 | Cross-BC reads use ACL snapshots; Ordering depends on Payment/Promotion through ports; Payment owns financial state; Notification owns delivery state | [ordering/acl](../../../src/module/ordering/acl); [promotion-application.port.ts](../../../src/shared/ports/promotion-application.port.ts); [payment-initiation.port.ts](../../../src/shared/ports/payment-initiation.port.ts) | Implemented |
 | QA-MA-02 (Schema Evolution via Drizzle Migrations) | UC-8, UC-9, UC-23, UC-26 | AD-3 | Drizzle schemas and migrations govern order, payment, promotion, notification, and ACL tables | [drizzle.config.ts](../../../drizzle.config.ts); [schema.ts](../../../src/drizzle/schema.ts) | Implemented |
 | QA-T-01 (Deterministic Order Placement Tests) | UC-8 | AD-1 | Order placement/payment regression tests run against controlled DB/Redis setup and injectable provider boundaries; notification provider stubs keep side effects deterministic | Representative evidence: [order.e2e-spec.ts](../../../test/e2e/order.e2e-spec.ts); [order-lifecycle.e2e-spec.ts](../../../test/e2e/order-lifecycle.e2e-spec.ts); [cart.e2e-spec.ts](../../../test/e2e/cart.e2e-spec.ts); [acl.e2e-spec.ts](../../../test/e2e/acl.e2e-spec.ts); [promotion-checkout.e2e-spec.ts](../../../test/e2e/promotion-checkout.e2e-spec.ts); [payment.e2e-spec.ts](../../../test/payment.e2e-spec.ts); [notification-inbox.e2e-spec.ts](../../../test/e2e/notification-inbox.e2e-spec.ts); [notification.module.ts](../../../src/module/notification/notification.module.ts) | Implemented |
-| QA-T-02 (Test Auth Bypass for E2E) | UC-1 | AD-13 | `DevTestUserMiddleware` injects synthetic users for explicit dev/test scenarios only and must be paired with QA-S-04 production exclusion | [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts); [app.module.ts](../../../src/app.module.ts) | Partial |
 | QA-U-01 (Sub-2-Minute Registration Flow) | UC-1 | AD-3 | Better Auth email/password account creation and session issue provide the backend path; client UX metrics remain partial | [lib/auth.ts](../../../src/lib/auth.ts) | Partial |
 | QA-U-02 (Predictable Restaurant Discovery) | UC-2 | AD-3 | Search returns paginated sections with deterministic relevance/distance/date ordering | [search.repository.ts](../../../src/module/restaurant-catalog/search/search.repository.ts) | Implemented |
 | QA-CI-01 (Single Order-Status Vocabulary) | UC-8, UC-14, UC-15, UC-18, UC-19, UC-20, UC-21, UC-32 | AD-5 | `orderStatusEnum` and `TRANSITIONS` are the source for lifecycle writes, reads, admin overrides, and future status-gated review eligibility | [order.schema.ts](../../../src/module/ordering/order/order.schema.ts); [transitions.ts](../../../src/module/ordering/order-lifecycle/constants/transitions.ts) | Implemented for order lifecycle; Planned for UC-22 |
@@ -889,9 +865,6 @@ Total architecturally significant functional rows in §4: **33**.
 
 Open QA scenario gaps not counted in §4 UC statistics:
 
-| Gap | Status | Evidence |
-|-----|--------|----------|
-| QA-S-04: `DevTestUserMiddleware` registered unconditionally for `'*'` routes in `app.module.ts`; no `NODE_ENV` guard present | Not Implemented — Open Gap | [dev-test-user.middleware.ts](../../../src/lib/dev-test-user.middleware.ts); [app.module.ts](../../../src/app.module.ts) |
 
 ---
 
