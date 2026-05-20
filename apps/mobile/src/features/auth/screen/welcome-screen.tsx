@@ -142,7 +142,7 @@ export function WelcomeScreen({
                   shadowOpacity: 0.06,
                   shadowRadius: 8,
                   elevation: 3,
-                }}
+                } as any}
               >
                 <Sprout size={20} color="#00490e" />
                 <Text
