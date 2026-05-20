@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TextInput } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
+import { Image } from 'expo-image';
 import { FileEdit } from 'lucide-react-native';
 import { formatCurrency } from '@/src/lib/format-utils';
 import type { CartItem } from '../../types';
