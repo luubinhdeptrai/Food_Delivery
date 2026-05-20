@@ -68,7 +68,7 @@ export function OrderReviewScreen({ onBack, onPlaceOrder }: ReviewScreenProps) {
               name: item.itemName,
               price: item.unitPrice,
               quantity: item.quantity,
-              imageUrl: '', // Mock or fetch image
+              imageUrl: item.imageUrl ?? '',
               selectedModifiers: item.selectedModifiers,
             }} 
           />

@@ -41,6 +41,8 @@ export interface CartItem {
   menuItemId: string;
   /** Snapshotted display name at add-time. */
   itemName: string;
+  /** Snapshotted public image URL for cart display. */
+  imageUrl?: string | null;
   /**
    * Base unit price snapshotted at add-time (excluding modifier prices).
    * Total item price = unitPrice + sum(selectedModifiers[*].price).

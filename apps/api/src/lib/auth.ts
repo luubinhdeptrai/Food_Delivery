@@ -16,11 +16,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  trustedOrigins: [
-    'http://localhost:5173',
-    'uitfood://',
-    'exp://**',
-  ],
+  trustedOrigins: ['http://localhost:5173', 'uitfood://', 'exp://**'],
   plugins: [
     openAPI(),
     bearer(),

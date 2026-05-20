@@ -119,6 +119,7 @@ export class CartService {
         modifierFingerprint: newFingerprint, // deterministic identity hash (Case 9 fix)
         menuItemId: dto.menuItemId,
         itemName: dto.itemName,
+        imageUrl: dto.imageUrl ?? null,
         unitPrice: dto.unitPrice,
         quantity: dto.quantity,
         selectedModifiers: resolvedModifiers,

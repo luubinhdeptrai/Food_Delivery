@@ -335,6 +335,7 @@ export class CartController {
         cartItemId: item.cartItemId,
         menuItemId: item.menuItemId,
         itemName: item.itemName,
+        imageUrl: item.imageUrl ?? null,
         unitPrice: item.unitPrice,
         quantity: item.quantity,
         subtotal: (item.unitPrice + modifiersTotal) * item.quantity,

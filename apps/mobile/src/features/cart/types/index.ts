@@ -70,6 +70,7 @@ export interface AddItemToCartRequest {
   restaurantName: string;
   itemName: string;
   unitPrice: number;
+  imageUrl?: string | null;
   quantity: number;
   selectedModifiers?: SelectedOption[];
 }
@@ -95,6 +96,7 @@ export interface CartItemResponse {
   menuItemId: string;
   itemName: string;
   unitPrice: number;
+  imageUrl?: string | null;
   quantity: number;
   subtotal: number;
   selectedModifiers: SelectedModifierResponse[];

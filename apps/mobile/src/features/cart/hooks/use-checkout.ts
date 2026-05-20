@@ -106,9 +106,7 @@ export function useCheckout() {
       name: item.itemName,
       price: item.unitPrice,
       quantity: item.quantity,
-      // TODO: Populate imageUrl by fetching from a product catalog or menu API.
-      // Currently CartItemResponse does not provide image data.
-      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200&auto=format&fit=crop',
+      imageUrl: item.imageUrl ?? '',
       selectedModifiers: item.selectedModifiers,
     })) || [];
 

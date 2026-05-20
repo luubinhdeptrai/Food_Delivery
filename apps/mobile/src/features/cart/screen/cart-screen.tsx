@@ -82,7 +82,7 @@ export function CartScreen({
     name: item.itemName,
     price: item.unitPrice,
     quantity: item.quantity,
-    imageUrl: '', // Backend doesn't provide imageUrl for cart items yet
+    imageUrl: item.imageUrl ?? '',
     selectedModifiers: item.selectedModifiers,
   }));
 

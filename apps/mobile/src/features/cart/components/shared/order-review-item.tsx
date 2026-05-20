@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Image } from 'expo-image';
+import { Utensils } from 'lucide-react-native';
 import type { CartItem } from '../../types';
 
 interface OrderReviewItemProps {
@@ -11,11 +12,17 @@ export function OrderReviewItem({ item }: OrderReviewItemProps) {
   return (
     <View className="bg-surface-container-lowest flex-row items-center p-3 rounded-2xl gap-4 mb-3">
       <View className="w-16 h-16 rounded-xl overflow-hidden bg-surface-container">
-        <Image
-          source={{ uri: item.imageUrl }}
-          className="w-full h-full"
-          contentFit="cover"
-        />
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            className="w-full h-full"
+            contentFit="cover"
+          />
+        ) : (
+          <View className="w-full h-full items-center justify-center">
+            <Utensils size={20} color="#707a6c" />
+          </View>
+        )}
       </View>
       <View className="flex-1">
         <Text

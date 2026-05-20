@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
-import { Minus, Plus, Trash2 } from 'lucide-react-native';
+import { Minus, Plus, Trash2, Utensils } from 'lucide-react-native';
 import { formatCurrency } from '@/src/lib/format-utils';
 import type { CartItem } from '../../types';
 import { calculateItemTotal } from '../../utils/price-calculations';
@@ -23,11 +23,17 @@ export function CartItemCard({
     <View className="flex-row items-center bg-surface-container-lowest rounded-[20px] p-3 gap-3 shadow-sm">
       {/* Product image */}
       <View className="w-20 h-20 rounded-2xl overflow-hidden bg-surface-container">
-        <Image
-          source={{ uri: item.imageUrl }}
-          className="w-full h-full"
-          contentFit="cover"
-        />
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            className="w-full h-full"
+            contentFit="cover"
+          />
+        ) : (
+          <View className="w-full h-full items-center justify-center">
+            <Utensils size={24} color="#707a6c" />
+          </View>
+        )}
       </View>
 
       {/* Info + controls */}

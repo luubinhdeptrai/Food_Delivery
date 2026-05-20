@@ -12,6 +12,7 @@ import {
   MaxLength,
   Max,
   IsPositive,
+  IsUrl,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -101,6 +102,15 @@ export class AddItemToCartDto {
   @IsPositive()
   @Type(() => Number)
   unitPrice!: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Public image URL of the menu item, snapshotted for cart display',
+    example: 'https://res.cloudinary.com/demo/image/upload/v123/menu.jpg',
+  })
+  @IsOptional()
+  @IsUrl()
+  imageUrl?: string;
 
   @ApiProperty({
     description:
@@ -216,6 +226,11 @@ export class CartItemResponseDto {
 
   @ApiProperty({ example: 12.5 })
   unitPrice!: number;
+
+  @ApiPropertyOptional({
+    example: 'https://res.cloudinary.com/demo/image/upload/v123/menu.jpg',
+  })
+  imageUrl?: string | null;
 
   @ApiProperty({ example: 2 })
   quantity!: number;

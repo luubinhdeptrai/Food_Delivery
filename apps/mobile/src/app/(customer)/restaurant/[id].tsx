@@ -78,6 +78,7 @@ export default function RestaurantMenuPage() {
         restaurantName: restaurant.name,
         itemName: menuItem.name,
         unitPrice: menuItem.price,
+        imageUrl: menuItem.imageUrl ?? null,
         quantity: 1,
       },
       {
