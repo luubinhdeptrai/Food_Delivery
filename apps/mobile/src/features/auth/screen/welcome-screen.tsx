@@ -105,7 +105,7 @@ export function WelcomeScreen({
             className="relative w-full overflow-hidden"
           >
             <Image
-              source={require("../../../../assets/images/welcome-hero.png")}
+              source={require("../../../../assets/images/welcome-hero.jpg")}
               style={{ width: "100%", height: "100%" }}
               contentFit="cover"
             />
