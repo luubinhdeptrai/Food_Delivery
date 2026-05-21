@@ -3,6 +3,9 @@ name: Publish Docker
 on:
   workflow_call:
     inputs:
+      app:
+        required: true
+        type: string
       gh_actor:
         required: true
         type: string
@@ -16,12 +19,8 @@ permissions:
 
 jobs:
   publish:
-    name: Package & Publish Docker
+    name: Package & Publish Docker (${{ inputs.app }})
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [api, web]
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -40,7 +39,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
-          images: ghcr.io/${{ inputs.gh_repository }}-${{ matrix.app }}
+          images: ghcr.io/${{ inputs.gh_repository }}-${{ inputs.app }}
           tags: |
             type=ref,event=branch
             type=sha,format=short
@@ -49,9 +48,9 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
-          file: apps/${{ matrix.app }}/Dockerfile
+          file: apps/${{ inputs.app }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+          cache-from: type=gha,scope=${{ inputs.app }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.app }}

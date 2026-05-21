@@ -1,8 +1,7 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,13 +15,28 @@ jobs:
     uses: ./.github/workflows/validate.yml
     secrets: inherit
 
-  publish-docker:
+  publish-api-docker:
+    name: Publish API Docker Image
     needs: validate
     permissions:
       contents: read
       packages: write
     uses: ./.github/workflows/publish-docker.yml
     with:
+      app: api
+      gh_actor: ${{ github.actor }}
+      gh_repository: ${{ github.repository }}
+    secrets: inherit
+
+  publish-web-docker:
+    name: Publish Web Docker Image
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish-docker.yml
+    with:
+      app: web
       gh_actor: ${{ github.actor }}
       gh_repository: ${{ github.repository }}
     secrets: inherit

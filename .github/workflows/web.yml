@@ -1,0 +1,63 @@
+name: Web CI/CD
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'apps/web/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code (Checkout)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+
+      - name: Turbo Cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-web-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-web-
+            ${{ runner.os }}-turbo-
+
+      - name: Check (Lint)
+        run: pnpm --filter=web run lint
+
+      - name: Check (Typecheck)
+        run: pnpm --filter=web run typecheck
+
+      - name: Security Scan (Audit)
+        run: pnpm audit --audit-level high
+
+      - name: Unit Test
+        run: pnpm --filter=web run test
+
+      - name: Build
+        run: pnpm --filter=web run build
+
+  publish:
+    name: Publish Web Docker Image
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish-docker.yml
+    with:
+      app: web
+      gh_actor: ${{ github.actor }}
+      gh_repository: ${{ github.repository }}
+    secrets: inherit
