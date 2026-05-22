@@ -15,5 +15,9 @@
     "prettier": "^3.8.1",
     "turbo": "latest"
   },
-  "packageManager": "pnpm@11.1.2"
+  "packageManager": "pnpm@11.1.2",
+  "dependencies": {
+    "@types/react-beautiful-dnd": "^13.1.8",
+    "react-beautiful-dnd": "^13.1.1"
+  }
 }

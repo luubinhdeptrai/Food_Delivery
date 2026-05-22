@@ -60,6 +60,9 @@ export function useCreateModifierGroup(menuItemId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: menuKeys.modifierGroups(menuItemId) });
     },
+    onError: (error) => {
+      console.error('Failed to create modifier group:', error);
+    },
   });
 }
 
@@ -93,6 +96,9 @@ export function useCreateModifierOption(menuItemId: string, groupId: string) {
       const actualGroupId = variables.groupId || groupId;
       qc.invalidateQueries({ queryKey: menuKeys.modifierGroups(menuItemId) });
       qc.invalidateQueries({ queryKey: menuKeys.modifierGroup(menuItemId, actualGroupId) });
+    },
+    onError: (error) => {
+      console.error('Failed to create modifier option:', error);
     },
   });
 }

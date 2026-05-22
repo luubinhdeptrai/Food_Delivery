@@ -138,7 +138,8 @@ export function ModifierGroupDialog({
               handleOpenChange(false);
             }
           },
-          onError: () => {
+          onError: (error) => {
+            console.error('Failed to save modifier option:', error);
             setIsSavingOptions(false);
           },
         }
