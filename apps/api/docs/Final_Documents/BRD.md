@@ -787,7 +787,7 @@ Each Business Requirement defines a discrete, verifiable business need that the 
 | **Description** | The platform must support discount code redemption at checkout, time-limited flash sales initiated by restaurant partners or administrators, and a customer loyalty points program that rewards repeat ordering behavior. |
 | **Business Value** | Promotions are a primary acquisition and retention mechanism in competitive food delivery markets. A loyalty program supports SM-1 (weekly active customers ≥ 500) and drives long-term repeat order volume. |
 | **Related Business Areas** | Marketing, Customer Retention, Restaurant Partnership |
-| **Related Artifacts** | SM-1, FE-10 *(Release 2+)* |
+| **Related Artifacts** | SM-1, FE-10 |
 
 ---
 
