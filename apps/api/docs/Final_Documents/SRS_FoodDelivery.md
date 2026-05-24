@@ -876,50 +876,49 @@ This section covers the operational use cases of the two supply-side actors that
 title UC-11: RES-FR-01 — Restaurant Registration & Profile Management
 skinparam ConditionEndStyle hline
 
-|Restaurant Partner|
-start
-:(1) Open Registration / Profile Management screen;
-:(2) Fill in restaurant details\n(name, description, address, phone, cuisine type,\ngeo-coordinates, logo URL, cover image URL);
-:(3) Submit registration or profile-update request;
-
 |System|
-:(4) Authenticate session and verify role;
-if ((5) Role permitted and input valid?) then (yes)
-  if ((6) Action is Register?) then (yes)
-    :(7) Create restaurant record\n(pending approval, initially closed);
-    :(8) Synchronise restaurant data with ordering system;
-    :(9) Confirm submission for review referencing MSG-RES-03;
-  else (Profile Update)
-    :(10) Load restaurant by id;
-    if ((11) Restaurant exists?) then (yes)
-      if ((12) Admin OR `ownerId = session.user.id`?) then (yes)
-        :(13) Apply and save profile updates;
-        :(14) Synchronise updated profile with ordering system;
-        :(15) Return updated profile referencing MSG-RES-04;
+start
+if (Selected workflow?) then (Registration / Profile Update)
+  |Restaurant Partner|
+  :(1) Open Registration / Profile Management screen;
+  :(2) Fill in restaurant details\n(name, description, address, phone, cuisine type,\ngeo-coordinates, logo URL, cover image URL);
+  :(3) Submit registration or profile-update request;
+
+  |System|
+  :(4) Authenticate session and verify role;
+  if ((5) Role permitted and input valid?) then (yes)
+    if ((6) Action is Register?) then (yes)
+      :(7) Create restaurant record\n(pending approval, initially closed);
+      :(8) Synchronise restaurant data with ordering system;
+      :(9) Confirm submission for review referencing MSG-RES-03;
+    else (Profile Update)
+      :(10) Load restaurant by id;
+      if ((11) Restaurant exists?) then (yes)
+        if ((12) Admin OR `ownerId = session.user.id`?) then (yes)
+          :(13) Apply and save profile updates;
+          :(14) Synchronise updated profile with ordering system;
+          :(15) Return updated profile referencing MSG-RES-04;
+        else (no)
+          :(16) Return access denied referencing MSG-RES-02;
+        endif
       else (no)
-        :(16) Return access denied referencing MSG-RES-02;
-        stop
+        :(17) Return not found referencing MSG-REST-01;
       endif
-    else (no)
-      :(17) Return not found referencing MSG-REST-01;
-      stop
     endif
+  else (no)
+    :(18) Return validation or access error\nreferencing MSG-RES-01 or MSG-RES-02;
   endif
-else (no)
-  :(18) Return validation or access error\nreferencing MSG-RES-01 or MSG-RES-02;
+else (Approval Decision)
+  |Administrator|
+  :(19) Open Pending Restaurants queue;
+  :(20) Review application documents and choose Approve or Unapprove;
+
+  |System|
+  :(21) Verify administrator role;
+  :(22) Update restaurant approval status;
+  :(23) Synchronise approval change with ordering system;
+  :(24) Return approval decision referencing MSG-RES-05;
 endif
-stop
-
-|Administrator|
-start
-:(19) Open Pending Restaurants queue;
-:(20) Review application documents and choose Approve or Unapprove;
-
-|System|
-:(21) Verify administrator role;
-:(22) Update restaurant approval status;
-:(23) Synchronise approval change with ordering system;
-:(24) Return approval decision referencing MSG-RES-05;
 stop
 @enduml
 ```
@@ -989,12 +988,10 @@ if ((6) Input passes validation?) then (yes)
       :(14) Return updated resource;
     else (no)
       :(15) Return not found referencing MSG-MENU-04 or MSG-MENU-07;
-      stop
-    endif
+endif
   else (no)
     :(16) Return access denied referencing MSG-MENU-05;
-    stop
-  endif
+endif
 else (no)
   :(17) Return validation error referencing MSG-MENU-01 or MSG-MENU-06;
 endif
@@ -1063,8 +1060,7 @@ if ((6) Resource exists?) then (yes)
         :(13) Confirm toggle referencing MSG-AVAIL-03;
       else (yes)
         :(14) Return conflict referencing MSG-AVAIL-01;
-        stop
-      endif
+endif
     else (Restaurant)
       :(15) Update restaurant open/closed status;
       :(16) Propagate availability change to customer surfaces;
@@ -1072,8 +1068,7 @@ if ((6) Resource exists?) then (yes)
     endif
   else (no)
     :(18) Return access denied referencing MSG-RES-02 or MSG-MENU-05;
-    stop
-  endif
+endif
 else (no)
   :(19) Return not found referencing MSG-MENU-04 or MSG-REST-01;
 endif
@@ -1141,13 +1136,11 @@ if ((7) Order exists?) then (yes)
           :(14) Accept allowed;
         else (yes)
           :(15) Return state error referencing MSG-LCYC-04;
-          stop
-        endif
+endif
       endif
       if ((16) requireNote=true AND reason is blank or missing?) then (yes)
         :(17) Return validation error referencing MSG-LCYC-05;
-        stop
-      endif
+endif
       :(18) Begin status transition;
       :(19) Update order status;
       :(20) Append status change to audit log;
@@ -1159,12 +1152,10 @@ if ((7) Order exists?) then (yes)
       :(25) Return updated order referencing MSG-LCYC-07 (accept)\nor MSG-LCYC-08 (reject);
     else (no)
       :(26) Return access denied referencing MSG-LCYC-03;
-      stop
-    endif
+endif
   else (no)
     :(27) Return role or state error referencing MSG-LCYC-02 or MSG-LCYC-01;
-    stop
-  endif
+endif
 else (no)
   :(28) Return not found referencing MSG-HIST-01;
 endif
@@ -1384,8 +1375,7 @@ if ((5) Role OK and account is approved?) then (yes)
   if ((6) New status is `offline`?) then (yes)
     if ((7) Any in-flight delivery\n(`picked_up` or `delivering`)?) then (yes)
       :(8) Return 409 referencing `MSG-SHIP-07`;
-      stop
-    else (no)
+else (no)
       :(9) Set availability to Offline;
     endif
   else (Online)
@@ -1458,16 +1448,13 @@ if ((6) Order exists?) then (yes)
         :(16) Return updated order referencing MSG-DEL-01;
       else (no — claimed concurrently)
         :(17) Return conflict referencing MSG-DEL-02;
-        stop
-      endif
+endif
     else (no)
       :(18) Return access denied referencing MSG-SHIP-04;
-      stop
-    endif
+endif
   else (no)
     :(19) Return access denied referencing MSG-LCYC-02;
-    stop
-  endif
+endif
 else (no)
   :(20) Return not found referencing MSG-HIST-01;
 endif
@@ -1540,8 +1527,7 @@ if ((6) Ownership OK and `status = 'picked_up'`?) then (yes)
     :(16) Return updated order referencing MSG-DEL-04;
   else (no)
     :(17) Return role or state error referencing MSG-DEL-03\nor MSG-LCYC-01;
-    stop
-  endif
+endif
 else (no)
   :(18) Return role or state error referencing MSG-DEL-03\nor MSG-LCYC-01;
 endif
@@ -1627,8 +1613,8 @@ stop
 | _(3)_ | _BR-20.6_ | **Real-Time Push Contract:**<br>❖ The Notification WebSocket gateway authenticates the connection via the Bearer token and joins the socket to a per-user room.<br>❖ For every `OrderStatusChangedEvent` published after a successful transition (T-01 through T-12), the Notification BC dispatches a `notification_payload` to the customer's room with the `notification_type` mapped from the `(fromStatus, toStatus)` pair (see UC-26).<br>❖ Payload delivery is fire-and-forget on the publishing side; failure to push does not affect the database state of the order. |
 | _(8)_ | _BR-20.7_ | **Real-Time Push Contract: — Same Requirement Application:**<br>❖ _BR-20.7_ applies the detailed requirement, validation, persistence, event, and runtime constraints specified in _BR-20.6_ to activity _(8)_.<br>❖ No actor-facing message code is emitted by this activity. |
 | _(10)_ | _BR-20.8_ | **Real-Time Push Contract: — Same Requirement Application:**<br>❖ _BR-20.8_ applies the detailed requirement, validation, persistence, event, and runtime constraints specified in _BR-20.6_ to activity _(10)_.<br>❖ No actor-facing message code is emitted by this activity. |
-| _(9)_ | _BR-20.9_ | **Polling Fallback & Eventual Consistency:**<br>❖ When the WebSocket is unavailable (cold start, mobile background, transient network loss), the client polls `GET /orders/:id` and `GET /orders/:id/timeline` at a configurable interval (recommended 10 s for active orders, 60 s for stable states).<br>❖ Because both the WebSocket push and the polled read are derived from the same authoritative `orders` and `order_status_logs` tables, the eventual state converges regardless of which channel delivers the update. |
-| _(11)_ | _BR-20.10_ | **Polling Fallback & Eventual Consistency: — Same Requirement Application:**<br>❖ _BR-20.10_ applies the detailed requirement, validation, persistence, event, and runtime constraints specified in _BR-20.9_ to activity _(11)_.<br>❖ No actor-facing message code is emitted by this activity. |
+| _(9)_ | _BR-20.9_ | **Polling Fallback & Read-Model Consistency:**<br>❖ When the WebSocket is unavailable (cold start, mobile background, transient network loss), the client polls `GET /orders/:id` and `GET /orders/:id/timeline` at a configurable interval (recommended 10 s for active orders, 60 s for stable states).<br>❖ Because both the WebSocket push and the polled read are derived from the same authoritative `orders` and `order_status_logs` tables, the displayed state remains consistent regardless of which channel delivers the update. |
+| _(11)_ | _BR-20.10_ | **Polling Fallback & Read-Model Consistency: — Same Requirement Application:**<br>❖ _BR-20.10_ applies the detailed requirement, validation, persistence, event, and runtime constraints specified in _BR-20.9_ to activity _(11)_.<br>❖ No actor-facing message code is emitted by this activity. |
 | _(8)_ | _BR-20.11_ | **Cross-BC Read-Model Boundary:**<br>❖ The Notification BC does not own the order; it only forwards the event payload so the client can refresh its local copy or render the toast.<br>❖ The Notification BC MUST NOT call any Ordering BC service or repository to enrich the payload — every field needed by the customer is published on the event itself (D-P7 cross-context isolation). |
 
 ---
