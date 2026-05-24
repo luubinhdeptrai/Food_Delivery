@@ -79,6 +79,18 @@ export class RestaurantController {
     return this.service.findAllAdmin(offset, limit);
   }
 
+  @Get('my')
+  @ApiOperation({
+    summary: "Get current user's restaurant",
+    description:
+      "Returns the authenticated caller's restaurant (any approval status). Returns null when the caller does not own a restaurant — used by the post-login redirect.",
+  })
+  @ApiOkResponse({ type: RestaurantResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
+  findMine(@Session() session: UserSession) {
+    return this.service.findMine(session.user.id);
+  }
+
   @Get(':id')
   @AllowAnonymous()
   @ApiOperation({

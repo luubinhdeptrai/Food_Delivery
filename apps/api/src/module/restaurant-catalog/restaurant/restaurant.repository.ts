@@ -65,6 +65,21 @@ export class RestaurantRepository {
     return result[0] ?? null;
   }
 
+  /**
+   * Returns the first restaurant owned by the given user, or null. The
+   * data model permits one owner → many restaurants, but the current UX
+   * assumes one. If that changes, callers should switch to a list endpoint.
+   */
+  async findByOwner(ownerId: string): Promise<Restaurant | null> {
+    const result = await this.db
+      .select()
+      .from(restaurants)
+      .where(eq(restaurants.ownerId, ownerId))
+      .orderBy(asc(restaurants.createdAt))
+      .limit(1);
+    return result[0] ?? null;
+  }
+
   async create(ownerId: string, dto: CreateRestaurantDto): Promise<Restaurant> {
     const [row] = await this.db
       .insert(restaurants)

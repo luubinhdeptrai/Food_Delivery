@@ -37,6 +37,12 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
+      // Root redirect — decides where a logged-in user should land. Lives
+      // OUTSIDE RequireRestaurantAccess so role='user' can still reach it
+      // (and get routed to /auth/register/business when they don't own a
+      // restaurant yet — first-time Google sign-in flow).
+      { path: '/', element: <RootRedirect /> },
+
       // Pending approval — accessible to any authenticated non-restaurant user.
       {
         path: 'pending-approval',
@@ -48,10 +54,8 @@ export const router = createBrowserRouter([
         element: <RequireRestaurantAccess />,
         children: [
           {
-            path: '/',
             element: <MainLayout />,
             children: [
-              { index: true, element: <RootRedirect /> },
               {
                 path: 'dashboard',
                 element: <DashboardPage />,

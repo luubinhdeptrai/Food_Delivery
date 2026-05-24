@@ -53,6 +53,15 @@ export class RestaurantService {
     return this.repo.findAll({ offset, limit: safeLimit, approvedOnly: false });
   }
 
+  /**
+   * Returns the caller's restaurant regardless of approval status, or null
+   * when they haven't submitted one yet. Used by the post-login redirect to
+   * decide between the registration page and the pending-approval page.
+   */
+  async findMine(ownerId: string): Promise<Restaurant | null> {
+    return this.repo.findByOwner(ownerId);
+  }
+
   async findOne(id: string): Promise<Restaurant> {
     const restaurant = await this.repo.findById(id);
     if (!restaurant) {
