@@ -1,19 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminRestaurantsApi } from '../api/admin-restaurants.api';
+import { restaurantsApi } from '../api/restaurants.api';
 
 const QUERY_KEY = 'admin-restaurants';
 
-export function useAdminRestaurants(params?: { offset?: number; limit?: number }) {
+export function useRestaurants(params?: { offset?: number; limit?: number }) {
   return useQuery({
     queryKey: [QUERY_KEY, params],
-    queryFn: () => adminRestaurantsApi.list(params),
+    queryFn: () => restaurantsApi.list(params),
   });
 }
 
 export function useApproveRestaurant() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: adminRestaurantsApi.approve,
+    mutationFn: restaurantsApi.approve,
     onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_KEY] }),
   });
 }
@@ -21,7 +21,7 @@ export function useApproveRestaurant() {
 export function useUnapproveRestaurant() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: adminRestaurantsApi.unapprove,
+    mutationFn: restaurantsApi.unapprove,
     onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_KEY] }),
   });
 }
@@ -29,7 +29,7 @@ export function useUnapproveRestaurant() {
 export function useDeleteRestaurant() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: adminRestaurantsApi.delete,
+    mutationFn: restaurantsApi.delete,
     onSuccess: () => qc.invalidateQueries({ queryKey: [QUERY_KEY] }),
   });
 }

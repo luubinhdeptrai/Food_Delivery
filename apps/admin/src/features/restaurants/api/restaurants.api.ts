@@ -1,6 +1,6 @@
 import { apiClient } from '@/lib/api-client';
 
-export interface AdminRestaurant {
+export interface Restaurant {
   id: string;
   ownerId: string;
   name: string;
@@ -18,25 +18,25 @@ export interface AdminRestaurant {
   updatedAt: string;
 }
 
-export interface AdminRestaurantListResponse {
-  data: AdminRestaurant[];
+export interface RestaurantListResponse {
+  data: Restaurant[];
   total: number;
 }
 
-export const adminRestaurantsApi = {
+export const restaurantsApi = {
   list: (params?: { offset?: number; limit?: number }) =>
     apiClient
-      .get<AdminRestaurantListResponse>('/api/restaurants/admin/all', { params })
+      .get<RestaurantListResponse>('/api/restaurants/admin/all', { params })
       .then((r) => r.data),
 
   approve: (id: string) =>
     apiClient
-      .patch<AdminRestaurant>(`/api/restaurants/${id}/approve`)
+      .patch<Restaurant>(`/api/restaurants/${id}/approve`)
       .then((r) => r.data),
 
   unapprove: (id: string) =>
     apiClient
-      .patch<AdminRestaurant>(`/api/restaurants/${id}/unapprove`)
+      .patch<Restaurant>(`/api/restaurants/${id}/unapprove`)
       .then((r) => r.data),
 
   delete: (id: string) =>

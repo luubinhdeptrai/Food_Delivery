@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { RegisterPage } from '@/app/pages/auth/register/RegisterPage';
 import { RegisterLocationPage } from '@/app/pages/auth/register/RegisterBusinessPage';
 import { RegisterPendingPage } from '@/app/pages/auth/register/RegisterPendingPage';
@@ -12,10 +12,8 @@ import { OrdersPage } from '@/app/pages/orders/OrdersPage';
 import { OrderDetailPage } from '@/app/pages/orders/OrderDetailPage';
 import { DeliveryZonesPage } from '@/app/pages/delivery-zones/DeliveryZonesPage';
 import { SettingsPage } from '@/app/pages/settings/SettingsPage';
-import { AdminRestaurantsPage } from '@/app/pages/admin/AdminRestaurantsPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
-import { RequireAdmin } from '@/components/auth/RequireAdmin';
 import { RequireRestaurantAccess } from '@/components/auth/RequireRestaurantAccess';
 import { RootRedirect } from '@/components/auth/RootRedirect';
 
@@ -39,13 +37,13 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
-      // Pending approval — accessible to any authenticated user (role: user)
+      // Pending approval — accessible to any authenticated non-restaurant user.
       {
         path: 'pending-approval',
         element: <PendingApprovalPage />,
       },
 
-      // Restaurant routes — blocked for role: user
+      // Restaurant routes — blocked for non-restaurant roles.
       {
         element: <RequireRestaurantAccess />,
         children: [
@@ -53,10 +51,7 @@ export const router = createBrowserRouter([
             path: '/',
             element: <MainLayout />,
             children: [
-              {
-                index: true,
-                element: <RootRedirect />,
-              },
+              { index: true, element: <RootRedirect /> },
               {
                 path: 'dashboard',
                 element: <DashboardPage />,
@@ -100,28 +95,6 @@ export const router = createBrowserRouter([
                 path: 'settings',
                 element: <SettingsPage />,
                 handle: { breadcrumb: 'Settings' },
-              },
-            ],
-          },
-        ],
-      },
-
-      // Admin routes — blocked for non-admin roles
-      {
-        element: <RequireAdmin />,
-        children: [
-          {
-            path: 'admin',
-            element: <MainLayout />,
-            children: [
-              {
-                index: true,
-                element: <Navigate to="/admin/restaurants" replace />,
-              },
-              {
-                path: 'restaurants',
-                element: <AdminRestaurantsPage />,
-                handle: { breadcrumb: 'Restaurant Approvals' },
               },
             ],
           },

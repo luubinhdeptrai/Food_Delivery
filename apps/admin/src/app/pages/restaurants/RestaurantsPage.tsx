@@ -1,22 +1,16 @@
 import { useState, useMemo } from 'react';
 import {
-  useAdminRestaurants,
+  useRestaurants,
   useApproveRestaurant,
   useUnapproveRestaurant,
   useDeleteRestaurant,
-} from '@/features/admin/restaurants/hooks/useAdminRestaurants';
-import type { AdminRestaurant } from '@/features/admin/restaurants/api/admin-restaurants.api';
-import { useImpersonation } from '@/features/admin/hooks/useImpersonation';
+} from '@/features/restaurants/hooks/useRestaurants';
+import type { Restaurant } from '@/features/restaurants/api/restaurants.api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +18,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Download, Store, Users, PauseCircle, LayoutGrid, MoreVertical, CheckCircle, LogIn, XCircle, X, MapPin, Phone, Mail, Calendar } from 'lucide-react';
+import {
+  Search,
+  Download,
+  Store,
+  LayoutGrid,
+  MoreVertical,
+  CheckCircle,
+  XCircle,
+  X,
+  MapPin,
+  Phone,
+  Calendar,
+} from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
@@ -64,11 +70,10 @@ function StatusBadge({ isApproved }: { isApproved: boolean }) {
 }
 
 interface DetailSheetProps {
-  restaurant: AdminRestaurant | null;
+  restaurant: Restaurant | null;
   onClose: () => void;
   onApprove: (id: string) => void;
   onUnapprove: (id: string) => void;
-  onViewAsOwner: (ownerId: string) => void;
   isApproving: boolean;
   isUnapproving: boolean;
 }
@@ -78,7 +83,6 @@ function RestaurantDetailSheet({
   onClose,
   onApprove,
   onUnapprove,
-  onViewAsOwner,
   isApproving,
   isUnapproving,
 }: DetailSheetProps) {
@@ -87,7 +91,6 @@ function RestaurantDetailSheet({
       <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto p-0">
         {restaurant && (
           <>
-            {/* Cover image or gradient header */}
             <div className="relative h-32 bg-gradient-to-br from-primary-200 to-primary-100 flex-shrink-0">
               {restaurant.coverImageUrl && (
                 <img
@@ -104,7 +107,6 @@ function RestaurantDetailSheet({
               </button>
             </div>
 
-            {/* Logo + name */}
             <div className="px-6 pb-0 -mt-8 flex items-end gap-4">
               <Avatar className="h-16 w-16 border-4 border-background shadow-md">
                 <AvatarImage src={restaurant.logoUrl ?? undefined} />
@@ -121,7 +123,6 @@ function RestaurantDetailSheet({
             </div>
 
             <div className="px-6 py-4 space-y-5">
-              {/* Info section */}
               <div className="space-y-3">
                 {restaurant.cuisineType && (
                   <div className="flex items-start gap-3 text-sm">
@@ -159,7 +160,6 @@ function RestaurantDetailSheet({
 
               <div className="h-px bg-border" />
 
-              {/* Owner section */}
               <div className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Ownership
@@ -167,7 +167,7 @@ function RestaurantDetailSheet({
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
                     <AvatarFallback className="bg-surface-container text-on-surface-variant text-sm font-medium">
-                      {getInitials('Owner')}
+                      OW
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
@@ -183,7 +183,6 @@ function RestaurantDetailSheet({
 
               <div className="h-px bg-border" />
 
-              {/* Dates section */}
               <div className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Timeline
@@ -206,7 +205,6 @@ function RestaurantDetailSheet({
               </div>
             </div>
 
-            {/* Action bar */}
             <div className="sticky bottom-0 border-t bg-background px-6 py-4 flex flex-col gap-2">
               {!restaurant.isApproved ? (
                 <Button
@@ -228,14 +226,6 @@ function RestaurantDetailSheet({
                   {isUnapproving ? 'Suspending…' : 'Suspend Restaurant'}
                 </Button>
               )}
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => onViewAsOwner(restaurant.ownerId)}
-              >
-                <LogIn className="h-4 w-4" />
-                View as Owner
-              </Button>
             </div>
           </>
         )}
@@ -244,14 +234,13 @@ function RestaurantDetailSheet({
   );
 }
 
-export function AdminRestaurantsPage() {
+export function RestaurantsPage() {
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<AdminRestaurant | null>(null);
-  const { data, isLoading } = useAdminRestaurants({ limit: PAGE_SIZE });
+  const [selected, setSelected] = useState<Restaurant | null>(null);
+  const { data, isLoading } = useRestaurants({ limit: PAGE_SIZE });
   const approveMutation = useApproveRestaurant();
   const unapproveMutation = useUnapproveRestaurant();
   const deleteMutation = useDeleteRestaurant();
-  const { startImpersonating } = useImpersonation();
 
   const restaurants = data?.data ?? [];
 
@@ -288,7 +277,6 @@ export function AdminRestaurantsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-on-surface">Restaurants</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -296,10 +284,13 @@ export function AdminRestaurantsPage() {
         </p>
       </div>
 
-      {/* Status cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
-          icon={<span className="material-symbols-outlined text-amber-600">hourglass_empty</span>}
+          icon={
+            <span className="material-symbols-outlined text-amber-600">
+              hourglass_empty
+            </span>
+          }
           label="Pending Approval"
           value={stats.pending}
           color="amber"
@@ -311,7 +302,11 @@ export function AdminRestaurantsPage() {
           color="green"
         />
         <StatCard
-          icon={<span className="material-symbols-outlined text-red-500">pause_circle</span>}
+          icon={
+            <span className="material-symbols-outlined text-red-500">
+              pause_circle
+            </span>
+          }
           label="Suspended"
           value={stats.suspended}
           color="red"
@@ -324,7 +319,6 @@ export function AdminRestaurantsPage() {
         />
       </div>
 
-      {/* Table toolbar */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -341,23 +335,34 @@ export function AdminRestaurantsPage() {
         </Button>
       </div>
 
-      {/* Table */}
       <div className="rounded-xl border bg-card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-surface-container/50">
-              <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Restaurant</th>
-              <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden md:table-cell">Submitted</th>
-              <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden lg:table-cell">Cuisine</th>
-              <th className="px-4 py-3 text-right font-semibold text-muted-foreground">Actions</th>
+              <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                Restaurant
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden md:table-cell">
+                Submitted
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-muted-foreground hidden lg:table-cell">
+                Cuisine
+              </th>
+              <th className="px-4 py-3 text-right font-semibold text-muted-foreground">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan={5} className="py-16 text-center text-muted-foreground">
-                  <span className="material-symbols-outlined animate-spin text-3xl">progress_activity</span>
+                  <span className="material-symbols-outlined animate-spin text-3xl">
+                    progress_activity
+                  </span>
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
@@ -412,10 +417,6 @@ export function AdminRestaurantsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuGroup>
-                            <DropdownMenuItem onClick={() => startImpersonating(r.ownerId)}>
-                              <LogIn className="mr-2 h-4 w-4" />
-                              View as Owner
-                            </DropdownMenuItem>
                             {!r.isApproved ? (
                               <DropdownMenuItem
                                 onClick={() => approveMutation.mutate(r.id)}
@@ -434,7 +435,11 @@ export function AdminRestaurantsPage() {
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => {
-                                if (confirm(`Delete "${r.name}"? This cannot be undone.`)) {
+                                if (
+                                  confirm(
+                                    `Delete "${r.name}"? This cannot be undone.`,
+                                  )
+                                ) {
                                   deleteMutation.mutate(r.id);
                                 }
                               }}
@@ -453,7 +458,6 @@ export function AdminRestaurantsPage() {
           </tbody>
         </table>
 
-        {/* Footer */}
         {data && (
           <div className="border-t px-4 py-3 text-xs text-muted-foreground">
             Showing {filtered.length} of {data.total} restaurants
@@ -461,16 +465,11 @@ export function AdminRestaurantsPage() {
         )}
       </div>
 
-      {/* Detail Sheet */}
       <RestaurantDetailSheet
         restaurant={selected}
         onClose={() => setSelected(null)}
         onApprove={handleApprove}
         onUnapprove={handleUnapprove}
-        onViewAsOwner={(ownerId) => {
-          setSelected(null);
-          startImpersonating(ownerId);
-        }}
         isApproving={approveMutation.isPending}
         isUnapproving={unapproveMutation.isPending}
       />

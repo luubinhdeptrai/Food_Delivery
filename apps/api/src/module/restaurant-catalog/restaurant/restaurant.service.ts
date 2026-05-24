@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   RestaurantRepository,
@@ -130,11 +130,15 @@ export class RestaurantService {
     }
     // When approving, promote the owner's role to 'restaurant' so they gain
     // access to restaurant-scoped features immediately without re-logging in.
+    // IMPORTANT: only promote 'user' → 'restaurant'. Admins must not be demoted
+    // (admins can own restaurants), and existing 'restaurant' owners stay put.
     if (isApproved) {
       await this.db
         .update(schema.user)
         .set({ role: 'restaurant' })
-        .where(eq(schema.user.id, updated.ownerId));
+        .where(
+          and(eq(schema.user.id, updated.ownerId), eq(schema.user.role, 'user')),
+        );
     }
     this.publishRestaurantEvent(updated);
     return updated;

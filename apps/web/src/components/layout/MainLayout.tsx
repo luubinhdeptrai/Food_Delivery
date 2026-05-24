@@ -2,7 +2,6 @@ import { Fragment } from 'react';
 import { Link, Outlet, useMatches } from 'react-router-dom';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { TopNavActions } from '@/components/layout/TopNavActions';
-import { ImpersonationBanner } from '@/components/layout/ImpersonationBanner';
 import {
   SidebarProvider,
   SidebarInset,
@@ -43,7 +42,6 @@ export function MainLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="bg-background min-w-0">
-        <ImpersonationBanner />
         <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-background">
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1 min-w-0 overflow-hidden">

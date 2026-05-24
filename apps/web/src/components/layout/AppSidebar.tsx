@@ -8,10 +8,6 @@ import {
   Settings,
   CircleHelp,
   LogOut,
-  Store,
-  ShieldCheck,
-  Tag,
-  Users,
 } from 'lucide-react';
 
 import {
@@ -24,9 +20,8 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useLogout } from '@/features/auth/hooks/useLogout';
-import { useSession } from '@/lib/auth-client';
 
-const restaurantNavItems = [
+const navItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Orders', url: '/orders', icon: ClipboardList },
   { title: 'Menu', url: '/menu', icon: Utensils },
@@ -34,41 +29,25 @@ const restaurantNavItems = [
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
-const adminNavItems = [
-  { title: 'Restaurants', url: '/admin/restaurants', icon: Store },
-  { title: 'Orders', url: '/admin/orders', icon: ClipboardList },
-  { title: 'Promotions', url: '/admin/promotions', icon: Tag },
-  { title: 'Users', url: '/admin/users', icon: Users },
-];
-
 const helpItem = { title: 'Help', url: '/help', icon: CircleHelp };
 
 export function AppSidebar() {
   const location = useLocation();
   const { logout, isLoggingOut } = useLogout();
-  const { data: session } = useSession();
-
-  const isAdmin = (session?.user as any)?.role === 'admin';
-  const navItems = isAdmin ? adminNavItems : restaurantNavItems;
-  const portalLabel = isAdmin ? 'ADMIN PORTAL' : 'MANAGEMENT PORTAL';
 
   return (
     <Sidebar className="bg-card">
       <SidebarHeader className="p-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-200">
-            {isAdmin ? (
-              <ShieldCheck className="h-6 w-6 text-primary" />
-            ) : (
-              <UtensilsCrossed className="h-6 w-6 text-primary" />
-            )}
+            <UtensilsCrossed className="h-6 w-6 text-primary" />
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-bold leading-tight text-primary">
               SoLi Food
             </span>
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground">
-              {portalLabel}
+              MANAGEMENT PORTAL
             </span>
           </div>
         </div>

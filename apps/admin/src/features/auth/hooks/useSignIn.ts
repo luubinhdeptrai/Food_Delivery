@@ -25,19 +25,19 @@ export function useSignIn() {
         );
       }
       const role = (result.data?.user as any)?.role;
-      // Admin accounts belong on the admin portal — refuse and sign out.
-      if (role === 'admin') {
+      // Reject non-admin accounts on the admin portal.
+      if (role !== 'admin') {
         await signOut();
         throw new ApiError(
           403,
-          'ADMIN_USE_ADMIN_PORTAL',
-          'Admin accounts must sign in via the admin portal.',
+          'NOT_ADMIN',
+          'This portal is for administrators only. Please use the restaurant portal.',
         );
       }
       return result.data;
     },
     onSuccess: () => {
-      navigate('/', { replace: true });
+      navigate('/restaurants', { replace: true });
     },
   });
 }

@@ -19,11 +19,6 @@ export function RequireRestaurantAccess() {
   }
 
   const role = (session.user as any)?.role;
-
-  if (role === 'admin') {
-    return <Navigate to="/admin/restaurants" replace />;
-  }
-
   if (role !== 'restaurant') {
     return <Navigate to="/pending-approval" replace />;
   }
