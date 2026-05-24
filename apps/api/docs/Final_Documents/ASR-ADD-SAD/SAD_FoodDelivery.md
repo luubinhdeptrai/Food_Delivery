@@ -2187,25 +2187,23 @@ deactivate CatalogRepo
 CatalogService -> EventBus : (5) Publish catalog domain event
 activate EventBus
 
-par Ordering checkout snapshot
-  EventBus -> OrderingProjector : RestaurantUpdated / MenuItemUpdated / DeliveryZoneSnapshotUpdated
-  activate OrderingProjector
-  OrderingProjector -> OrderingAclRepo : (6) Upsert ordering_*_snapshots
-  activate OrderingAclRepo
-  OrderingAclRepo --> OrderingProjector : snapshot upserted
-  deactivate OrderingAclRepo
-  OrderingProjector --> EventBus : handled
-  deactivate OrderingProjector
-and Notification routing snapshot
-  EventBus -> NotificationProjector : RestaurantUpdatedEvent
-  activate NotificationProjector
-  NotificationProjector -> NotificationRepo : (7) Upsert notification_restaurant_snapshots
-  activate NotificationRepo
-  NotificationRepo --> NotificationProjector : snapshot upserted
-  deactivate NotificationRepo
-  NotificationProjector --> EventBus : handled
-  deactivate NotificationProjector
-end
+EventBus -> OrderingProjector : (6a) RestaurantUpdated / MenuItemUpdated / DeliveryZoneSnapshotUpdated
+activate OrderingProjector
+OrderingProjector -> OrderingAclRepo : Upsert ordering_*_snapshots
+activate OrderingAclRepo
+OrderingAclRepo --> OrderingProjector : snapshot upserted
+deactivate OrderingAclRepo
+OrderingProjector --> EventBus : handled
+deactivate OrderingProjector
+
+EventBus -> NotificationProjector : (6b) RestaurantUpdatedEvent
+activate NotificationProjector
+NotificationProjector -> NotificationRepo : (7) Upsert notification_restaurant_snapshots
+activate NotificationRepo
+NotificationRepo --> NotificationProjector : snapshot upserted
+deactivate NotificationRepo
+NotificationProjector --> EventBus : handled
+deactivate NotificationProjector
 
 EventBus --> CatalogService : published
 deactivate EventBus
