@@ -27,6 +27,18 @@ on:
         required: false
         type: string
         default: ''
+      gh_repository:
+        required: false
+        type: string
+        default: ''
+      api_image_url:
+        required: false
+        type: string
+        default: ''
+      web_image_url:
+        required: false
+        type: string
+        default: ''
       working_directory:
         required: false
         type: string
@@ -34,7 +46,7 @@ on:
       terraform_version:
         required: false
         type: string
-        default: 1.14.5
+        default: 1.15.4
     secrets:
       RENDER_API_KEY:
         required: true
@@ -80,9 +92,12 @@ jobs:
 
       - name: Resolve image tags
         env:
+          API_IMAGE_URL_INPUT: ${{ inputs.api_image_url }}
           API_IMAGE_TAG_INPUT: ${{ inputs.api_image_tag }}
           API_USE_GITHUB_SHA_TAG: ${{ inputs.api_use_github_sha_tag }}
+          GH_REPOSITORY_INPUT: ${{ inputs.gh_repository }}
           USE_GITHUB_SHA_TAG: ${{ inputs.use_github_sha_tag }}
+          WEB_IMAGE_URL_INPUT: ${{ inputs.web_image_url }}
           WEB_IMAGE_TAG_INPUT: ${{ inputs.web_image_tag }}
           WEB_USE_GITHUB_SHA_TAG: ${{ inputs.web_use_github_sha_tag }}
         run: |
@@ -97,6 +112,19 @@ jobs:
             echo "Repository variable TF_WORKSPACE is required." >&2
             exit 1
           fi
+
+          gh_repository="${GH_REPOSITORY_INPUT:-${GITHUB_REPOSITORY:-}}"
+          if [ -z "${gh_repository}" ]; then
+            echo "GitHub repository is required to resolve GHCR image URLs." >&2
+            exit 1
+          fi
+
+          gh_repository="${gh_repository,,}"
+          api_image_url="${API_IMAGE_URL_INPUT:-ghcr.io/${gh_repository}-api}"
+          web_image_url="${WEB_IMAGE_URL_INPUT:-ghcr.io/${gh_repository}-web}"
+
+          echo "TF_VAR_api_image_url=${api_image_url}" >> "${GITHUB_ENV}"
+          echo "TF_VAR_web_image_url=${web_image_url}" >> "${GITHUB_ENV}"
 
           short_sha="${GITHUB_SHA:0:7}"
 

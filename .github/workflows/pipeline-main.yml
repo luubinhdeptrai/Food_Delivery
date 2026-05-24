@@ -53,6 +53,7 @@ jobs:
     uses: ./.github/workflows/cd-render-iac.yml
     with:
       apply: true
+      gh_repository: ${{ github.repository }}
       use_github_sha_tag: true
     secrets: inherit
 

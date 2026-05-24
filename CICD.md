@@ -331,14 +331,16 @@ Common behavior:
 Image name format:
 
 ```text
-ghcr.io/<github-owner>/<github-repo>-<app>
+ghcr.io/<github-owner-lowercase>/<github-repo-lowercase>-<app>
 ```
 
-For this repository, Terraform defaults expect:
+The Docker packaging workflow and the Render Terraform workflow both derive
+this value from `github.repository`, lower-case it, and append `-api` or
+`-web`. For this repository, the fallback Terraform defaults expect:
 
 ```text
-ghcr.io/ndtruongdanh/soli-food-order-and-deliver-app-api
-ghcr.io/ndtruongdanh/soli-food-order-and-deliver-app-web
+ghcr.io/ndtruongdanh/uitfood-api
+ghcr.io/ndtruongdanh/uitfood-web
 ```
 
 Tag format:
