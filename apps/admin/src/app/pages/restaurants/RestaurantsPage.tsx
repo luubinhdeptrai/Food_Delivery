@@ -31,6 +31,7 @@ import {
   Phone,
   Calendar,
 } from 'lucide-react';
+import { PageHero } from '@/components/layout/PageHero';
 
 const PAGE_SIZE = 20;
 
@@ -277,12 +278,12 @@ export function RestaurantsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-on-surface">Restaurants</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Approve new businesses joining the platform
-        </p>
-      </div>
+      <PageHero
+        eyebrow="Catalog"
+        title="Restaurants"
+        subtitle="Approve new businesses joining the platform and keep the catalog healthy."
+        icon={<Store className="h-6 w-6" />}
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
