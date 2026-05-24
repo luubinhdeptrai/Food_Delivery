@@ -65,6 +65,20 @@ export class RestaurantController {
     return this.service.findAll(offset, limit);
   }
 
+  @Get('admin/all')
+  @Roles(['admin'])
+  @ApiOperation({
+    summary: 'List all restaurants (admin)',
+    description: 'Returns all restaurants including unapproved ones. Admin only.',
+  })
+  @ApiOkResponse({ type: RestaurantListResponseDto })
+  findAllAdmin(
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ) {
+    return this.service.findAllAdmin(offset, limit);
+  }
+
   @Get(':id')
   @AllowAnonymous()
   @ApiOperation({

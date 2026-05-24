@@ -33,10 +33,18 @@ export class RestaurantService {
     offset?: number,
     limit?: number,
   ): Promise<PaginatedResult<Restaurant>> {
-    // Enforce a default and ceiling on page size to prevent full-table dumps (Issue #5).
     const safeLimit = Math.min(limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     // Public listing must only show approved restaurants (Issue #4).
     return this.repo.findAll({ offset, limit: safeLimit, approvedOnly: true });
+  }
+
+  async findAllAdmin(
+    offset?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<Restaurant>> {
+    const safeLimit = Math.min(limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    // Admin view returns ALL restaurants including unapproved/pending.
+    return this.repo.findAll({ offset, limit: safeLimit, approvedOnly: false });
   }
 
   async findOne(id: string): Promise<Restaurant> {

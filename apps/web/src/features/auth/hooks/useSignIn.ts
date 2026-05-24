@@ -26,8 +26,9 @@ export function useSignIn() {
       }
       return result.data;
     },
-    onSuccess: () => {
-      navigate('/dashboard');
+    onSuccess: (data) => {
+      const role = (data?.user as any)?.role;
+      navigate(role === 'admin' ? '/admin/restaurants' : '/dashboard');
     },
   });
 }

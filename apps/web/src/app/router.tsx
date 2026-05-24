@@ -11,8 +11,11 @@ import { OrdersPage } from '@/app/pages/orders/OrdersPage';
 import { OrderDetailPage } from '@/app/pages/orders/OrderDetailPage';
 import { DeliveryZonesPage } from '@/app/pages/delivery-zones/DeliveryZonesPage';
 import { SettingsPage } from '@/app/pages/settings/SettingsPage';
+import { AdminRestaurantsPage } from '@/app/pages/admin/AdminRestaurantsPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
+import { RequireAdmin } from '@/components/auth/RequireAdmin';
+import { RootRedirect } from '@/components/auth/RootRedirect';
 
 export const router = createBrowserRouter([
   {
@@ -40,7 +43,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/dashboard" replace />,
+            element: <RootRedirect />,
           },
           {
             path: 'dashboard',
@@ -85,6 +88,26 @@ export const router = createBrowserRouter([
             path: 'settings',
             element: <SettingsPage />,
             handle: { breadcrumb: 'Settings' },
+          },
+        ],
+      },
+      {
+        element: <RequireAdmin />,
+        children: [
+          {
+            path: 'admin',
+            element: <MainLayout />,
+            children: [
+              {
+                index: true,
+                element: <Navigate to="/admin/restaurants" replace />,
+              },
+              {
+                path: 'restaurants',
+                element: <AdminRestaurantsPage />,
+                handle: { breadcrumb: 'Restaurant Approvals' },
+              },
+            ],
           },
         ],
       },
