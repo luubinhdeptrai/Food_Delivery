@@ -46,7 +46,7 @@ on:
       terraform_version:
         required: false
         type: string
-        default: 1.14.5
+        default: 1.15.4
     secrets:
       RENDER_API_KEY:
         required: true
