@@ -102,18 +102,15 @@ export class RestaurantController {
   }
 
   @Post()
-  @Roles(['admin', 'restaurant'])
   @ApiUnauthorizedResponse({ description: 'Missing or invalid bearer token' })
   @ApiOperation({
     summary: 'Create restaurant',
-    description: 'Creates a new restaurant for the authenticated owner.',
+    description:
+      'Creates a new restaurant for the authenticated owner. Any authenticated user may submit; the restaurant is pending approval until an admin approves it.',
   })
   @ApiCreatedResponse({
     description: 'Restaurant created successfully',
     type: RestaurantResponseDto,
-  })
-  @ApiForbiddenResponse({
-    description: 'Insufficient permissions (requires admin or restaurant role)',
   })
   create(@Session() session: UserSession, @Body() dto: CreateRestaurantDto) {
     return this.service.create(session.user.id, dto);

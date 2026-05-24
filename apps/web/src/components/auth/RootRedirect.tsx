@@ -4,5 +4,7 @@ import { useSession } from '@/lib/auth-client';
 export function RootRedirect() {
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
-  return <Navigate to={role === 'admin' ? '/admin/restaurants' : '/dashboard'} replace />;
+  if (role === 'admin') return <Navigate to="/admin/restaurants" replace />;
+  if (role === 'restaurant') return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/pending-approval" replace />;
 }

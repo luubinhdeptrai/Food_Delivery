@@ -1,10 +1,13 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
+import { eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import {
   RestaurantRepository,
   type PaginatedResult,
@@ -14,6 +17,8 @@ import type { Restaurant } from '@/module/restaurant-catalog/restaurant/restaura
 import { RestaurantUpdatedEvent } from '@/shared/events/restaurant-updated.event';
 import { ImageService } from '@/module/image/image.service';
 import type { CreateImageDto } from '@/module/image/dto/image.dto';
+import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
+import * as schema from '@/drizzle/schema';
 
 // ---------------------------------------------------------------------------
 // Pagination constants — enforced in all list/search endpoints (Issue #5)
@@ -27,6 +32,7 @@ export class RestaurantService {
     private readonly repo: RestaurantRepository,
     private readonly eventBus: EventBus,
     private readonly imageService: ImageService,
+    @Inject(DB_CONNECTION) private readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
   async findAll(
@@ -118,14 +124,18 @@ export class RestaurantService {
   }
 
   async setApproved(id: string, isApproved: boolean): Promise<Restaurant> {
-    // Skip a pre-fetch so the event always reflects the actually-persisted state.
-    // If the restaurant does not exist, repo.update() returns undefined and we
-    // throw NotFoundException below (Issue #2).
     const updated = await this.repo.update(id, { isApproved });
     if (!updated) {
       throw new NotFoundException(`Restaurant ${id} not found`);
     }
-    // Emit so the Ordering BC snapshot stays in sync with isApproved changes (Issue #2).
+    // When approving, promote the owner's role to 'restaurant' so they gain
+    // access to restaurant-scoped features immediately without re-logging in.
+    if (isApproved) {
+      await this.db
+        .update(schema.user)
+        .set({ role: 'restaurant' })
+        .where(eq(schema.user.id, updated.ownerId));
+    }
     this.publishRestaurantEvent(updated);
     return updated;
   }

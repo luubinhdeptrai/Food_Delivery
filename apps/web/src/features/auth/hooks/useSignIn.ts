@@ -28,7 +28,9 @@ export function useSignIn() {
     },
     onSuccess: (data) => {
       const role = (data?.user as any)?.role;
-      navigate(role === 'admin' ? '/admin/restaurants' : '/dashboard');
+      if (role === 'admin') navigate('/admin/restaurants');
+      else if (role === 'restaurant') navigate('/dashboard');
+      else navigate('/pending-approval');
     },
   });
 }

@@ -3,6 +3,7 @@ import { RegisterPage } from '@/app/pages/auth/register/RegisterPage';
 import { RegisterLocationPage } from '@/app/pages/auth/register/RegisterBusinessPage';
 import { RegisterPendingPage } from '@/app/pages/auth/register/RegisterPendingPage';
 import { LoginPage } from '@/app/pages/auth/login/LoginPage';
+import { PendingApprovalPage } from '@/app/pages/auth/PendingApprovalPage';
 import { DashboardPage } from '@/app/pages/dashboard/DashboardPage';
 import { MenuManagementPage } from '@/app/pages/menu/MenuManagementPage';
 import CreateMenuItemPage from '@/app/pages/menu/CreateMenuItemPage';
@@ -15,6 +16,7 @@ import { AdminRestaurantsPage } from '@/app/pages/admin/AdminRestaurantsPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { RequireAdmin } from '@/components/auth/RequireAdmin';
+import { RequireRestaurantAccess } from '@/components/auth/RequireRestaurantAccess';
 import { RootRedirect } from '@/components/auth/RootRedirect';
 
 export const router = createBrowserRouter([
@@ -37,60 +39,74 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
+      // Pending approval — accessible to any authenticated user (role: user)
       {
-        path: '/',
-        element: <MainLayout />,
+        path: 'pending-approval',
+        element: <PendingApprovalPage />,
+      },
+
+      // Restaurant routes — blocked for role: user
+      {
+        element: <RequireRestaurantAccess />,
         children: [
           {
-            index: true,
-            element: <RootRedirect />,
-          },
-          {
-            path: 'dashboard',
-            element: <DashboardPage />,
-            handle: { breadcrumb: 'Dashboard' },
-          },
-          {
-            path: 'orders',
-            handle: { breadcrumb: 'Orders' },
+            path: '/',
+            element: <MainLayout />,
             children: [
-              { index: true, element: <OrdersPage /> },
               {
-                path: ':orderId',
-                element: <OrderDetailPage />,
-                handle: { breadcrumb: 'Order Detail' },
+                index: true,
+                element: <RootRedirect />,
+              },
+              {
+                path: 'dashboard',
+                element: <DashboardPage />,
+                handle: { breadcrumb: 'Dashboard' },
+              },
+              {
+                path: 'orders',
+                handle: { breadcrumb: 'Orders' },
+                children: [
+                  { index: true, element: <OrdersPage /> },
+                  {
+                    path: ':orderId',
+                    element: <OrderDetailPage />,
+                    handle: { breadcrumb: 'Order Detail' },
+                  },
+                ],
+              },
+              {
+                path: 'menu',
+                handle: { breadcrumb: 'Menu' },
+                children: [
+                  { index: true, element: <MenuManagementPage /> },
+                  {
+                    path: 'create',
+                    element: <CreateMenuItemPage />,
+                    handle: { breadcrumb: 'Create Item' },
+                  },
+                  {
+                    path: 'edit/:itemId',
+                    element: <EditMenuItemPage />,
+                    handle: { breadcrumb: 'Edit Item' },
+                  },
+                ],
+              },
+              {
+                path: 'delivery-zones',
+                element: <DeliveryZonesPage />,
+                handle: { breadcrumb: 'Delivery Zones' },
+              },
+              {
+                path: 'settings',
+                element: <SettingsPage />,
+                handle: { breadcrumb: 'Settings' },
               },
             ],
-          },
-          {
-            path: 'menu',
-            handle: { breadcrumb: 'Menu' },
-            children: [
-              { index: true, element: <MenuManagementPage /> },
-              {
-                path: 'create',
-                element: <CreateMenuItemPage />,
-                handle: { breadcrumb: 'Create Item' },
-              },
-              {
-                path: 'edit/:itemId',
-                element: <EditMenuItemPage />,
-                handle: { breadcrumb: 'Edit Item' },
-              },
-            ],
-          },
-          {
-            path: 'delivery-zones',
-            element: <DeliveryZonesPage />,
-            handle: { breadcrumb: 'Delivery Zones' },
-          },
-          {
-            path: 'settings',
-            element: <SettingsPage />,
-            handle: { breadcrumb: 'Settings' },
           },
         ],
       },
+
+      // Admin routes — blocked for non-admin roles
       {
         element: <RequireAdmin />,
         children: [
