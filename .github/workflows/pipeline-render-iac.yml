@@ -41,6 +41,7 @@ jobs:
     uses: ./.github/workflows/cd-render-iac.yml
     with:
       apply: true
+      gh_repository: ${{ github.repository }}
     secrets:
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       RENDER_OWNER_ID: ${{ secrets.RENDER_OWNER_ID }}
