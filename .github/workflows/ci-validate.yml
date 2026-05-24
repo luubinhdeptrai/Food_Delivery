@@ -44,6 +44,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure Turbo Affected Range
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ -n "${PR_BASE_SHA}" ]]; then
+            base_ref="${PR_BASE_SHA}"
+          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            base_ref="HEAD^"
+          else
+            base_ref="$(git rev-list --max-parents=0 HEAD)"
+          fi
+
+          echo "TURBO_SCM_BASE=${base_ref}" >> "$GITHUB_ENV"
+          echo "TURBO_SCM_HEAD=HEAD" >> "$GITHUB_ENV"
+          echo "Turbo affected range: ${base_ref}...HEAD"
+
       - name: Setup Environment
         uses: ./.github/actions/setup-environment
 
