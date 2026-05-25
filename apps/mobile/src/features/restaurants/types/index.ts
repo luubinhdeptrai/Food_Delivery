@@ -216,6 +216,7 @@ export interface MenuItemDetailScreenProps {
   itemId: string;
   onBack?: () => void;
   onFavoriteToggle?: (itemId: string) => void;
+  isAddingToCart?: boolean;
   onAddToCart?: (
     itemId: string,
     quantity: number,

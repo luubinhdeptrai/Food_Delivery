@@ -40,6 +40,7 @@ export function MenuItemDetailScreen({
   onBack,
   onFavoriteToggle,
   onAddToCart,
+  isAddingToCart,
 }: MenuItemDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(1);
@@ -128,11 +129,12 @@ export function MenuItemDetailScreen({
   };
 
   const handleAddToCart = () => {
-    if (!areRequiredModifiersSelected) return;
+    if (!areRequiredModifiersSelected || isAddingToCart) return;
     onAddToCart?.(itemId, quantity, currentSelections, isItemInCart);
   };
 
   const isLoading = isLoadingItem || isLoadingModifiers;
+  const isAddButtonDisabled = !areRequiredModifiersSelected || !!isAddingToCart;
 
   if (isLoading) {
     return (
@@ -313,23 +315,27 @@ export function MenuItemDetailScreen({
       >
         <TouchableOpacity 
           onPress={handleAddToCart}
-          disabled={!areRequiredModifiersSelected}
+          disabled={isAddButtonDisabled}
           activeOpacity={0.9}
         >
           <LinearGradient
-            colors={areRequiredModifiersSelected ? ['#00490e', '#0d631b'] : ['#e0e0e0', '#bdbdbd']}
+            colors={!isAddButtonDisabled ? ['#00490e', '#0d631b'] : ['#e0e0e0', '#bdbdbd']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             className="w-full h-14 rounded-full flex-row items-center justify-center"
             style={{ borderRadius: 9999 }}
           >
-            <Text 
-              className={`font-jakarta-sans font-bold text-lg ${
-                areRequiredModifiersSelected ? 'text-white' : 'text-on-surface-variant'
-              }`}
-            >
-              {isItemInCart ? 'Update Cart' : 'Add to Cart'} - {formatCurrency(calculateTotal())}
-            </Text>
+            {isAddingToCart ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text 
+                className={`font-jakarta-sans font-bold text-lg ${
+                  !isAddButtonDisabled ? 'text-white' : 'text-on-surface-variant'
+                }`}
+              >
+                {isItemInCart ? 'Update Cart' : 'Add to Cart'} - {formatCurrency(calculateTotal())}
+              </Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>

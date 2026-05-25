@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MenuItemDetailScreen } from "@/src/features/restaurants";
 import { useMenuItem, useRestaurant } from "@/src/features/restaurants/api";
-import { useAddToCart } from "@/src/features/cart";
+import { useGuardedAddToCart } from "@/src/features/cart";
 import { Text, View, TouchableOpacity, Alert } from "react-native";
 
 export default function MenuItemDetailPage() {
@@ -12,7 +12,7 @@ export default function MenuItemDetailPage() {
 
   const { data: menuItem, isLoading: isLoadingItem, isError: isErrorItem } = useMenuItem(normalizedId || "");
   const { data: restaurant, isLoading: isLoadingRestaurant, isError: isErrorRestaurant } = useRestaurant(menuItem?.restaurantId || "");
-  const { mutate: addToCart, isPending: isAddingToCart } = useAddToCart();
+  const { addItem, isPending: isAddingToCart } = useGuardedAddToCart();
 
   if (!normalizedId) {
     return (
@@ -80,7 +80,7 @@ export default function MenuItemDetailPage() {
       ([groupId, optionIds]) => optionIds.map(optionId => ({ groupId, optionId }))
     );
 
-    addToCart(
+    addItem(
       {
         menuItemId: menuItem.id,
         restaurantId: restaurant.id,
@@ -92,12 +92,9 @@ export default function MenuItemDetailPage() {
         selectedModifiers,
       },
       {
+        successMessage: `${menuItem.name} ${isUpdate ? 'updated in' : 'added to'} cart`,
         onSuccess: () => {
-          Alert.alert("Success", `${menuItem.name} ${isUpdate ? 'updated in' : 'added to'} cart`);
           router.back();
-        },
-        onError: (error: any) => {
-          Alert.alert("Error", error.message || "Failed to add item to cart");
         },
       }
     );
@@ -109,6 +106,7 @@ export default function MenuItemDetailPage() {
       onBack={handleBack}
       onFavoriteToggle={handleFavoriteToggle}
       onAddToCart={handleAddToCart}
+      isAddingToCart={isAddingToCart}
     />
   );
 }
