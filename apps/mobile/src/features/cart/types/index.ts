@@ -74,6 +74,7 @@ export interface AddItemToCartRequest {
   imageUrl?: string | null;
   quantity: number;
   selectedModifiers?: SelectedOption[];
+  optimisticSelectedModifiers?: SelectedModifierResponse[];
 }
 
 export interface UpdateCartItemQuantityRequest {

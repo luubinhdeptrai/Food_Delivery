@@ -12,6 +12,7 @@ import { useAddToCart, useClearCart, useMyCart } from './use-cart';
 
 type GuardedAddToCartOptions = {
   successMessage?: string;
+  onOptimisticUpdate?: () => void;
   onSuccess?: (cart: CartResponse) => void;
   onError?: (error: unknown) => void;
 };
@@ -43,6 +44,7 @@ export function useGuardedAddToCart() {
           options?.onError?.(error);
         },
       });
+      options?.onOptimisticUpdate?.();
     },
     [addToCart, cart],
   );

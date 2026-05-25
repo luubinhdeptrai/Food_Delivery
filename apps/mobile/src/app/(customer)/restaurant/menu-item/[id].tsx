@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { MenuItemDetailScreen } from "@/src/features/restaurants";
 import { useMenuItem, useRestaurant } from "@/src/features/restaurants/api";
 import { useGuardedAddToCart } from "@/src/features/cart";
+import type { SelectedModifierResponse } from "@/src/features/cart";
 import { Text, View, TouchableOpacity, Alert } from "react-native";
 
 export default function MenuItemDetailPage() {
@@ -66,7 +67,8 @@ export default function MenuItemDetailPage() {
     itemId: string,
     quantity: number,
     modifierSelections: Record<string, string[]>,
-    isUpdate?: boolean
+    isUpdate?: boolean,
+    optimisticSelectedModifiers?: SelectedModifierResponse[]
   ) => {
     if (!menuItem || !restaurant || isAddingToCart) {
       if (!isAddingToCart) {
@@ -90,10 +92,11 @@ export default function MenuItemDetailPage() {
         imageUrl: menuItem.imageUrl ?? null,
         quantity,
         selectedModifiers,
+        optimisticSelectedModifiers,
       },
       {
         successMessage: `${menuItem.name} ${isUpdate ? 'updated in' : 'added to'} cart`,
-        onSuccess: () => {
+        onOptimisticUpdate: () => {
           router.back();
         },
       }

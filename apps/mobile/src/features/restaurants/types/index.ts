@@ -222,5 +222,6 @@ export interface MenuItemDetailScreenProps {
     quantity: number,
     modifierSelections: Record<string, string[]>,
     isUpdate?: boolean,
+    optimisticSelectedModifiers?: import('@/src/features/cart').SelectedModifierResponse[],
   ) => void;
 }
