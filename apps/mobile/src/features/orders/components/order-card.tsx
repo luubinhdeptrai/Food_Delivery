@@ -1,9 +1,10 @@
 import { View, Text, TouchableOpacity } from 'react-native';
+import { formatCurrency } from '@/src/lib/format-utils';
 import { OrderListItem, OrderStatus } from '../types';
 
 export interface OrderProps {
   order: OrderListItem;
-  onActionPress: () => void;
+  onPress: () => void;
 }
 
 const STATUS_CONFIG: Record<
@@ -22,7 +23,7 @@ const STATUS_CONFIG: Record<
   refunded: { label: 'Refunded', isProcessing: false },
 };
 
-export function OrderCard({ order, onActionPress }: OrderProps) {
+export function OrderCard({ order, onPress }: OrderProps) {
   const statusInfo = STATUS_CONFIG[order.status] || {
     label: order.status,
     isProcessing: false,
@@ -38,7 +39,13 @@ export function OrderCard({ order, onActionPress }: OrderProps) {
   const actionText = isProcessing ? 'Track Order' : 'Reorder';
 
   return (
-    <View className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm mb-6 mx-4">
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`View order ${order.orderId.slice(0, 8).toUpperCase()} details`}
+      className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm mb-6 mx-4"
+    >
       <View className="p-5 flex-col gap-4">
         {/* Header */}
         <View className="flex-row justify-between items-start">
@@ -118,23 +125,19 @@ export function OrderCard({ order, onActionPress }: OrderProps) {
               className="text-lg text-on-surface"
               style={{ fontFamily: 'PlusJakartaSans_700Bold' }}
             >
-              ${order.totalAmount.toFixed(2)}
+              {formatCurrency(order.totalAmount)}
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={onActionPress}
-            activeOpacity={0.8}
-            className="bg-primary px-6 py-3 rounded-full shadow-md items-center justify-center min-w-[120px]"
-          >
+          <View className="bg-primary px-6 py-3 rounded-full shadow-md items-center justify-center min-w-[120px]">
             <Text
               className="text-on-primary text-sm"
               style={{ fontFamily: 'Inter_700Bold' }}
             >
               {actionText}
             </Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
