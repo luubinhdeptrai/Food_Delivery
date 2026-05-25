@@ -5,6 +5,7 @@ import { OrderListItem, OrderStatus } from '../types';
 export interface OrderProps {
   order: OrderListItem;
   onPress: () => void;
+  onActionPress?: () => void;
 }
 
 const STATUS_CONFIG: Record<
@@ -23,7 +24,7 @@ const STATUS_CONFIG: Record<
   refunded: { label: 'Refunded', isProcessing: false },
 };
 
-export function OrderCard({ order, onPress }: OrderProps) {
+export function OrderCard({ order, onPress, onActionPress }: OrderProps) {
   const statusInfo = STATUS_CONFIG[order.status] || {
     label: order.status,
     isProcessing: false,
@@ -37,6 +38,7 @@ export function OrderCard({ order, onPress }: OrderProps) {
   });
 
   const actionText = isProcessing ? 'Track Order' : 'Reorder';
+  const handleActionPress = onActionPress ?? onPress;
 
   return (
     <TouchableOpacity
@@ -128,14 +130,20 @@ export function OrderCard({ order, onPress }: OrderProps) {
               {formatCurrency(order.totalAmount)}
             </Text>
           </View>
-          <View className="bg-primary px-6 py-3 rounded-full shadow-md items-center justify-center min-w-[120px]">
+          <TouchableOpacity
+            onPress={handleActionPress}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`${actionText} for order ${order.orderId.slice(0, 8).toUpperCase()}`}
+            className="bg-primary px-6 py-3 rounded-full shadow-md items-center justify-center min-w-[120px]"
+          >
             <Text
               className="text-on-primary text-sm"
               style={{ fontFamily: 'Inter_700Bold' }}
             >
               {actionText}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>

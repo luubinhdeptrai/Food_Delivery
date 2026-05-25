@@ -51,7 +51,10 @@ export function useGuardedAddToCart() {
 
   const addItem = useCallback(
     (payload: AddItemToCartRequest, options?: GuardedAddToCartOptions) => {
-      if (isCartLoading || isAddingToCart || isClearingCart) return;
+      if (isCartLoading || isAddingToCart || isClearingCart) {
+        Alert.alert('Please wait', 'A cart operation is already in progress');
+        return;
+      }
 
       if (cartHasDifferentRestaurant(cart, payload.restaurantId)) {
         Alert.alert(
