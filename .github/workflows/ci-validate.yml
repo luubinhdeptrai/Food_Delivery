@@ -1,0 +1,131 @@
+name: CI Validate
+
+on:
+  workflow_call:
+    secrets:
+      TURBO_TOKEN:
+        required: true
+      TURBO_TEAM:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate (Check, Scan, Test, Build)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: food_order_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Code (Checkout)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Turbo Affected Range
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ -n "${PR_BASE_SHA}" ]]; then
+            base_ref="${PR_BASE_SHA}"
+          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            base_ref="HEAD^"
+          else
+            base_ref="$(git rev-list --max-parents=0 HEAD)"
+          fi
+
+          echo "TURBO_SCM_BASE=${base_ref}" >> "$GITHUB_ENV"
+          echo "TURBO_SCM_HEAD=HEAD" >> "$GITHUB_ENV"
+          echo "Turbo affected range: ${base_ref}...HEAD"
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+
+      - name: Turbo Cache
+        id: turbo-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Check (Lint & Typecheck)
+        run: pnpm turbo run lint typecheck --affected --cache-dir=".turbo"
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: Security Scan (Audit)
+        run: pnpm audit --audit-level high
+
+      - name: Unit Test
+        run: pnpm turbo run test --affected --cache-dir=".turbo"
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
+          VNPAY_HASH_SECRET: ${{ secrets.VNPAY_HASH_SECRET }}
+          VNPAY_URL: ${{ secrets.VNPAY_URL }}
+          VNPAY_RETURN_URL: ${{ secrets.VNPAY_RETURN_URL }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+
+      - name: Build
+        run: pnpm turbo run build --affected --cache-dir=".turbo"
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+      - name: Setup Database (Migrate)
+        run: pnpm --filter=api run db:push
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+          NODE_ENV: test
+
+      - name: Test (E2E)
+        run: pnpm turbo run test:e2e --filter=api --cache-dir=".turbo" -- --detectOpenHandles --forceExit
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
+          VNPAY_HASH_SECRET: ${{ secrets.VNPAY_HASH_SECRET }}
+          VNPAY_URL: ${{ secrets.VNPAY_URL }}
+          VNPAY_RETURN_URL: ${{ secrets.VNPAY_RETURN_URL }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}

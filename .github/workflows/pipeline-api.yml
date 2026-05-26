@@ -1,0 +1,134 @@
+name: API CI/CD Pipeline
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'apps/api/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate API
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: food_order_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Code (Checkout)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+
+      - name: Turbo Cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-api-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-api-
+            ${{ runner.os }}-turbo-
+
+      - name: Check (Lint)
+        run: pnpm --filter=api run lint
+
+      - name: Check (Typecheck)
+        run: pnpm --filter=api run typecheck
+
+      - name: Security Scan (Audit)
+        run: pnpm audit --audit-level high
+
+      - name: Unit Test
+        run: pnpm --filter=api run test
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
+          VNPAY_HASH_SECRET: ${{ secrets.VNPAY_HASH_SECRET }}
+          VNPAY_URL: ${{ secrets.VNPAY_URL }}
+          VNPAY_RETURN_URL: ${{ secrets.VNPAY_RETURN_URL }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+
+      - name: Build
+        run: pnpm --filter=api run build
+
+      - name: Setup Database (Migrate)
+        run: pnpm --filter=api run db:push
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+          NODE_ENV: test
+
+      - name: Test (E2E)
+        run: pnpm --filter=api run test:e2e --detectOpenHandles
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
+          VNPAY_HASH_SECRET: ${{ secrets.VNPAY_HASH_SECRET }}
+          VNPAY_URL: ${{ secrets.VNPAY_URL }}
+          VNPAY_RETURN_URL: ${{ secrets.VNPAY_RETURN_URL }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+
+  publish:
+    name: Publish API Docker Image
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/cd-package-docker.yml
+    with:
+      app: api
+      gh_actor: ${{ github.actor }}
+      gh_repository: ${{ github.repository }}
+    secrets: inherit
+
+  apply-render-infra:
+    name: Apply API Image to Render
+    needs: publish
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/cd-render-iac.yml
+    with:
+      apply: true
+      gh_repository: ${{ github.repository }}
+      api_use_github_sha_tag: true
+    secrets: inherit

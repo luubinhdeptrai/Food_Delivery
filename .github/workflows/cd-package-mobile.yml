@@ -1,0 +1,44 @@
+name: CD Package Mobile
+
+on:
+  workflow_call:
+    secrets:
+      EXPO_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish-mobile:
+    name: Package Mobile (EAS)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
+        with:
+          expo-version: 55.0.30
+          eas-version: 18.13.0
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Setup Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Package (Local Android Build)
+        working-directory: apps/mobile
+        run: eas build --platform android --profile preview --local --non-interactive --output build.apk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mobile-production-build
+          path: apps/mobile/build.apk

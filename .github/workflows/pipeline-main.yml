@@ -1,0 +1,64 @@
+name: Main CI/CD Pipeline
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    uses: ./.github/workflows/ci-validate.yml
+    secrets: inherit
+
+  publish-api-docker:
+    name: Publish API Docker Image
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/cd-package-docker.yml
+    with:
+      app: api
+      gh_actor: ${{ github.actor }}
+      gh_repository: ${{ github.repository }}
+    secrets: inherit
+
+  publish-web-docker:
+    name: Publish Web Docker Image
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/cd-package-docker.yml
+    with:
+      app: web
+      gh_actor: ${{ github.actor }}
+      gh_repository: ${{ github.repository }}
+      vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
+    secrets: inherit
+
+  apply-render-infra:
+    name: Apply Render Infra
+    needs:
+      - publish-api-docker
+      - publish-web-docker
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/cd-render-iac.yml
+    with:
+      apply: true
+      gh_repository: ${{ github.repository }}
+      use_github_sha_tag: true
+    secrets: inherit
+
+  publish-mobile:
+    needs: validate
+    uses: ./.github/workflows/cd-package-mobile.yml
+    secrets:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

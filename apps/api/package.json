@@ -115,6 +115,9 @@
       "^@/(.*)$": "<rootDir>/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },
+    "setupFilesAfterEnv": [
+      "<rootDir>/test-setup.ts"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],

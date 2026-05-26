@@ -9,6 +9,7 @@ export const APP_ROLES = ['admin', 'restaurant', 'shipper', 'user'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
 export const auth = betterAuth({
+  baseUrl: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema,
@@ -30,7 +31,13 @@ export const auth = betterAuth({
         }
       : {}),
   },
-  trustedOrigins: ['http://localhost:5173', 'http://localhost:5174', 'uitfood://', 'exp://**'],
+  trustedOrigins: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'uitfood://',
+    'exp://**',
+    'https://uitfood-web.onrender.com',
+  ],
   plugins: [
     openAPI(),
     bearer(),
