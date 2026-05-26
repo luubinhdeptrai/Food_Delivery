@@ -2,6 +2,7 @@ import { RouterProvider } from 'react-router-dom';
 import { AppProvider } from './provider';
 import { router } from './router';
 import { Sentry } from '@/lib/observability';
+import { AnalyticsProvider } from '@/lib/analytics';
 
 function ErrorFallback() {
   return (
@@ -18,7 +19,9 @@ export function App() {
   return (
     <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
       <AppProvider>
-        <RouterProvider router={router} />
+        <AnalyticsProvider>
+          <RouterProvider router={router} />
+        </AnalyticsProvider>
       </AppProvider>
     </Sentry.ErrorBoundary>
   );

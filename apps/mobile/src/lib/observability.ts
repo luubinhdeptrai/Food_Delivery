@@ -11,17 +11,31 @@ export function initMobileObservability(): void {
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
   if (!dsn) return;
 
+  const environment =
+    process.env.EXPO_PUBLIC_APP_ENV ??
+    process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT ??
+    process.env.NODE_ENV;
+  const release =
+    process.env.EXPO_PUBLIC_SENTRY_RELEASE ??
+    process.env.EXPO_PUBLIC_APP_VERSION;
+
   Sentry.init({
     dsn,
-    environment:
-      process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
-    release: process.env.EXPO_PUBLIC_SENTRY_RELEASE,
+    environment,
+    release,
     tracesSampleRate: numberFromEnv(
       process.env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
       0.1,
     ),
     sendDefaultPii: false,
     enableAutoSessionTracking: true,
+    initialScope: {
+      tags: {
+        app_env: environment,
+        app_version: process.env.EXPO_PUBLIC_APP_VERSION,
+        commit_sha: process.env.EXPO_PUBLIC_COMMIT_SHA,
+      },
+    },
   });
 }
 

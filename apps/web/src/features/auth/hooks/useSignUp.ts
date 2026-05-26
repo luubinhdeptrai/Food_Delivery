@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { signUp } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
+import { trackEvent } from '@/lib/analytics';
 
 export interface SignUpInput {
   email: string;
@@ -29,7 +30,15 @@ export function useSignUp() {
       return result.data;
     },
     onSuccess: () => {
+      trackEvent('signup_success', { method: 'email' });
       navigate('/auth/register/business');
+    },
+    onError: (error) => {
+      trackEvent('signup_failure', {
+        method: 'email',
+        code: error instanceof ApiError ? error.code : 'UNKNOWN',
+        status: error instanceof ApiError ? error.status : 0,
+      });
     },
   });
 }

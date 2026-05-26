@@ -18,11 +18,19 @@ export function initObservability(): void {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!dsn) return;
 
+  const environment =
+    import.meta.env.VITE_APP_ENV ??
+    import.meta.env.VITE_SENTRY_ENVIRONMENT ??
+    import.meta.env.MODE;
+  const release =
+    import.meta.env.VITE_SENTRY_RELEASE ??
+    import.meta.env.VITE_APP_VERSION ??
+    undefined;
+
   Sentry.init({
     dsn,
-    environment:
-      import.meta.env.VITE_SENTRY_ENVIRONMENT ?? import.meta.env.MODE,
-    release: import.meta.env.VITE_SENTRY_RELEASE,
+    environment,
+    release,
     tracesSampleRate: numberFromEnv(
       import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE,
       0.1,
@@ -30,6 +38,13 @@ export function initObservability(): void {
     integrations: [Sentry.browserTracingIntegration()],
     tracePropagationTargets: [/^\/api/, escapedRegExp(apiBaseUrl)],
     sendDefaultPii: false,
+    initialScope: {
+      tags: {
+        app_env: environment,
+        app_version: import.meta.env.VITE_APP_VERSION,
+        commit_sha: import.meta.env.VITE_COMMIT_SHA,
+      },
+    },
   });
 }
 

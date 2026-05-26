@@ -6,6 +6,7 @@ import {
   removeCartItem,
   clearCart,
 } from '../api/cart-api';
+import { trackMobileEvent } from '@/src/lib/analytics';
 
 export const cartKeys = {
   all: ['cart'] as const,
@@ -32,7 +33,11 @@ export function useAddToCart() {
 
   return useMutation({
     mutationFn: addItemToCart,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      trackMobileEvent('cart_item_added', {
+        menu_item_id: variables.menuItemId,
+        quantity: variables.quantity,
+      });
       queryClient.invalidateQueries({ queryKey: cartKeys.all });
     },
   });

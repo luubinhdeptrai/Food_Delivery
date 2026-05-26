@@ -1,8 +1,7 @@
-import { SpanStatusCode, trace } from '@opentelemetry/api';
-import { captureException } from './sentry';
-import { redactValue } from './redaction';
+import { trace } from '@opentelemetry/api';
+import { recordException } from './errors';
 
-const tracer = trace.getTracer('uitfood-api');
+const tracer = trace.getTracer(process.env.OTEL_SERVICE_NAME ?? 'uitfood-api');
 
 export async function runObserved<T>(
   name: string,
@@ -20,16 +19,9 @@ export async function runObserved<T>(
       try {
         return await fn();
       } catch (error) {
-        if (error instanceof Error) {
-          span.recordException(error);
-        }
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error instanceof Error ? error.message : String(error),
-        });
-        captureException(error, {
-          tags: { span: name },
-          extras: { attributes: redactValue(attributes) },
+        recordException(error, {
+          span: name,
+          ...attributes,
         });
         throw error;
       } finally {

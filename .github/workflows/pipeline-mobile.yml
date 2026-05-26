@@ -50,9 +50,14 @@ jobs:
         run: pnpm --filter=mobile run build
         env:
           EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+          EXPO_PUBLIC_APP_ENV: production
+          EXPO_PUBLIC_APP_VERSION: ${{ vars.APP_VERSION || '1.0.0' }}
+          EXPO_PUBLIC_COMMIT_SHA: ${{ github.sha }}
           EXPO_PUBLIC_SENTRY_ENVIRONMENT: production
           EXPO_PUBLIC_SENTRY_RELEASE: sha-${{ github.sha }}
           EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
+          EXPO_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_MOBILE_KEY }}
+          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_MOBILE_HOST || 'https://app.posthog.com' }}
 
       - name: Upload Sentry Source Maps
         working-directory: apps/mobile
@@ -61,12 +66,15 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_MOBILE_PROJECT }}
+          SENTRY_RELEASE: sha-${{ github.sha }}
         run: |
           if [[ -z "${SENTRY_AUTH_TOKEN}" || -z "${SENTRY_ORG}" || -z "${SENTRY_PROJECT}" ]]; then
             echo "Sentry mobile sourcemap upload skipped: missing Sentry CI configuration."
             exit 0
           fi
-          pnpm exec sentry-expo-upload-sourcemaps dist
+          pnpm exec sentry-cli releases new "${SENTRY_RELEASE}" || true
+          pnpm exec sentry-cli sourcemaps upload dist --release "${SENTRY_RELEASE}" --rewrite
+          pnpm exec sentry-cli releases finalize "${SENTRY_RELEASE}"
 
   publish:
     name: Publish Mobile Build
@@ -74,3 +82,5 @@ jobs:
     uses: ./.github/workflows/cd-package-mobile.yml
     secrets:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      POSTHOG_MOBILE_KEY: ${{ secrets.POSTHOG_MOBILE_KEY }}

@@ -8,6 +8,9 @@ locals {
       NODE_ENV = {
         value = "production"
       }
+      APP_ENV = {
+        value = var.environment
+      }
     },
     {
       for key, value in var.api_env_vars : key => {

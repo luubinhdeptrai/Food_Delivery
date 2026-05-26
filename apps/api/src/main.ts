@@ -1,4 +1,4 @@
-import { shutdownTelemetry } from './observability/instrumentation';
+import { shutdownTelemetry } from './telemetry';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, OpenAPIObject } from '@nestjs/swagger';
 import { auth } from './lib/auth';
@@ -11,7 +11,6 @@ import * as expressStatic from 'express';
 import { createCorsOptions } from './observability/cors';
 import { JsonLogger } from './observability/json-logger';
 import { requestContextMiddleware } from './observability/request-context';
-import { setupSentryExpressErrorHandler } from './observability/sentry';
 
 function installShutdownHandler(app: INestApplication): void {
   let shutdownStarted = false;
@@ -121,7 +120,6 @@ async function bootstrap() {
     }),
   );
 
-  setupSentryExpressErrorHandler(app.getHttpAdapter().getInstance());
   installShutdownHandler(app);
 
   await app.listen(process.env.PORT ?? 3000);

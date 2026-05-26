@@ -51,7 +51,10 @@ describe('requestContextMiddleware', () => {
 
     requestContextMiddleware(request as never, response as never, jest.fn());
 
-    const requestId = response.setHeader.mock.calls[0]?.[1] as string;
+    const setHeaderCalls = response.setHeader.mock.calls as Array<
+      [string, string]
+    >;
+    const requestId = setHeaderCalls[0]?.[1] ?? '';
     expect(requestId).not.toBe('req-123\r\nx-bad: injected');
     expect(requestId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,

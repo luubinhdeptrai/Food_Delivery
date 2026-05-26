@@ -1,7 +1,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
-import { trace } from '@opentelemetry/api';
+import { metrics, trace } from '@opentelemetry/api';
+import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import type { NextFunction, Request, Response } from 'express';
+import { toLogAttributes } from './otel-attributes';
 import { redactHeaders } from './redaction';
 
 export interface RequestContext {
@@ -15,6 +17,23 @@ export interface RequestContext {
 
 const storage = new AsyncLocalStorage<RequestContext>();
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._~:-]{1,128}$/;
+const meter = metrics.getMeter(process.env.OTEL_SERVICE_NAME ?? 'uitfood-api');
+const requestCount = meter.createCounter('api.http.requests', {
+  description: 'Total API HTTP requests',
+});
+const errorCount = meter.createCounter('api.http.errors', {
+  description: 'Total API HTTP requests with 5xx responses',
+});
+const requestDuration = meter.createHistogram('api.http.request.duration_ms', {
+  description: 'API HTTP request duration',
+  unit: 'ms',
+});
+const activeRequests = meter.createUpDownCounter('api.http.active_requests', {
+  description: 'Active API HTTP requests',
+});
+const otelLogger = logs.getLogger(
+  process.env.OTEL_SERVICE_NAME ?? 'uitfood-api',
+);
 
 function firstHeader(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -59,32 +78,67 @@ export function requestContextMiddleware(
   res.setHeader('x-request-id', context.requestId);
 
   storage.run(context, () => {
-    res.on('finish', () => {
-      if (isHealthPath(context.path)) return;
+    const metricBase = {
+      'http.request.method': context.method,
+      'url.path': context.path,
+    };
 
+    activeRequests.add(1, metricBase);
+
+    res.on('finish', () => {
       const user = (req as Request & { user?: { id?: string } }).user;
       const durationMs = Math.round(performance.now() - context.startedAt);
+      const metricAttributes = {
+        ...metricBase,
+        'http.response.status_code': res.statusCode,
+      };
 
-      console.log(
-        JSON.stringify({
-          level: res.statusCode >= 500 ? 'error' : 'info',
-          timestamp: new Date().toISOString(),
-          event: 'http.request',
-          requestId: context.requestId,
-          traceId: context.traceId,
-          spanId: context.spanId,
-          method: context.method,
-          path: context.path,
-          statusCode: res.statusCode,
-          durationMs,
-          userId: user?.id,
-          cfRay: firstHeader(req.headers['cf-ray']),
-          requestHeaders: redactHeaders({
-            'user-agent': req.headers['user-agent'],
-            'x-forwarded-proto': req.headers['x-forwarded-proto'],
-          }),
+      activeRequests.add(-1, metricBase);
+
+      if (isHealthPath(context.path)) return;
+
+      requestCount.add(1, metricAttributes);
+      requestDuration.record(durationMs, metricAttributes);
+      if (res.statusCode >= 500) {
+        errorCount.add(1, metricAttributes);
+      }
+
+      const record = {
+        level: res.statusCode >= 500 ? 'error' : 'info',
+        timestamp: new Date().toISOString(),
+        event: 'http.request',
+        service: process.env.OTEL_SERVICE_NAME ?? 'uitfood-api',
+        environment:
+          process.env.APP_ENV ?? process.env.NODE_ENV ?? 'development',
+        version: process.env.APP_VERSION,
+        commitSha: process.env.COMMIT_SHA,
+        requestId: context.requestId,
+        traceId: context.traceId,
+        spanId: context.spanId,
+        method: context.method,
+        path: context.path,
+        statusCode: res.statusCode,
+        durationMs,
+        userId: user?.id,
+        cfRay: firstHeader(req.headers['cf-ray']),
+        requestHeaders: redactHeaders({
+          'user-agent': req.headers['user-agent'],
+          'x-forwarded-proto': req.headers['x-forwarded-proto'],
         }),
-      );
+      };
+
+      if ((process.env.OTEL_LOGS_EXPORTER ?? 'none').toLowerCase() !== 'none') {
+        otelLogger.emit({
+          eventName: 'http.request',
+          severityNumber:
+            res.statusCode >= 500 ? SeverityNumber.ERROR : SeverityNumber.INFO,
+          severityText: record.level,
+          body: `${context.method} ${context.path} ${res.statusCode}`,
+          attributes: toLogAttributes(record),
+        });
+      }
+
+      console.log(JSON.stringify(record));
     });
 
     next();

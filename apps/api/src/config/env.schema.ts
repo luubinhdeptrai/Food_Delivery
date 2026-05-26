@@ -146,18 +146,28 @@ export const envSchema = z.object({
   FIREBASE_SERVICE_ACCOUNT_PATH: z.string().optional(),
 
   // ---------------------------------------------------------------------------
-  // Observability - optional. When absent, Sentry and OpenTelemetry exporters
-  // stay disabled and the app continues to run with local structured logs.
+  // Observability - optional. When absent, OpenTelemetry exporters stay disabled
+  // and the app continues to run with local structured JSON logs.
   // ---------------------------------------------------------------------------
-  SENTRY_DSN: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
-  SENTRY_ENVIRONMENT: z.string().optional(),
-  SENTRY_RELEASE: z.string().optional(),
-  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
+  APP_ENV: z.string().default('development'),
+  APP_VERSION: z.string().default('local'),
+  COMMIT_SHA: z.string().optional(),
   OTEL_SERVICE_NAME: z.string().default('uitfood-api'),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(
     emptyStringToUndefined,
     z.string().url().optional(),
   ),
+  OTEL_EXPORTER_OTLP_HEADERS: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  OTEL_RESOURCE_ATTRIBUTES: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  OTEL_TRACES_EXPORTER: z.string().default('otlp'),
+  OTEL_METRICS_EXPORTER: z.string().default('otlp'),
+  OTEL_LOGS_EXPORTER: z.string().default('otlp'),
   OTEL_TRACES_SAMPLER: z
     .enum([
       'always_on',

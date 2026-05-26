@@ -30,6 +30,7 @@ import {
   initMobileObservability,
   Sentry,
 } from '@/src/lib/observability';
+import { MobileAnalyticsProvider } from '@/src/lib/analytics';
 
 initMobileObservability();
 
@@ -148,7 +149,9 @@ function AppLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RootNavigation />
+      <MobileAnalyticsProvider>
+        <RootNavigation />
+      </MobileAnalyticsProvider>
     </QueryClientProvider>
   );
 }

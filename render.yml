@@ -14,6 +14,22 @@ projects:
             envVars:
               - key: VITE_API_BASE_URL
                 sync: false
+              - key: VITE_APP_ENV
+                sync: false
+              - key: VITE_APP_VERSION
+                sync: false
+              - key: VITE_COMMIT_SHA
+                sync: false
+              - key: VITE_SENTRY_DSN
+                sync: false
+              - key: VITE_SENTRY_RELEASE
+                sync: false
+              - key: VITE_SENTRY_TRACES_SAMPLE_RATE
+                sync: false
+              - key: VITE_POSTHOG_KEY
+                sync: false
+              - key: VITE_POSTHOG_HOST
+                sync: false
             region: singapore
             autoDeployTrigger: 'off'
           - type: web
@@ -35,6 +51,32 @@ projects:
                 fromDatabase:
                   name: UITFood Postgres
                   property: connectionString
+              - key: APP_ENV
+                sync: false
+              - key: APP_VERSION
+                sync: false
+              - key: COMMIT_SHA
+                sync: false
+              - key: OTEL_SERVICE_NAME
+                sync: false
+              - key: OTEL_EXPORTER_OTLP_ENDPOINT
+                sync: false
+              - key: OTEL_EXPORTER_OTLP_HEADERS
+                sync: false
+              - key: OTEL_RESOURCE_ATTRIBUTES
+                sync: false
+              - key: OTEL_TRACES_EXPORTER
+                sync: false
+              - key: OTEL_METRICS_EXPORTER
+                sync: false
+              - key: OTEL_LOGS_EXPORTER
+                sync: false
+              - key: OTEL_TRACES_SAMPLER
+                sync: false
+              - key: OTEL_TRACES_SAMPLER_ARG
+                sync: false
+              - key: LOG_LEVEL
+                sync: false
               - key: FIREBASE_SERVICE_ACCOUNT_PATH
                 sync: false
               - key: soli-food-delivery-FCM-key.json

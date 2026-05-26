@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { signIn } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
+import { trackEvent } from '@/lib/analytics';
 
 export interface SignInInput {
   email: string;
@@ -27,7 +28,15 @@ export function useSignIn() {
       return result.data;
     },
     onSuccess: () => {
+      trackEvent('login_success', { method: 'email' });
       navigate('/dashboard');
+    },
+    onError: (error) => {
+      trackEvent('login_failure', {
+        method: 'email',
+        code: error instanceof ApiError ? error.code : 'UNKNOWN',
+        status: error instanceof ApiError ? error.status : 0,
+      });
     },
   });
 }

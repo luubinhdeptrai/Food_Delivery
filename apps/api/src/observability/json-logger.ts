@@ -1,5 +1,8 @@
 import type { LoggerService, LogLevel } from '@nestjs/common';
 import { trace } from '@opentelemetry/api';
+import { logs, SeverityNumber } from '@opentelemetry/api-logs';
+import type { LogBody } from '@opentelemetry/api-logs';
+import { toLogAttributes } from './otel-attributes';
 import { getRequestContext } from './request-context';
 import { redactString, redactValue } from './redaction';
 
@@ -21,6 +24,19 @@ const LOG_LEVEL_ALIASES: Record<string, LogLevel> = {
   log: 'log',
   debug: 'debug',
   verbose: 'verbose',
+};
+
+const OTEL_LOGGER = logs.getLogger(
+  process.env.OTEL_SERVICE_NAME ?? 'uitfood-api',
+);
+
+const OTEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
+  fatal: SeverityNumber.FATAL,
+  error: SeverityNumber.ERROR,
+  warn: SeverityNumber.WARN,
+  log: SeverityNumber.INFO,
+  debug: SeverityNumber.DEBUG,
+  verbose: SeverityNumber.TRACE,
 };
 
 export class JsonLogger implements LoggerService {
@@ -70,9 +86,9 @@ export class JsonLogger implements LoggerService {
       level: level === 'log' ? 'info' : level,
       timestamp: new Date().toISOString(),
       service: process.env.OTEL_SERVICE_NAME ?? 'uitfood-api',
-      environment:
-        process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
-      release: process.env.SENTRY_RELEASE,
+      environment: process.env.APP_ENV ?? process.env.NODE_ENV ?? 'development',
+      version: process.env.APP_VERSION,
+      commitSha: process.env.COMMIT_SHA,
       context,
       requestId: requestContext?.requestId,
       traceId: span?.traceId,
@@ -82,6 +98,8 @@ export class JsonLogger implements LoggerService {
       extras: extras.length > 0 ? redactValue(extras) : undefined,
     };
 
+    this.emitOpenTelemetryLog(level, record, normalizedMessage);
+
     const line = JSON.stringify(record);
     if (level === 'error' || level === 'fatal') {
       console.error(line);
@@ -90,6 +108,23 @@ export class JsonLogger implements LoggerService {
     } else {
       console.log(line);
     }
+  }
+
+  private emitOpenTelemetryLog(
+    level: LogLevel,
+    record: Record<string, unknown>,
+    body: unknown,
+  ): void {
+    if ((process.env.OTEL_LOGS_EXPORTER ?? 'none').toLowerCase() === 'none') {
+      return;
+    }
+
+    OTEL_LOGGER.emit({
+      severityNumber: OTEL_SEVERITY[level],
+      severityText: level === 'log' ? 'info' : level,
+      body: body as LogBody,
+      attributes: toLogAttributes(record, { omit: ['message'] }),
+    });
   }
 
   private parseOptionalParams(optionalParams: unknown[]): {

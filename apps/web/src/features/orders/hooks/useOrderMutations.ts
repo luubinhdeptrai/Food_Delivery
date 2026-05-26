@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordersApi } from '../api/orders.api';
 import { orderKeys } from './useOrders';
+import { trackEvent } from '@/lib/analytics';
 
 function useTransition() {
   const qc = useQueryClient();
@@ -16,7 +17,13 @@ export function useConfirmOrder() {
   const invalidate = useTransition();
   return useMutation({
     mutationFn: (id: string) => ordersApi.confirmOrder(id),
-    onSuccess:  (_, id) => invalidate(id),
+    onSuccess: (_, id) => {
+      trackEvent('order_status_changed', {
+        order_id: id,
+        status: 'confirmed',
+      });
+      invalidate(id);
+    },
   });
 }
 
@@ -25,7 +32,13 @@ export function useStartPreparing() {
   const invalidate = useTransition();
   return useMutation({
     mutationFn: (id: string) => ordersApi.startPreparing(id),
-    onSuccess:  (_, id) => invalidate(id),
+    onSuccess: (_, id) => {
+      trackEvent('order_status_changed', {
+        order_id: id,
+        status: 'preparing',
+      });
+      invalidate(id);
+    },
   });
 }
 
@@ -34,7 +47,13 @@ export function useMarkReady() {
   const invalidate = useTransition();
   return useMutation({
     mutationFn: (id: string) => ordersApi.markReady(id),
-    onSuccess:  (_, id) => invalidate(id),
+    onSuccess: (_, id) => {
+      trackEvent('order_status_changed', {
+        order_id: id,
+        status: 'ready_for_pickup',
+      });
+      invalidate(id);
+    },
   });
 }
 
@@ -44,6 +63,12 @@ export function useCancelOrder() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       ordersApi.cancelOrder(id, reason),
-    onSuccess: (_, { id }) => invalidate(id),
+    onSuccess: (_, { id }) => {
+      trackEvent('order_status_changed', {
+        order_id: id,
+        status: 'cancelled',
+      });
+      invalidate(id);
+    },
   });
 }

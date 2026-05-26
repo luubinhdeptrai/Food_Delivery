@@ -50,10 +50,15 @@ jobs:
         run: pnpm --filter=web run build
         env:
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_APP_ENV: production
+          VITE_APP_VERSION: ${{ vars.APP_VERSION || '0.1.0' }}
+          VITE_COMMIT_SHA: ${{ github.sha }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
           VITE_SENTRY_ENVIRONMENT: production
           VITE_SENTRY_RELEASE: sha-${{ github.sha }}
           VITE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
+          VITE_POSTHOG_KEY: ${{ secrets.POSTHOG_WEB_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.POSTHOG_WEB_HOST || 'https://app.posthog.com' }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_WEB_PROJECT }}
@@ -70,9 +75,14 @@ jobs:
       gh_actor: ${{ github.actor }}
       gh_repository: ${{ github.repository }}
       vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
+      vite_app_env: production
+      vite_app_version: ${{ vars.APP_VERSION || '0.1.0' }}
+      vite_commit_sha: ${{ github.sha }}
       vite_sentry_dsn: ${{ vars.VITE_SENTRY_DSN }}
       vite_sentry_environment: production
       vite_sentry_traces_sample_rate: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
+      vite_posthog_key: ${{ vars.POSTHOG_WEB_KEY }}
+      vite_posthog_host: ${{ vars.POSTHOG_WEB_HOST || 'https://app.posthog.com' }}
     secrets: inherit
 
   apply-render-infra:

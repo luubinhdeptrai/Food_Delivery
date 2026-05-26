@@ -8,7 +8,7 @@ import {
 import type { Request } from 'express';
 import { catchError, throwError } from 'rxjs';
 import { getRequestContext } from './request-context';
-import { captureException } from './sentry';
+import { recordException } from './errors';
 
 function objectRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object'
@@ -32,13 +32,10 @@ export class ObservabilityInterceptor implements NestInterceptor {
 
         if (!status || status >= 500) {
           const requestContext = getRequestContext();
-          captureException(error, {
-            tags: {
-              request_id: requestContext?.requestId ?? 'unknown',
-              handler: context.getHandler().name || 'unknown',
-              transport,
-            },
-            extras: this.exceptionExtras(context, request, status),
+          recordException(error, {
+            requestId: requestContext?.requestId ?? 'unknown',
+            handler: context.getHandler().name || 'unknown',
+            ...this.exceptionExtras(context, request, status),
           });
         }
 
