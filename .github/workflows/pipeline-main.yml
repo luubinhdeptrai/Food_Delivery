@@ -42,20 +42,35 @@ jobs:
       vite_api_base_url: ${{ vars.VITE_API_BASE_URL }}
     secrets: inherit
 
-  apply-render-infra:
-    name: Apply Render Infra
-    needs:
-      - publish-api-docker
-      - publish-web-docker
+  deploy-api-render:
+    name: Deploy API Image to Render
+    needs: publish-api-docker
     if: github.ref == 'refs/heads/master'
     permissions:
       contents: read
-    uses: ./.github/workflows/cd-render-iac.yml
+    uses: ./.github/workflows/cd-deploy-render.yml
     with:
-      apply: true
+      app: api
       gh_repository: ${{ github.repository }}
-      use_github_sha_tag: true
-    secrets: inherit
+      image_url: ${{ needs.publish-api-docker.outputs.image_url }}
+      image_tag: ${{ needs.publish-api-docker.outputs.image_tag }}
+    secrets:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_API_DEPLOY_HOOK }}
+
+  deploy-web-render:
+    name: Deploy Web Image to Render
+    needs: publish-web-docker
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/cd-deploy-render.yml
+    with:
+      app: web
+      gh_repository: ${{ github.repository }}
+      image_url: ${{ needs.publish-web-docker.outputs.image_url }}
+      image_tag: ${{ needs.publish-web-docker.outputs.image_tag }}
+    secrets:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
 
   publish-mobile:
     needs: validate

@@ -16,6 +16,16 @@ on:
         required: false
         type: string
         default: ''
+    outputs:
+      image_url:
+        description: Published GHCR image repository URL.
+        value: ${{ jobs.publish.outputs.image_url }}
+      image_tag:
+        description: Published short-SHA image tag.
+        value: ${{ jobs.publish.outputs.image_tag }}
+      image_ref:
+        description: Published image reference used by Render deploy hooks.
+        value: ${{ jobs.publish.outputs.image_ref }}
 
 permissions:
   contents: read
@@ -25,6 +35,10 @@ jobs:
   publish:
     name: Package & Publish Docker (${{ inputs.app }})
     runs-on: ubuntu-latest
+    outputs:
+      image_url: ${{ steps.image.outputs.name }}
+      image_tag: ${{ steps.image.outputs.tag }}
+      image_ref: ${{ steps.image.outputs.ref }}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -48,7 +62,10 @@ jobs:
         run: |
           set -euo pipefail
           image="ghcr.io/${GH_REPOSITORY,,}-${APP,,}"
+          image_tag="sha-${GITHUB_SHA:0:7}"
           echo "name=${image}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+          echo "ref=${image}@${image_tag}" >> "${GITHUB_OUTPUT}"
 
       - name: Extract metadata
         id: meta

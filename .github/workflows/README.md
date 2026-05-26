@@ -11,8 +11,7 @@ this directory is organized by filename prefix instead of nested folders.
 - `pipeline-api.yml`: API-specific CI/CD pipeline.
 - `pipeline-web.yml`: Web-specific CI/CD pipeline.
 - `pipeline-mobile.yml`: Mobile-specific CI/CD pipeline.
-- `pipeline-render-iac.yml`: Render Terraform pipeline that applies
-  `infra/render/**` changes on `master`.
+- `pipeline-render-deploy.yml`: manual Render image deployment pipeline.
 
 ## CI
 
@@ -23,4 +22,4 @@ this directory is organized by filename prefix instead of nested folders.
 
 - `cd-package-docker.yml`: reusable Docker build and GHCR push workflow.
 - `cd-package-mobile.yml`: reusable mobile build package workflow.
-- `cd-render-iac.yml`: reusable Render Terraform init, plan, and apply workflow.
+- `cd-deploy-render.yml`: reusable Render deploy-hook workflow for GHCR images.

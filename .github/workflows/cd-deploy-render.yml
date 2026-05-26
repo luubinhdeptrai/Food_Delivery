@@ -1,0 +1,92 @@
+name: CD Deploy Render
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+      gh_repository:
+        required: true
+        type: string
+      image_url:
+        required: false
+        type: string
+        default: ''
+      image_tag:
+        required: false
+        type: string
+        default: ''
+      image_ref:
+        required: false
+        type: string
+        default: ''
+    outputs:
+      image_ref:
+        description: Image reference sent to the Render deploy hook.
+        value: ${{ jobs.deploy.outputs.image_ref }}
+    secrets:
+      RENDER_DEPLOY_HOOK_URL:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.app }} Image to Render
+    runs-on: ubuntu-latest
+    outputs:
+      image_ref: ${{ steps.image.outputs.ref }}
+    steps:
+      - name: Resolve image reference
+        id: image
+        shell: bash
+        env:
+          APP: ${{ inputs.app }}
+          GH_REPOSITORY: ${{ inputs.gh_repository }}
+          IMAGE_REF_INPUT: ${{ inputs.image_ref }}
+          IMAGE_TAG_INPUT: ${{ inputs.image_tag }}
+          IMAGE_URL_INPUT: ${{ inputs.image_url }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${IMAGE_REF_INPUT}" ]; then
+            image_ref="${IMAGE_REF_INPUT}"
+          else
+            image_url="${IMAGE_URL_INPUT:-ghcr.io/${GH_REPOSITORY,,}-${APP,,}}"
+            image_tag="${IMAGE_TAG_INPUT:-sha-${GITHUB_SHA:0:7}}"
+            image_ref="${image_url}@${image_tag}"
+          fi
+
+          echo "ref=${image_ref}" >> "${GITHUB_OUTPUT}"
+          echo "Deploying ${image_ref}"
+
+      - name: Trigger Render deploy hook
+        shell: bash
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          IMAGE_REF: ${{ steps.image.outputs.ref }}
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          http_code="$(
+            curl \
+              --silent \
+              --show-error \
+              --location \
+              --get \
+              --data-urlencode "imgURL=${IMAGE_REF}" \
+              --output "${response_file}" \
+              --write-out "%{http_code}" \
+              "${DEPLOY_HOOK_URL}"
+          )"
+
+          if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
+            echo "Render deploy hook failed with HTTP ${http_code}." >&2
+            cat "${response_file}" >&2
+            exit 1
+          fi
+
+          cat "${response_file}"
