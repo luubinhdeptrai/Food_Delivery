@@ -1720,8 +1720,8 @@ package "PostgreSQL\nsingle physical database\nlogical schemas grouped by BC own
     }
   }
 
-  package "REVIEW_RATING\n[Target logical schema]" as DReview #E0F2FE {
-    entity "reviews\n[Planned]" as reviews <<planned>> {
+  package "REVIEW_RATING" as DReview #E0F2FE {
+    entity "reviews" as reviews {
       *id : uuid
       --
       orderId : uuid
@@ -1732,7 +1732,7 @@ package "PostgreSQL\nsingle physical database\nlogical schemas grouped by BC own
       moderationStatus : text
     }
 
-    entity "ratings\n[Planned]" as ratings <<planned>> {
+    entity "ratings" as ratings {
       *targetType : text
       *targetId : uuid
       --
@@ -1742,8 +1742,8 @@ package "PostgreSQL\nsingle physical database\nlogical schemas grouped by BC own
     }
   }
 
-  package "ADMIN_GOVERNANCE\n[Target logical schema]" as DAdmin #FDF2F8 {
-    entity "partner_applications\n[Planned]" as partner_applications <<planned>> {
+  package "ADMIN_GOVERNANCE" as DAdmin #FDF2F8 {
+    entity "partner_applications" as partner_applications {
       *id : uuid
       --
       applicantUserId : uuid
@@ -1753,7 +1753,7 @@ package "PostgreSQL\nsingle physical database\nlogical schemas grouped by BC own
       decidedAt : timestamp
     }
 
-    entity "governance_audit_logs\n[Planned]" as governance_audit_logs <<planned>> {
+    entity "governance_audit_logs" as governance_audit_logs {
       *id : uuid
       --
       actorId : uuid
@@ -1797,7 +1797,7 @@ package "SHARED_STATE\nRedis / Valkey" as DShared #FDE68A {
     heartbeatTtl : integer
   }
 
-  entity "rate-limit buckets\n[Planned]" as rate_limit_buckets <<planned>> {
+  entity "rate-limit buckets" as rate_limit_buckets {
     *bucketKey : text
     --
     windowStart : timestamp
