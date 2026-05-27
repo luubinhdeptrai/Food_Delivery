@@ -1,8 +1,14 @@
 import { RouterProvider } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AppProvider } from './provider';
 import { router } from './router';
 import { Sentry } from '@/lib/observability';
-import { AnalyticsProvider } from '@/lib/analytics';
+import {
+  AnalyticsProvider,
+  identifyUser,
+  resetAnalyticsIdentity,
+} from '@/lib/analytics';
+import { useSession } from '@/lib/auth-client';
 
 function ErrorFallback() {
   return (
@@ -15,11 +21,32 @@ function ErrorFallback() {
   );
 }
 
+function ObservabilityIdentitySync() {
+  const { data: session, isPending } = useSession();
+  const userId = session?.user?.id;
+
+  useEffect(() => {
+    if (isPending) return;
+
+    if (userId) {
+      identifyUser(userId);
+      Sentry.setUser({ id: userId });
+      return;
+    }
+
+    resetAnalyticsIdentity();
+    Sentry.setUser(null);
+  }, [userId, isPending]);
+
+  return null;
+}
+
 export function App() {
   return (
     <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
       <AppProvider>
         <AnalyticsProvider>
+          <ObservabilityIdentitySync />
           <RouterProvider router={router} />
         </AnalyticsProvider>
       </AppProvider>

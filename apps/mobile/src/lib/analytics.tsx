@@ -100,7 +100,7 @@ function MobileScreenTracker() {
   const posthog = usePostHog();
 
   useEffect(() => {
-    if (!pathname) return;
+    if (!pathname || !posthog) return;
     void posthog.screen(pathname, {
       ...appMetadata(),
       pathname,

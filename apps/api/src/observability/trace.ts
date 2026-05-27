@@ -1,4 +1,4 @@
-import { trace } from '@opentelemetry/api';
+import { SpanStatusCode, trace } from '@opentelemetry/api';
 import { recordException } from './errors';
 
 const tracer = trace.getTracer(process.env.OTEL_SERVICE_NAME ?? 'uitfood-api');
@@ -17,7 +17,9 @@ export async function runObserved<T>(
     },
     async (span) => {
       try {
-        return await fn();
+        const result = await fn();
+        span.setStatus({ code: SpanStatusCode.OK });
+        return result;
       } catch (error) {
         recordException(error, {
           span: name,

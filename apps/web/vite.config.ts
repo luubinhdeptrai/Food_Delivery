@@ -26,6 +26,7 @@ if (shouldUploadSourcemaps) {
       },
       sourcemaps: {
         assets: './dist/**',
+        deleteAfterUpload: true,
       },
     }),
   );
@@ -34,7 +35,7 @@ if (shouldUploadSourcemaps) {
 export default defineConfig({
   plugins,
   build: {
-    sourcemap: shouldUploadSourcemaps,
+    sourcemap: shouldUploadSourcemaps ? 'hidden' : true,
   },
   resolve: {
     alias: {

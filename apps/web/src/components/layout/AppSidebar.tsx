@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   UtensilsCrossed,
   LayoutDashboard,
@@ -17,6 +17,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { signOut } from '@/lib/auth-client';
+import { resetAnalyticsIdentity } from '@/lib/analytics';
+import { Sentry } from '@/lib/observability';
 
 const mainNavItems = [
   {
@@ -42,16 +45,21 @@ const footerNavItems = [
     url: '/help',
     icon: CircleHelp,
   },
-  {
-    title: 'Logout',
-    url: '/logout',
-    icon: LogOut,
-    className: 'text-error',
-  },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      resetAnalyticsIdentity();
+      Sentry.setUser(null);
+      navigate('/auth/login', { replace: true });
+    }
+  };
 
   return (
     <Sidebar className="bg-card">
@@ -120,6 +128,16 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              type="button"
+              onClick={handleSignOut}
+              className="text-on-surface-variant hover:bg-surface-container"
+            >
+              <LogOut className="text-error" />
+              <span className="text-error">Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

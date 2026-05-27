@@ -30,7 +30,11 @@ import {
   initMobileObservability,
   Sentry,
 } from '@/src/lib/observability';
-import { MobileAnalyticsProvider } from '@/src/lib/analytics';
+import {
+  identifyMobileUser,
+  MobileAnalyticsProvider,
+  resetMobileAnalyticsIdentity,
+} from '@/src/lib/analytics';
 
 initMobileObservability();
 
@@ -76,11 +80,25 @@ function RootNavigation() {
   const { data: session, isPending } = useSession();
   const segments = useSegments();
   const router = useRouter();
+  const userId = session?.user?.id;
 
   // Initialize notifications
   useNotificationSocket();
   usePushToken();
   useNotificationHandler();
+
+  useEffect(() => {
+    if (isPending) return;
+
+    if (userId) {
+      identifyMobileUser(userId);
+      Sentry.setUser({ id: userId });
+      return;
+    }
+
+    resetMobileAnalyticsIdentity();
+    Sentry.setUser(null);
+  }, [userId, isPending]);
 
   useEffect(() => {
     if (isPending) return;
