@@ -2,6 +2,8 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { signIn, signOut } from '@/lib/auth-client';
 import { ApiError } from '@/lib/api-client';
+import { identifyUser, trackEvent } from '@/lib/analytics';
+import { Sentry } from '@/lib/observability';
 
 export interface SignInInput {
   email: string;
@@ -36,8 +38,20 @@ export function useSignIn() {
       }
       return result.data;
     },
-    onSuccess: () => {
-      navigate('/', { replace: true });
+    onSuccess: (session) => {
+      trackEvent('login_success', { method: 'email' });
+      if (session?.user?.id) {
+        identifyUser(session.user.id);
+        Sentry.setUser({ id: session.user.id });
+      }
+      navigate('/dashboard');
+    },
+    onError: (error) => {
+      trackEvent('login_failure', {
+        method: 'email',
+        code: error instanceof ApiError ? error.code : 'UNKNOWN',
+        status: error instanceof ApiError ? error.status : 0,
+      });
     },
   });
 }

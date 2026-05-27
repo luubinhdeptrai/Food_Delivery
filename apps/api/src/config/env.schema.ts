@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const emptyStringToUndefined = (value: unknown) =>
+  value === '' ? undefined : value;
+
 /**
  * Zod schema for all required environment variables.
  *
@@ -15,7 +18,7 @@ import { z } from 'zod';
  *     downstream consumers receive correctly-typed values.
  *   - Defaults are applied consistently before any factory function runs.
  */
-export const envSchema = z.object({
+const baseEnvSchema = z.object({
   NODE_ENV: z.string().default('development'),
 
   // ---------------------------------------------------------------------------
@@ -141,6 +144,121 @@ export const envSchema = z.object({
   //   FIREBASE_SERVICE_ACCOUNT_PATH=soli-food-delivery-FCM-key.json
   // ---------------------------------------------------------------------------
   FIREBASE_SERVICE_ACCOUNT_PATH: z.string().optional(),
+
+  // ---------------------------------------------------------------------------
+  // Observability - optional. When absent, OpenTelemetry exporters stay disabled
+  // and the app continues to run with local structured JSON logs.
+  // ---------------------------------------------------------------------------
+  APP_ENV: z.string().default('development'),
+  APP_VERSION: z.string().default('local'),
+  COMMIT_SHA: z.string().optional(),
+  OTEL_SERVICE_NAME: z.string().default('uitfood-api'),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(
+    emptyStringToUndefined,
+    z.string().url().optional(),
+  ),
+  OTEL_EXPORTER_OTLP_HEADERS: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  GRAFANA_CLOUD_OTLP_ENDPOINT: z.preprocess(
+    emptyStringToUndefined,
+    z.string().url().optional(),
+  ),
+  GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  GRAFANA_CLOUD_OTLP_TOKEN: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  OTEL_RESOURCE_ATTRIBUTES: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  OTEL_TRACES_EXPORTER: z.string().default('otlp'),
+  OTEL_METRICS_EXPORTER: z.string().default('otlp'),
+  OTEL_LOGS_EXPORTER: z.string().default('otlp'),
+  OTEL_TRACES_SAMPLER: z
+    .enum([
+      'always_on',
+      'always_off',
+      'traceidratio',
+      'parentbased_always_on',
+      'parentbased_always_off',
+      'parentbased_traceidratio',
+      'parentbased_jaeger_remote',
+      'jaeger_remote',
+      'xray',
+    ])
+    .default('parentbased_traceidratio'),
+  OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(0.1),
+  LOG_LEVEL: z
+    .enum([
+      'fatal',
+      'error',
+      'warn',
+      'warning',
+      'info',
+      'log',
+      'debug',
+      'verbose',
+    ])
+    .default('log'),
+});
+
+export const envSchema = baseEnvSchema.superRefine((env, ctx) => {
+  const hasGrafanaEndpoint = Boolean(env.GRAFANA_CLOUD_OTLP_ENDPOINT);
+  const hasGrafanaUsername = Boolean(
+    env.GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID,
+  );
+  const hasGrafanaToken = Boolean(env.GRAFANA_CLOUD_OTLP_TOKEN);
+  const hasExplicitOtelHeaders = Boolean(env.OTEL_EXPORTER_OTLP_HEADERS);
+
+  if (hasGrafanaUsername && !hasGrafanaToken) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['GRAFANA_CLOUD_OTLP_TOKEN'],
+      message:
+        'GRAFANA_CLOUD_OTLP_TOKEN is required when Grafana Cloud username/instance ID is set',
+    });
+  }
+
+  if (hasGrafanaToken && !hasGrafanaUsername) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID'],
+      message:
+        'GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID is required when Grafana Cloud token is set',
+    });
+  }
+
+  if (
+    (hasGrafanaUsername || hasGrafanaToken) &&
+    !env.OTEL_EXPORTER_OTLP_ENDPOINT &&
+    !hasGrafanaEndpoint
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['GRAFANA_CLOUD_OTLP_ENDPOINT'],
+      message:
+        'Set GRAFANA_CLOUD_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT for Grafana Cloud export',
+    });
+  }
+
+  if (
+    hasGrafanaEndpoint &&
+    !hasExplicitOtelHeaders &&
+    (!hasGrafanaUsername || !hasGrafanaToken)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID'],
+      message:
+        'Grafana Cloud direct OTLP export requires username/instance ID and token, or an explicit OTEL_EXPORTER_OTLP_HEADERS value',
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

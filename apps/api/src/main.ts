@@ -1,24 +1,60 @@
+import { shutdownTelemetry } from './telemetry';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder, OpenAPIObject } from '@nestjs/swagger';
 import { auth } from './lib/auth';
 import { AppModule } from './app.module';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import type { Request, Response } from 'express';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { join } from 'path';
 import * as expressStatic from 'express';
+import { createCorsOptions } from './observability/cors';
+import { JsonLogger } from './observability/json-logger';
+import { requestContextMiddleware } from './observability/request-context';
+
+function installShutdownHandler(app: INestApplication): void {
+  let shutdownStarted = false;
+
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, () => {
+      if (shutdownStarted) return;
+      shutdownStarted = true;
+
+      void (async () => {
+        try {
+          await app.close();
+          await shutdownTelemetry(signal);
+          process.exit(0);
+        } catch (error) {
+          console.error(
+            JSON.stringify({
+              level: 'error',
+              timestamp: new Date().toISOString(),
+              event: 'app.shutdown_failed',
+              signal,
+              message: error instanceof Error ? error.message : String(error),
+            }),
+          );
+          await shutdownTelemetry(`${signal}:failed`);
+          process.exit(1);
+        }
+      })();
+    });
+  }
+}
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const logger = new JsonLogger();
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+    bufferLogs: true,
+  });
+  app.useLogger(logger);
+  app.use(requestContextMiddleware);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.setGlobalPrefix('api');
 
-  app.enableCors({
-    origin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
-      .split(',')
-      .map((o) => o.trim()),
-    credentials: true,
-  });
+  app.enableCors(createCorsOptions());
 
   // Serve static development assets (FCM test page, service worker, etc.)
   // from the apps/api/public/ directory.
@@ -83,6 +119,8 @@ async function bootstrap() {
       layout: 'modern',
     }),
   );
+
+  installShutdownHandler(app);
 
   await app.listen(process.env.PORT ?? 3000);
 }

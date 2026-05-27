@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   UtensilsCrossed,
   LayoutDashboard,
@@ -19,6 +19,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { signOut } from '@/lib/auth-client';
+import { resetAnalyticsIdentity } from '@/lib/analytics';
+import { Sentry } from '@/lib/observability';
 import { useLogout } from '@/features/auth/hooks/useLogout';
 
 const navItems = [
@@ -29,11 +32,27 @@ const navItems = [
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
-const helpItem = { title: 'Help', url: '/help', icon: CircleHelp };
+const footerNavItems = [
+  {
+    title: 'Help',
+    url: '/help',
+    icon: CircleHelp,
+  },
+];
 
 export function AppSidebar() {
   const location = useLocation();
-  const { logout, isLoggingOut } = useLogout();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      resetAnalyticsIdentity();
+      Sentry.setUser(null);
+      navigate('/auth/login', { replace: true });
+    }
+  };
 
   return (
     <Sidebar className="bg-card">
@@ -85,6 +104,31 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 gap-4">
         <SidebarMenu className="gap-1">
+          {footerNavItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton
+                asChild
+                className="text-on-surface-variant hover:bg-surface-container"
+              >
+                <Link to={item.url} className="flex items-center gap-3">
+                  <item.icon
+                    className={item.className || 'text-on-surface-variant'}
+                  />
+                  <span className={item.className || 'font-medium'}>
+                    {item.title}
+                  </span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              type="button"
+              onClick={handleSignOut}
+              className="text-on-surface-variant hover:bg-surface-container"
+            >
+              <LogOut className="text-error" />
+              <span className="text-error">Logout</span>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
