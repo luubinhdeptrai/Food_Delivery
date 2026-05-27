@@ -26,7 +26,7 @@ if (shouldUploadSourcemaps) {
       },
       sourcemaps: {
         assets: './dist/**',
-        deleteAfterUpload: true,
+        filesToDeleteAfterUpload: './dist/**/*.map',
       },
     }),
   );
