@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -80,26 +80,29 @@ export function ZoneFormDialog({
   const radiusKm = useWatch({ control, name: 'radiusKm' });
   const isActive = useWatch({ control, name: 'isActive' });
 
-  // Reset form whenever the dialog opens — wrapping onOpenChange so
-  // the state update happens in an event handler, not an effect.
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      if (zone) {
-        reset({
-          name: zone.name,
-          radiusKm: zone.radiusKm,
-          baseFee: zone.baseFee,
-          perKmRate: zone.perKmRate,
-          avgSpeedKmh: zone.avgSpeedKmh,
-          prepTimeMinutes: zone.prepTimeMinutes,
-          bufferMinutes: zone.bufferMinutes,
-          isActive: zone.isActive,
-        });
-      } else {
-        reset(defaultValues);
-      }
-      setShowAdvanced(false);
+  useEffect(() => {
+    if (!open) {
+      return;
     }
+
+    if (zone) {
+      reset({
+        name: zone.name,
+        radiusKm: zone.radiusKm,
+        baseFee: zone.baseFee,
+        perKmRate: zone.perKmRate,
+        avgSpeedKmh: zone.avgSpeedKmh,
+        prepTimeMinutes: zone.prepTimeMinutes,
+        bufferMinutes: zone.bufferMinutes,
+        isActive: zone.isActive,
+      });
+    } else {
+      reset(defaultValues);
+    }
+
+  }, [open, reset, zone]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
   };
 
