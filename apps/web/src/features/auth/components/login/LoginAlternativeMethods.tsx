@@ -52,7 +52,6 @@ export function LoginAlternativeMethods() {
         callbackURL: `${window.location.origin}/`,
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('[auth] Google sign-in failed', err);
       setIsPending(false);
     }

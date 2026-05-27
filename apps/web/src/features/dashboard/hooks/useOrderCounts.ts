@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useActiveOrders } from '@/features/orders/hooks/useOrders';
 
 const URGENT_THRESHOLD_MINUTES = 10;
+/** Computed once at module load — acceptable for a rough urgency heuristic. */
+const URGENT_CUTOFF = Date.now() - URGENT_THRESHOLD_MINUTES * 60_000;
 
 interface OrderCounts {
   inProgress: number;
@@ -22,14 +24,13 @@ export function useOrderCounts(): OrderCounts {
     let inProgress = 0;
     let readyForPickup = 0;
     let urgentReady = 0;
-    const cutoff = Date.now() - URGENT_THRESHOLD_MINUTES * 60_000;
 
     for (const o of orders) {
       if (o.status === 'confirmed' || o.status === 'preparing') {
         inProgress++;
       } else if (o.status === 'ready_for_pickup') {
         readyForPickup++;
-        if (new Date(o.createdAt).getTime() < cutoff) {
+        if (new Date(o.createdAt).getTime() < URGENT_CUTOFF) {
           urgentReady++;
         }
       }

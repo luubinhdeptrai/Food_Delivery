@@ -35,7 +35,6 @@ export function useImageUpload(folder = 'menu-items') {
       try {
         await storeImageMetadata(result);
       } catch (metaErr) {
-        // eslint-disable-next-line no-console
         console.warn(
           '[useImageUpload] Cloudinary asset uploaded but metadata persistence failed:',
           metaErr,

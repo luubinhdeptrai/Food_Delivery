@@ -98,13 +98,15 @@ export function ProfileTab() {
     }
   };
 
-  const onSubmit = handleSubmit(async ({ name }) => {
-    await authClient.updateUser({ name });
-    await refetch();
-    queryClient.invalidateQueries({ queryKey: ['restaurants'] });
-    setSavedAt(Date.now());
-    setTimeout(() => setSavedAt(null), 2500);
-  });
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    handleSubmit(async ({ name }) => {
+      await authClient.updateUser({ name });
+      await refetch();
+      queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+      setSavedAt(Date.now());
+      setTimeout(() => setSavedAt(null), 2500);
+    })(e);
+  };
 
   if (!user) return null;
 

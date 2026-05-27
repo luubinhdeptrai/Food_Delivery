@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -66,7 +66,7 @@ export function ZoneFormDialog({
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -77,11 +77,13 @@ export function ZoneFormDialog({
   const { mutateAsync: createZone } = useCreateDeliveryZone(restaurantId);
   const { mutateAsync: updateZone } = useUpdateDeliveryZone(restaurantId);
 
-  const radiusKm = watch('radiusKm');
-  const isActive = watch('isActive');
+  const radiusKm = useWatch({ control, name: 'radiusKm' });
+  const isActive = useWatch({ control, name: 'isActive' });
 
-  useEffect(() => {
-    if (open) {
+  // Reset form whenever the dialog opens — wrapping onOpenChange so
+  // the state update happens in an event handler, not an effect.
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       if (zone) {
         reset({
           name: zone.name,
@@ -98,20 +100,29 @@ export function ZoneFormDialog({
       }
       setShowAdvanced(false);
     }
-  }, [open, zone, reset]);
+    onOpenChange(nextOpen);
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     if (isEdit && zone) {
       await updateZone({ id: zone.id, data: values });
     } else {
-      const { isActive: _isActive, ...createDto } = values;
+      const createDto: Omit<FormValues, 'isActive'> = {
+        name: values.name,
+        radiusKm: values.radiusKm,
+        baseFee: values.baseFee,
+        perKmRate: values.perKmRate,
+        avgSpeedKmh: values.avgSpeedKmh,
+        prepTimeMinutes: values.prepTimeMinutes,
+        bufferMinutes: values.bufferMinutes,
+      };
       await createZone(createDto);
     }
     onOpenChange(false);
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
         className="p-0 max-w-lg sm:max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl"

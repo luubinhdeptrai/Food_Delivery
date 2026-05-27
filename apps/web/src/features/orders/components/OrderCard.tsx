@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import type { Order } from "@/features/orders/types/order.types";
 import { Badge } from "@/components/ui/badge";
 import type { VariantProps } from "class-variance-authority";
-import { badgeVariants } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge-variants";
 import { Draggable } from "@hello-pangea/dnd";
 import { canDragFromColumn } from "@/features/orders/utils/dragTransitions";
 import { getColumnForStatus } from "@/features/orders/utils/statusMapping";
