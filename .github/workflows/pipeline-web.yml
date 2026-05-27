@@ -85,15 +85,15 @@ jobs:
       vite_posthog_host: ${{ vars.POSTHOG_WEB_HOST || 'https://app.posthog.com' }}
     secrets: inherit
 
-  apply-render-infra:
-    name: Apply Web Image to Render
+  deploy-render:
+    name: Deploy Web Image to Render
     needs: publish
     if: github.ref == 'refs/heads/master'
     permissions:
       contents: read
-    uses: ./.github/workflows/cd-render-iac.yml
+    uses: ./.github/workflows/cd-render-image.yml
     with:
-      apply: true
+      app: web
       gh_repository: ${{ github.repository }}
-      web_use_github_sha_tag: true
-    secrets: inherit
+    secrets:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL }}
