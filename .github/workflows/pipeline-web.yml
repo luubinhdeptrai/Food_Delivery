@@ -78,7 +78,7 @@ jobs:
       grafana_faro_sourcemap_endpoint: ${{ vars.GRAFANA_FARO_SOURCEMAP_ENDPOINT }}
       grafana_faro_app_id: ${{ vars.GRAFANA_FARO_APP_ID }}
       grafana_cloud_stack_id: ${{ vars.GRAFANA_CLOUD_STACK_ID }}
-      vite_posthog_key: ${{ vars.POSTHOG_WEB_KEY }}
+      vite_posthog_key: ${{ secrets.POSTHOG_WEB_KEY }}
       vite_posthog_host: ${{ vars.POSTHOG_WEB_HOST || 'https://app.posthog.com' }}
     secrets: inherit
 

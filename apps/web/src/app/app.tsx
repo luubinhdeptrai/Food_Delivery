@@ -13,6 +13,7 @@ import {
   resetAnalyticsIdentity,
 } from '@/lib/analytics';
 import { useSession } from '@/lib/auth-client';
+import { withFaroRouterInstrumentation } from '@grafana/faro-react';
 
 function ErrorFallback() {
   return (
@@ -45,13 +46,15 @@ function ObservabilityIdentitySync() {
   return null;
 }
 
+const FaroRouter = withFaroRouterInstrumentation(RouterProvider);
+
 export function App() {
   return (
     <FaroErrorBoundary fallback={<ErrorFallback />}>
       <AppProvider>
         <AnalyticsProvider>
           <ObservabilityIdentitySync />
-          <RouterProvider router={router} />
+          <FaroRouter router={router} />
         </AnalyticsProvider>
       </AppProvider>
     </FaroErrorBoundary>

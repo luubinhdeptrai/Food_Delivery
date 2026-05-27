@@ -8,7 +8,15 @@ import { router } from './app/router';
 
 initObservability();
 initAnalytics(() => trackPageView(router.state.location));
-router.subscribe((state) => trackPageView(state.location));
+
+let lastPath = `${router.state.location.pathname}${router.state.location.search}`;
+router.subscribe((state) => {
+  const currentPath = `${state.location.pathname}${state.location.search}`;
+  if (currentPath !== lastPath) {
+    lastPath = currentPath;
+    trackPageView(state.location);
+  }
+});
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
