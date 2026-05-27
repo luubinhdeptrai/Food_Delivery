@@ -18,7 +18,7 @@ on:
         type: string
         default: ''
     secrets:
-      RENDER_DEPLOY_HOOK_URL:
+      RENDER_DEPLOY_HOOK:
         required: true
 
 permissions:
@@ -62,13 +62,13 @@ jobs:
         shell: bash
         env:
           IMAGE_REF: ${{ steps.image.outputs.image_ref }}
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
           set -euo pipefail
 
           curl --fail-with-body --silent --show-error --get \
             --data-urlencode "imgURL=${IMAGE_REF}" \
-            "${RENDER_DEPLOY_HOOK_URL}"
+            "${RENDER_DEPLOY_HOOK}"
 
           {
             echo "### Render deploy"

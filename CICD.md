@@ -417,7 +417,7 @@ Inputs:
 
 Required secret:
 
-- `RENDER_DEPLOY_HOOK_URL`: the service deploy hook URL from Render settings.
+- `RENDER_DEPLOY_HOOK`: the service deploy hook URL from Render settings.
 
 The API and Web pipelines pass this secret from service-specific GitHub secrets:
 

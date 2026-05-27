@@ -131,4 +131,4 @@ jobs:
       app: api
       gh_repository: ${{ github.repository }}
     secrets:
-      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_API_DEPLOY_HOOK_URL }}
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_API_DEPLOY_HOOK }}

@@ -96,4 +96,4 @@ jobs:
       app: web
       gh_repository: ${{ github.repository }}
     secrets:
-      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL }}
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
