@@ -113,7 +113,7 @@ export function AppSidebar() {
             >
               <LogOut className="text-error" />
               <span className="font-medium text-error">
-                {isLoggingOut ? 'Logging out…' : 'Logout'}
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
               </span>
             </SidebarMenuButton>
           </SidebarMenuItem>

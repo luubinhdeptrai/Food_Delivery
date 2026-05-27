@@ -12,10 +12,7 @@ let initialized = false;
 
 function appMetadata(): Properties {
   return {
-    app_env:
-      import.meta.env.VITE_APP_ENV ??
-      import.meta.env.VITE_SENTRY_ENVIRONMENT ??
-      import.meta.env.MODE,
+    app_env: import.meta.env.VITE_APP_ENV ?? import.meta.env.MODE,
     app_version: import.meta.env.VITE_APP_VERSION,
     commit_sha: import.meta.env.VITE_COMMIT_SHA,
     surface: 'web',
