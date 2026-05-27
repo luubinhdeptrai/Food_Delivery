@@ -7,7 +7,11 @@
 
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { orders, orderItems, orderStatusLogs } from '../../module/ordering/order/order.schema';
+import {
+  orders,
+  orderItems,
+  orderStatusLogs,
+} from '../../module/ordering/order/order.schema';
 import type { OrderModifier } from '../../module/ordering/order/order.schema';
 
 const db = drizzle(process.env.DATABASE_URL!);
@@ -76,7 +80,9 @@ async function seedTestOrders() {
         },
       ];
 
-      const createdAt = new Date(Date.now() - testOrder.createdMinutesAgo * 60 * 1000);
+      const createdAt = new Date(
+        Date.now() - testOrder.createdMinutesAgo * 60 * 1000,
+      );
 
       // Insert order
       await db.insert(orders).values({
@@ -87,7 +93,7 @@ async function seedTestOrders() {
         cartId,
         status: testOrder.status,
         totalAmount: 145000, // 145k VND
-        shippingFee: 18000,  // 18k shipping
+        shippingFee: 18000, // 18k shipping
         discountAmount: 12000, // 12k discount
         paymentMethod: 'cod',
         deliveryAddress: {
@@ -130,7 +136,9 @@ async function seedTestOrders() {
       console.log(`   Created: ${createdAt.toLocaleString()}\n`);
     }
 
-    console.log('✅ All test orders for The Green Bistro created successfully!');
+    console.log(
+      '✅ All test orders for The Green Bistro created successfully!',
+    );
     console.log('📋 Ready for kitchen board testing');
   } catch (err) {
     console.error('❌ Error creating test orders:', err);
@@ -138,4 +146,4 @@ async function seedTestOrders() {
   }
 }
 
-seedTestOrders().then(() => process.exit(0));
+void seedTestOrders().then(() => process.exit(0));

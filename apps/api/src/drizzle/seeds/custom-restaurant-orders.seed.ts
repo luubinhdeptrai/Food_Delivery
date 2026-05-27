@@ -7,7 +7,11 @@
 
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { orders, orderItems, orderStatusLogs } from '../../module/ordering/order/order.schema';
+import {
+  orders,
+  orderItems,
+  orderStatusLogs,
+} from '../../module/ordering/order/order.schema';
 import type { OrderModifier } from '../../module/ordering/order/order.schema';
 
 const db = drizzle(process.env.DATABASE_URL!);
@@ -22,12 +26,36 @@ async function seedCustomRestaurantOrders() {
     console.log(`Restaurant ID: ${RESTAURANT_ID}\n`);
 
     const menuItems = [
-      { id: 'a470096d-fbe5-4497-9b1f-ac5f805778f8', name: 'Spring Rolls', price: 45000 },
-      { id: 'c796b96f-9edd-48bc-aaea-74d9844e3d87', name: 'Fresh Lemonade', price: 20000 },
-      { id: 'a1f57dff-4f9f-48fc-97fa-24d2be5824c1', name: 'Iced Coffee (Cà Phê Đá)', price: 25000 },
-      { id: 'ddbfc807-a65a-4ea6-92eb-369c1bfc4f5a', name: 'Bánh Mì Thịt', price: 40000 },
-      { id: '3e07a028-c6fb-478e-b665-fe27dc7ae62d', name: 'Phở Bò', price: 65000 },
-      { id: '8690decd-4a1b-4b97-bb11-0bdcbd063fe3', name: 'Pizza 4Ps first class', price: 60000 },
+      {
+        id: 'a470096d-fbe5-4497-9b1f-ac5f805778f8',
+        name: 'Spring Rolls',
+        price: 45000,
+      },
+      {
+        id: 'c796b96f-9edd-48bc-aaea-74d9844e3d87',
+        name: 'Fresh Lemonade',
+        price: 20000,
+      },
+      {
+        id: 'a1f57dff-4f9f-48fc-97fa-24d2be5824c1',
+        name: 'Iced Coffee (Cà Phê Đá)',
+        price: 25000,
+      },
+      {
+        id: 'ddbfc807-a65a-4ea6-92eb-369c1bfc4f5a',
+        name: 'Bánh Mì Thịt',
+        price: 40000,
+      },
+      {
+        id: '3e07a028-c6fb-478e-b665-fe27dc7ae62d',
+        name: 'Phở Bò',
+        price: 65000,
+      },
+      {
+        id: '8690decd-4a1b-4b97-bb11-0bdcbd063fe3',
+        name: 'Pizza 4Ps first class',
+        price: 60000,
+      },
     ];
 
     const testOrders = [
@@ -78,7 +106,9 @@ async function seedCustomRestaurantOrders() {
         },
       ];
 
-      const createdAt = new Date(Date.now() - testOrder.createdMinutesAgo * 60 * 1000);
+      const createdAt = new Date(
+        Date.now() - testOrder.createdMinutesAgo * 60 * 1000,
+      );
       const subtotal = menuItem.price + 10000; // price + modifier
 
       // Insert order
@@ -90,7 +120,7 @@ async function seedCustomRestaurantOrders() {
         cartId,
         status: testOrder.status,
         totalAmount: subtotal + 25000, // subtotal + shipping
-        shippingFee: 25000,  // 25k shipping
+        shippingFee: 25000, // 25k shipping
         discountAmount: 0,
         paymentMethod: 'cod',
         deliveryAddress: {
@@ -142,4 +172,4 @@ async function seedCustomRestaurantOrders() {
   }
 }
 
-seedCustomRestaurantOrders().then(() => process.exit(0));
+void seedCustomRestaurantOrders().then(() => process.exit(0));

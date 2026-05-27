@@ -7,7 +7,11 @@
 
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { orders, orderItems, orderStatusLogs } from '../../module/ordering/order/order.schema';
+import {
+  orders,
+  orderItems,
+  orderStatusLogs,
+} from '../../module/ordering/order/order.schema';
 import type { OrderModifier } from '../../module/ordering/order/order.schema';
 
 const db = drizzle(process.env.DATABASE_URL!);
@@ -76,7 +80,9 @@ async function seedTestOrders() {
         },
       ];
 
-      const createdAt = new Date(Date.now() - testOrder.createdMinutesAgo * 60 * 1000);
+      const createdAt = new Date(
+        Date.now() - testOrder.createdMinutesAgo * 60 * 1000,
+      );
 
       // Insert order
       await db.insert(orders).values({
@@ -87,7 +93,7 @@ async function seedTestOrders() {
         cartId,
         status: testOrder.status,
         totalAmount: 125000, // 125k VND
-        shippingFee: 15000,  // 15k shipping
+        shippingFee: 15000, // 15k shipping
         discountAmount: 10000, // 10k discount
         paymentMethod: 'cod',
         deliveryAddress: {
@@ -138,4 +144,4 @@ async function seedTestOrders() {
   }
 }
 
-seedTestOrders().then(() => process.exit(0));
+void seedTestOrders().then(() => process.exit(0));

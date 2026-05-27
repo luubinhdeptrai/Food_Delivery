@@ -21,8 +21,7 @@ export const auth = betterAuth({
   // otherwise the plugin throws on boot. Set up in Google Cloud Console:
   //   Authorised redirect URI: http://localhost:3000/api/auth/callback/google
   socialProviders: {
-    ...(process.env.GOOGLE_CLIENT_ID &&
-    process.env.GOOGLE_CLIENT_SECRET
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? {
           google: {
             clientId: process.env.GOOGLE_CLIENT_ID,

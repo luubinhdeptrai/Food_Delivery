@@ -146,7 +146,10 @@ export class RestaurantService {
         .update(schema.user)
         .set({ role: 'restaurant' })
         .where(
-          and(eq(schema.user.id, updated.ownerId), eq(schema.user.role, 'user')),
+          and(
+            eq(schema.user.id, updated.ownerId),
+            eq(schema.user.role, 'user'),
+          ),
         );
     }
     this.publishRestaurantEvent(updated);

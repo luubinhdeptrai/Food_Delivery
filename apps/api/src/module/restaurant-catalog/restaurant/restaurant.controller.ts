@@ -69,7 +69,8 @@ export class RestaurantController {
   @Roles(['admin'])
   @ApiOperation({
     summary: 'List all restaurants (admin)',
-    description: 'Returns all restaurants including unapproved ones. Admin only.',
+    description:
+      'Returns all restaurants including unapproved ones. Admin only.',
   })
   @ApiOkResponse({ type: RestaurantListResponseDto })
   findAllAdmin(
