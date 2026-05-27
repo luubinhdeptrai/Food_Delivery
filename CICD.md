@@ -195,7 +195,7 @@ Render deploy job:
 
 - Runs only on `refs/heads/master`.
 - Calls `cd-render-image.yml`.
-- Uses the `RENDER_API_DEPLOY_HOOK_URL` GitHub secret.
+- Uses the `RENDER_API_DEPLOY_HOOK` GitHub secret.
 - Triggers Render with the API image reference `ghcr.io/<owner>/<repo>-api:sha-<short-sha>`.
 - The Web service remains on its previous image tag.
 
@@ -229,7 +229,7 @@ Render deploy job:
 
 - Runs only on `refs/heads/master`.
 - Calls `cd-render-image.yml`.
-- Uses the `RENDER_WEB_DEPLOY_HOOK_URL` GitHub secret.
+- Uses the `RENDER_WEB_DEPLOY_HOOK` GitHub secret.
 - Triggers Render with the Web image reference `ghcr.io/<owner>/<repo>-web:sha-<short-sha>`.
 - The API service remains on its previous image tag.
 
@@ -343,19 +343,25 @@ Image name format:
 ghcr.io/<github-owner-lowercase>/<github-repo-lowercase>-<app>
 ```
 
-The Docker packaging workflow and the Render image deploy workflow both derive
+The Docker packaging workflow and the Render image deploy workflow both accept
+an optional explicit image URL. When no explicit URL is provided, they derive
 this value from `github.repository`, lower-case it, and append `-api` or
-`-web`. For this repository, the default workflow image refs are:
+`-web`. For the current `NDTruongDanh/UITFood` repository, the default workflow
+image refs are:
 
 ```text
-ghcr.io/ndtruongdanh/soli-food-order-and-deliver-app-api
-ghcr.io/ndtruongdanh/soli-food-order-and-deliver-app-web
+ghcr.io/ndtruongdanh/uitfood-api
+ghcr.io/ndtruongdanh/uitfood-web
 ```
 
 The default image URL configured on each Render image-backed service must match
 the workflow image URL, except for the tag. Render rejects deploy hook requests
 where the image host, repository, or image name differs from the service's
 configured default image URL.
+
+If a Render service is configured to pull a different image repository, update
+the Render service image URL to this workflow image repository. The deploy hook
+can then move the service from one `sha-<short-sha>` tag to the next.
 
 Tag format:
 
@@ -422,8 +428,8 @@ Required secret:
 The API and Web pipelines pass this secret from service-specific GitHub secrets:
 
 ```text
-RENDER_API_DEPLOY_HOOK_URL
-RENDER_WEB_DEPLOY_HOOK_URL
+RENDER_API_DEPLOY_HOOK
+RENDER_WEB_DEPLOY_HOOK
 ```
 
 Default image resolution:
@@ -592,6 +598,8 @@ Inputs:
 - `web_use_github_sha_tag`: use the current commit SHA tag for Web only.
 - `api_image_tag`: explicit API image tag.
 - `web_image_tag`: explicit Web image tag.
+- `api_image_url`: optional explicit API image repository, without a tag.
+- `web_image_url`: optional explicit Web image repository, without a tag.
 - `working_directory`: defaults to `infra/render`.
 - `terraform_version`: defaults to `1.15.4`.
 
@@ -881,7 +889,7 @@ These are current behaviors to be aware of:
 - `pipeline-main.yml` is manual only. There is no full automatic pipeline for every push or pull request.
 - The API, Web, and Mobile pipelines are path-specific. Root-level changes such as `package.json`, `pnpm-lock.yaml`, `turbo.json`, or shared workflow changes may require manually running the main pipeline unless their workflow path filters are expanded.
 - `ci-validate.yml` requires `TURBO_TOKEN` and `TURBO_TEAM`. If remote caching is optional for the team, make those workflow-call secrets optional.
-- The deploy hook workflow assumes each Render service's configured image URL matches the GHCR image URL derived from `github.repository` and `app`.
+- The deploy hook workflow requires each Render service's configured image URL to match the GHCR image URL used by Docker publish and deploy. If the Render image repository differs from `ghcr.io/<owner>/<repo>-<app>`, update the Render service image URL.
 - The Web and Mobile test scripts currently do not run real tests.
 - `pipeline-mobile.yml` uploads an artifact named `mobile-production-build`, but the reusable mobile package workflow builds the `preview` EAS profile.
 - Render Postgres `postgres_ip_allow_list` defaults to `0.0.0.0/0`. Tighten this if external public database access is not required.
@@ -924,6 +932,17 @@ sha-<short-sha>
 ```
 
 Also confirm the Terraform image URL variables match the GHCR repository names produced by `cd-package-docker.yml`.
+
+If the deploy hook fails with:
+
+```text
+deploy hook cannot change the host, project, or image name. Only the digest or tag may be modified
+```
+
+the image repository sent in `imgURL` does not match the image repository
+currently configured on the Render service. Either update the Render service
+image URL to the workflow image repository, or explicitly pass a matching
+`image_url` input from a custom workflow caller.
 
 ### Web Points To The Wrong API URL
 

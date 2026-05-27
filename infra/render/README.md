@@ -110,13 +110,15 @@ terraform apply
 ```
 
 GitHub Actions automatically applies Render infrastructure changes on pushes to
-`master` that touch `infra/render/**`. App image deploys also run through
-Terraform: the pipeline publishes Docker images to GHCR with `sha-<short-sha>`
-tags, then updates the Render service image tag through Terraform.
+`master` that touch `infra/render/**`. App image deploys are handled by the
+API/Web GitHub Actions pipelines: they publish Docker images to GHCR with
+`sha-<short-sha>` tags, then call the matching Render deploy hook with that
+image reference.
 
-Do not use Render deploy hooks for API/Web releases while Terraform manages
-`runtime_source.image.tag`; using both would create two release mechanisms for
-the same Render field.
+Keep the Terraform image URL variables and the Render service's configured image
+repositories aligned with the GitHub Actions default image names. Render deploy
+hooks can change only the image tag or digest, not the image host, namespace, or
+repository name.
 
 ## After Terraform Owns Render
 
