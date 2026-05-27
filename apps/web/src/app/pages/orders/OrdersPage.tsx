@@ -8,7 +8,6 @@ import { useOrderStore } from "@/features/orders/stores/orderStore";
 import { useInitializeOrderStore } from "@/features/orders/hooks/useInitializeOrderStore";
 import { useConfirmOrder, useStartPreparing, useMarkReady } from "@/features/orders/hooks/useOrderMutations";
 import { getTransition } from "@/features/orders/utils/dragTransitions";
-import { getColumnForStatus } from "@/features/orders/utils/statusMapping";
 import type { KitchenColumn } from "@/features/orders/utils/statusMapping";
 
 const COLUMN_ORDER: OrderStatus[] = [

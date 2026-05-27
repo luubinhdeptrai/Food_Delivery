@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   UtensilsCrossed,
   LayoutDashboard,
@@ -19,9 +19,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { signOut } from '@/lib/auth-client';
-import { resetAnalyticsIdentity } from '@/lib/analytics';
-import { Sentry } from '@/lib/observability';
 import { useLogout } from '@/features/auth/hooks/useLogout';
 
 const navItems = [
@@ -42,17 +39,7 @@ const footerNavItems = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } finally {
-      resetAnalyticsIdentity();
-      Sentry.setUser(null);
-      navigate('/auth/login', { replace: true });
-    }
-  };
+  const { logout, isLoggingOut } = useLogout();
 
   return (
     <Sidebar className="bg-card">
@@ -111,35 +98,12 @@ export function AppSidebar() {
                 className="text-on-surface-variant hover:bg-surface-container"
               >
                 <Link to={item.url} className="flex items-center gap-3">
-                  <item.icon
-                    className={item.className || 'text-on-surface-variant'}
-                  />
-                  <span className={item.className || 'font-medium'}>
-                    {item.title}
-                  </span>
+                  <item.icon className="text-on-surface-variant" />
+                  <span className="font-medium">{item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              type="button"
-              onClick={handleSignOut}
-              className="text-on-surface-variant hover:bg-surface-container"
-            >
-              <LogOut className="text-error" />
-              <span className="text-error">Logout</span>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="text-on-surface-variant hover:bg-surface-container"
-            >
-              <Link to={helpItem.url} className="flex items-center gap-3">
-                <helpItem.icon className="text-on-surface-variant" />
-                <span className="font-medium">{helpItem.title}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
 
           <SidebarMenuItem>
             <SidebarMenuButton

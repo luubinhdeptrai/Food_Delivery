@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { VariantProps } from "class-variance-authority";
-import { badgeVariants } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge-variants";
 import type { OrderDetail, OrderStatus } from "@/features/orders/types";
 import { STATUS_LABEL, KANBAN_GROUP } from "@/features/orders/types";
 

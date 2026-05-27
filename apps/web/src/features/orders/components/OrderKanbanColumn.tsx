@@ -47,12 +47,16 @@ type OrderKanbanColumnProps = {
 };
 
 export function OrderKanbanColumn({ columnId }: OrderKanbanColumnProps) {
-  // We must subscribe to the data so this component re-renders!
-  const _ordersSub = useOrderStore((s) => s.orders);
-  const _searchSub = useOrderStore((s) => s.searchQuery);
+  // Subscribe to orders and searchQuery so this component re-renders on changes
+  const orders = useOrderStore((s) => s.orders);
+  const searchQuery = useOrderStore((s) => s.searchQuery);
   const getOrdersByStatus = useOrderStore((s) => s.getOrdersByStatus);
+
+  // Suppress unused variable warnings — these subscriptions are needed for reactivity
+  void orders;
+  void searchQuery;
   
-  const orders = getOrdersByStatus(columnId);
+  const filteredOrders = getOrdersByStatus(columnId);
   const config = COLUMN_CONFIGS.find((c) => c.id === columnId)!;
 
   return (
@@ -69,7 +73,7 @@ export function OrderKanbanColumn({ columnId }: OrderKanbanColumnProps) {
             {config.label}
           </h3>
           <span className="text-xs font-bold text-muted-foreground">
-            {orders.length}
+            {filteredOrders.length}
           </span>
         </div>
         <span
@@ -91,10 +95,10 @@ export function OrderKanbanColumn({ columnId }: OrderKanbanColumnProps) {
               snapshot.isDraggingOver && "bg-black/5 rounded-md"
             )}
           >
-            {orders.map((order, index) => (
+            {filteredOrders.map((order, index) => (
               <OrderCard key={order.id} order={order} index={index} />
             ))}
-            {orders.length === 0 && (
+            {filteredOrders.length === 0 && (
               <p className="text-center py-8 text-muted-foreground text-xs font-medium opacity-60">
                 No orders
               </p>
