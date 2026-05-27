@@ -222,7 +222,8 @@ Validation job:
 Publish job:
 
 - Calls `cd-package-docker.yml` with `app: web`.
-- Passes `VITE_API_BASE_URL` as a Docker build argument.
+- Passes Web Vite build arguments for API base URL, Grafana Faro, and PostHog.
+- Passes the Grafana Faro source-map API key to Docker as a BuildKit secret when configured.
 - Publishes `ghcr.io/<owner>/<repo>-web` image tags.
 
 Render deploy job:
@@ -675,7 +676,7 @@ sha-<short-sha>
 1. A commit lands on `master` under `apps/web/**`.
 2. `pipeline-web.yml` starts.
 3. Web validation runs.
-4. Web Docker image is built with `VITE_API_BASE_URL`.
+4. Web Docker image is built with API, Grafana Faro, and PostHog build configuration.
 5. Web image is pushed to GHCR.
 6. `cd-render-image.yml` runs with `app: web`.
 7. The workflow calls the Render Web deploy hook with `imgURL=ghcr.io/<owner>/<repo>-web:sha-<short-sha>`.

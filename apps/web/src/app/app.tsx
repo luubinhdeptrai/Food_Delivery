@@ -2,7 +2,11 @@ import { RouterProvider } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AppProvider } from './provider';
 import { router } from './router';
-import { Sentry } from '@/lib/observability';
+import {
+  FaroErrorBoundary,
+  resetObservabilityUser,
+  setObservabilityUser,
+} from '@/lib/observability';
 import {
   AnalyticsProvider,
   identifyUser,
@@ -30,12 +34,12 @@ function ObservabilityIdentitySync() {
 
     if (userId) {
       identifyUser(userId);
-      Sentry.setUser({ id: userId });
+      setObservabilityUser(userId);
       return;
     }
 
     resetAnalyticsIdentity();
-    Sentry.setUser(null);
+    resetObservabilityUser();
   }, [userId, isPending]);
 
   return null;
@@ -43,13 +47,13 @@ function ObservabilityIdentitySync() {
 
 export function App() {
   return (
-    <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
+    <FaroErrorBoundary fallback={<ErrorFallback />}>
       <AppProvider>
         <AnalyticsProvider>
           <ObservabilityIdentitySync />
           <RouterProvider router={router} />
         </AnalyticsProvider>
       </AppProvider>
-    </Sentry.ErrorBoundary>
+    </FaroErrorBoundary>
   );
 }

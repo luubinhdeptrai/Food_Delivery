@@ -2,8 +2,9 @@
 
 UITFood uses a production MVP observability setup:
 
-- Sentry captures API, web, and mobile exceptions with release/environment tags.
 - OpenTelemetry exports API traces, metrics, and logs directly to Grafana Cloud over OTLP HTTP when configured.
+- Grafana Faro captures web browser errors, logs, Web Vitals, sessions, route changes, frontend traces, and source-map metadata.
+- Sentry captures mobile exceptions with release/environment tags.
 - The API emits JSON logs with request IDs, trace IDs, route, status, duration, and safe context.
 - Render health checks use API readiness and web container liveness endpoints.
 
@@ -12,11 +13,6 @@ UITFood uses a production MVP observability setup:
 API environment variables:
 
 ```env
-SENTRY_DSN=
-SENTRY_ENVIRONMENT=production
-SENTRY_RELEASE=sha-<git-sha>
-SENTRY_TRACES_SAMPLE_RATE=0.1
-
 OTEL_SERVICE_NAME=uitfood-api
 GRAFANA_CLOUD_OTLP_ENDPOINT=https://otlp-gateway-prod-REGION.grafana.net/otlp
 GRAFANA_CLOUD_OTLP_USERNAME_OR_INSTANCE_ID=<instance-id>
@@ -29,11 +25,24 @@ LOG_LEVEL=info
 Web build-time variables:
 
 ```env
-VITE_SENTRY_DSN=
-VITE_SENTRY_ENVIRONMENT=production
-VITE_SENTRY_RELEASE=sha-<git-sha>
-VITE_SENTRY_TRACES_SAMPLE_RATE=0.1
+VITE_GRAFANA_FARO_COLLECTOR_URL=https://faro-collector-prod-REGION.grafana.net/collect/<collector-id>
+VITE_GRAFANA_FARO_APP_NAME=uitfood-web
+VITE_APP_ENV=production
+VITE_APP_VERSION=1.0.0
+VITE_COMMIT_SHA=sha-<git-sha>
 ```
+
+Web source-map upload variables and secrets:
+
+```env
+GRAFANA_FARO_SOURCEMAP_ENDPOINT=<frontend-observability-source-map-api-url>
+GRAFANA_FARO_APP_ID=<frontend-observability-app-id>
+GRAFANA_CLOUD_STACK_ID=<grafana-cloud-stack-id>
+GRAFANA_FARO_SOURCEMAP_API_KEY=<grafana-cloud-access-policy-token>
+```
+
+`GRAFANA_FARO_SOURCEMAP_API_KEY` is passed to Docker as a BuildKit secret during
+the deployed web image build. It must not be exposed as a `VITE_` variable.
 
 Mobile build-time variables:
 
@@ -46,12 +55,15 @@ EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1
 
 CI variables and secrets:
 
-- `SENTRY_AUTH_TOKEN` as a GitHub secret.
-- `SENTRY_ORG` as a GitHub variable.
-- `SENTRY_WEB_PROJECT` and `SENTRY_MOBILE_PROJECT` as GitHub variables.
-- `VITE_SENTRY_DSN`, `EXPO_PUBLIC_SENTRY_DSN`, and sample-rate variables as GitHub variables.
+- `GRAFANA_FARO_SOURCEMAP_API_KEY` as a GitHub secret.
+- `GRAFANA_FARO_SOURCEMAP_ENDPOINT`, `GRAFANA_FARO_APP_ID`, `GRAFANA_CLOUD_STACK_ID`, `VITE_GRAFANA_FARO_COLLECTOR_URL`, and `VITE_GRAFANA_FARO_APP_NAME` as GitHub variables.
+- `SENTRY_AUTH_TOKEN` as a GitHub secret for mobile.
+- `SENTRY_ORG` and `SENTRY_MOBILE_PROJECT` as GitHub variables for mobile.
+- `EXPO_PUBLIC_SENTRY_DSN` and mobile sample-rate variables as GitHub variables.
 
-If DSNs are empty, Sentry is disabled. If neither `OTEL_EXPORTER_OTLP_ENDPOINT` nor `GRAFANA_CLOUD_OTLP_ENDPOINT` is set, API OTLP export is disabled while JSON logs and request IDs remain active.
+If `VITE_GRAFANA_FARO_COLLECTOR_URL` is empty, Web Faro is disabled. If neither
+`OTEL_EXPORTER_OTLP_ENDPOINT` nor `GRAFANA_CLOUD_OTLP_ENDPOINT` is set, API OTLP
+export is disabled while JSON logs and request IDs remain active.
 
 ## Health Checks
 
@@ -80,6 +92,9 @@ API logs are JSON written to stdout/stderr for Render log collection. Each reque
 
 The redaction layer removes sensitive headers and common secret fields, including auth cookies, bearer tokens, FCM tokens, payment hashes/signatures, SMTP credentials, Cloudinary secrets, and explicitly labelled IP fields. Do not log request bodies, payment payloads, raw addresses, or provider credentials.
 
+Web Faro sets only the stable user ID, not email/name, and disables client-side
+geolocation tracking. PostHog session replay remains disabled by default.
+
 ## Dashboards and Alerts
 
 Minimum dashboard panels:
@@ -89,7 +104,8 @@ Minimum dashboard panels:
 - Payment IPN failures and payment timeout task errors.
 - Order timeout task errors.
 - Notification delivery failures and WebSocket connection errors.
-- Web and mobile Sentry issue count by release.
+- Web Faro error count and Web Vitals by release/environment.
+- Mobile Sentry issue count by release.
 
 Minimum alerts:
 
@@ -98,13 +114,15 @@ Minimum alerts:
 - p95 API latency above 2 seconds for 10 minutes.
 - Payment IPN error spike.
 - Notification delivery failure spike.
-- New Sentry issue in production on the latest release.
+- New Web Faro error in production on the latest release.
+- New mobile Sentry issue in production on the latest release.
 
 ## Incident Runbook
 
 1. Open Render service logs and filter by `requestId` if a user report includes it.
-2. Search Sentry by release, environment, and request ID.
-3. Check `/api/ready` to determine whether the fault is dependency readiness or app logic.
-4. For payment issues, inspect `command.payment.process_ipn`, `cron.payment_timeout`, and related order status logs.
-5. For realtime issues, inspect WebSocket connection breadcrumbs, `ws.notifications.connection`, and notification delivery logs.
-6. If a release introduced the issue, rollback the Render image tag through Terraform or rerun the previous successful pipeline.
+2. Search Grafana Cloud Frontend Observability by release, environment, user ID, and request ID for web reports.
+3. Search Sentry by release and environment for mobile reports.
+4. Check `/api/ready` to determine whether the fault is dependency readiness or app logic.
+5. For payment issues, inspect `command.payment.process_ipn`, `cron.payment_timeout`, and related order status logs.
+6. For realtime issues, inspect WebSocket connection logs, `ws.notifications.connection`, and notification delivery logs.
+7. If a release introduced the issue, rollback the Render image tag through Terraform or rerun the previous successful pipeline.
