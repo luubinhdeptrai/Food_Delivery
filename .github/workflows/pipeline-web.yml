@@ -74,12 +74,11 @@ jobs:
       vite_app_version: ${{ vars.APP_VERSION || '0.1.0' }}
       vite_commit_sha: ${{ github.sha }}
       vite_grafana_faro_collector_url: ${{ vars.VITE_GRAFANA_FARO_COLLECTOR_URL }}
-      vite_grafana_faro_app_name: ${{ vars.VITE_GRAFANA_FARO_APP_NAME || 'uitfood-web' }}
+      vite_grafana_faro_app_name: ${{ vars.VITE_GRAFANA_FARO_APP_NAME }}
       grafana_faro_sourcemap_endpoint: ${{ vars.GRAFANA_FARO_SOURCEMAP_ENDPOINT }}
       grafana_faro_app_id: ${{ vars.GRAFANA_FARO_APP_ID }}
       grafana_cloud_stack_id: ${{ vars.GRAFANA_CLOUD_STACK_ID }}
-      vite_posthog_key: ${{ secrets.POSTHOG_WEB_KEY }}
-      vite_posthog_host: ${{ vars.POSTHOG_WEB_HOST || 'https://app.posthog.com' }}
+      vite_posthog_host: ${{ vars.POSTHOG_WEB_HOST }}
     secrets: inherit
 
   deploy-render:
