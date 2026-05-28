@@ -36,6 +36,7 @@ export const auth = betterAuth({
     'uitfood://',
     'exp://**',
     'https://uitfood-web.onrender.com',
+    'https://uitfood-admin.onrender.com',
   ],
   plugins: [
     openAPI(),
