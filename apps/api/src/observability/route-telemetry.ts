@@ -27,14 +27,14 @@ const ROUTE_GROUPS: readonly RouteGroupMatcher[] = [
   { routeGroup: 'menu-items', prefixes: ['/api/menu-items'] },
   { routeGroup: 'restaurants', prefixes: ['/api/restaurants'] },
   { routeGroup: 'search', prefixes: ['/api/search'] },
-  { routeGroup: 'promotions', prefixes: ['/api/promotions', '/api/promotion'] },
+  { routeGroup: 'promotions', prefixes: ['/api/promotions'] },
   { routeGroup: 'carts', prefixes: ['/api/carts'] },
   { routeGroup: 'my', prefixes: ['/api/my'] },
   {
     routeGroup: 'restaurant',
     prefixes: ['/api/restaurant'],
   },
-  { routeGroup: 'payments', prefixes: ['/api/payments', '/api/payment'] },
+  { routeGroup: 'payments', prefixes: ['/api/payments'] },
 ] as const;
 
 const UUID_SEGMENT =
