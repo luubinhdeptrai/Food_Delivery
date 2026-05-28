@@ -10,3 +10,5 @@ dist
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+
+.github\workflows\cd-render-iac.yml

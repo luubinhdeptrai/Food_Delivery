@@ -19,7 +19,7 @@ export function useOrderCounts(): OrderCounts {
   const { data: orders = [], isLoading, dataUpdatedAt } = useActiveOrders();
 
   return useMemo(() => {
-    let inProgress = 0;
+    let inProgress = 0; 
     let readyForPickup = 0;
     let urgentReady = 0;
 
