@@ -1,36 +1,132 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Image } from 'expo-image';
-import { Search, Navigation, ChevronRight, Plus } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useAddressStore } from '../store/address-store';
-import { useAddressSearch, useCurrentLocation } from '../hooks';
-import { IMAGE_ASSETS } from '@/src/lib/constants';
 import {
-  AddressSelectionHeader,
-  SearchResultItem,
-  SavedAddressItem,
-  RecentSearchItem,
-} from '../components';
+  ArrowLeft,
+  Clock3,
+  LocateFixed,
+  Map,
+  MapPin,
+  MoreVertical,
+  Search,
+} from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useAddressSearch, useCurrentLocation } from '../hooks';
+import { useAddressStore } from '../store/address-store';
+
+type LocationTab = 'recent' | 'saved';
+
+type LocationListItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  address: string;
+  coords?: { latitude: number; longitude: number } | null;
+};
+
+interface LocationRowProps {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  iconClassName?: string;
+  onPress: () => void;
+  disabled?: boolean;
+  testID?: string;
+}
+
+const DEFAULT_RECENT_LOCATIONS: LocationListItem[] = [
+  {
+    id: 'bcons-plaza',
+    title: 'Bcons Plaza Apartment',
+    subtitle: '0.08km - Thong Nhat, Dong Hoa Ward',
+    address: 'Bcons Plaza Apartment, Thong Nhat, Dong Hoa Ward',
+  },
+  {
+    id: 'mien-dong-station',
+    title: 'Mien Dong New Coach Station',
+    subtitle: '2.98km - Xa Lo Ha Noi, Long Binh',
+    address: 'Mien Dong New Coach Station, Xa Lo Ha Noi, Long Binh',
+  },
+  {
+    id: 'national-university',
+    title: 'National University Station',
+    subtitle: '3.14km - Song Hanh Xa Lo Ha Noi',
+    address: 'National University Station, Song Hanh Xa Lo Ha Noi',
+  },
+  {
+    id: 'm-one-south-saigon',
+    title: 'M-One South Saigon',
+    subtitle: '18km - Huynh Tan Phat, District 7',
+    address: 'M-One South Saigon, Huynh Tan Phat, District 7',
+  },
+];
+
+function LocationRow({
+  title,
+  subtitle,
+  icon,
+  iconClassName = 'bg-surface-container',
+  onPress,
+  disabled,
+  testID,
+}: LocationRowProps) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      className="flex-row items-start gap-4 rounded-3xl bg-surface-container-lowest p-4 active:bg-surface-container-low"
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${subtitle}`}
+      accessibilityState={{ disabled: !!disabled }}
+      testID={testID}
+    >
+      <View
+        className={`h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconClassName}`}
+      >
+        {icon}
+      </View>
+      <View className="min-w-0 flex-1">
+        <Text
+          className="font-jakarta-sans text-base font-semibold text-on-surface"
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+        <Text
+          className="mt-0.5 text-sm text-on-surface-variant"
+          numberOfLines={1}
+        >
+          {subtitle}
+        </Text>
+      </View>
+      <View className="p-1">
+        <MoreVertical size={20} color="#40493d" />
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export function AddressSelectionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { 
-    setSelectedAddress, 
-    latitude, 
+  const searchInputRef = useRef<TextInput>(null);
+  const [activeTab, setActiveTab] = useState<LocationTab>('recent');
+  const {
+    setSelectedAddress,
+    latitude,
     longitude,
     savedAddresses,
-    recentSearches 
+    recentSearches,
   } = useAddressStore();
   const {
     query: searchQuery,
@@ -68,180 +164,231 @@ export function AddressSelectionScreen() {
     router.back();
   };
 
-  const handleAddNewAddress = () => {
-    Alert.alert('Action', 'Add new address feature coming soon!');
+  const handleChooseOnMap = () => {
+    Alert.alert('Choose on Map', 'Map picker feature coming soon!');
   };
 
+  const recentLocations: LocationListItem[] =
+    recentSearches.length > 0
+      ? recentSearches.map((search) => ({
+          id: search.id,
+          title: search.address,
+          subtitle: 'Recent search',
+          address: search.address,
+          coords: search.coords,
+        }))
+      : DEFAULT_RECENT_LOCATIONS;
+
   return (
-    <View className="flex-1 bg-background">
-      <AddressSelectionHeader
-        onBack={() => router.back()}
-        insetsTop={insets.top}
-      />
+    <View className="flex-1 bg-surface">
+      <View
+        className="z-10 bg-surface px-4 pb-3"
+        style={{ paddingTop: Math.max(insets.top, 12) + 8 }}
+      >
+        <View className="flex-row items-center justify-between">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="h-10 w-10 items-center justify-center rounded-full active:bg-surface-container-low"
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color="#40493d" />
+          </TouchableOpacity>
+          <Text className="font-jakarta-sans text-lg font-bold text-on-surface">
+            Select Location
+          </Text>
+          <TouchableOpacity
+            onPress={() => searchInputRef.current?.focus()}
+            className="h-10 w-10 items-center justify-center rounded-full active:bg-surface-container-low"
+            accessibilityRole="button"
+            accessibilityLabel="Focus search"
+          >
+            <Search size={22} color="#40493d" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View className="z-10 bg-surface px-4 pb-4 pt-2">
+        <View className="relative justify-center">
+          <View className="pointer-events-none absolute left-4 z-10">
+            <MapPin size={21} color="#00490e" fill="#00490e" />
+          </View>
+          <TextInput
+            ref={searchInputRef}
+            className="h-14 w-full rounded-full border-2 border-primary-fixed bg-surface-container-lowest px-12 text-sm font-medium text-on-surface"
+            placeholder="Search for area, street name..."
+            placeholderTextColor="#40493d"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+        </View>
+      </View>
+
+      <View className="z-10 border-b border-surface-container-high bg-surface px-4 pb-2">
+        <View className="flex-row gap-2">
+          {(['recent', 'saved'] as const).map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                className={`rounded-full px-5 py-2 ${
+                  isActive ? 'bg-primary-fixed' : 'bg-transparent'
+                }`}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text
+                  className={`font-jakarta-sans text-sm ${
+                    isActive
+                      ? 'font-semibold text-on-primary-fixed-variant'
+                      : 'font-medium text-on-surface-variant'
+                  }`}
+                >
+                  {tab === 'recent' ? 'Recent' : 'Saved'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
 
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
-          paddingTop: insets.top + 70,
-          paddingBottom: insets.bottom + 120,
-          paddingHorizontal: 24,
+          paddingHorizontal: 16,
+          paddingTop: 16,
+          paddingBottom: Math.max(insets.bottom, 24) + 120,
+          gap: 8,
         }}
+        contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
-        {/* Search Section */}
-        <View className="mb-8">
-          <View className="relative justify-center">
-            <View className="absolute left-4 z-10 pointer-events-none">
-              <Search size={20} color="#40493d" />
-            </View>
-            <TextInput
-              className="w-full h-14 pl-12 pr-4 bg-surface-container-high rounded-xl font-jakarta-sans font-medium text-sm text-on-surface"
-              placeholder="Search for area, street, or landmark"
-              placeholderTextColor="#40493d"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-        </View>
+        <LocationRow
+          title={isLocating ? 'Fetching your location' : 'Current location'}
+          subtitle={
+            isLocating
+              ? 'This may take a moment'
+              : 'Using GPS for exact location...'
+          }
+          icon={
+            isLocating ? (
+              <ActivityIndicator size="small" color="#00490e" />
+            ) : (
+              <LocateFixed size={22} color="#00490e" />
+            )
+          }
+          iconClassName="bg-primary-fixed/20"
+          onPress={handleUseCurrentLocation}
+          disabled={isLocating}
+          testID="use-current-location"
+        />
+
+        {locationError ? (
+          <Text className="px-4 py-1 text-xs text-error" selectable>
+            {locationError}
+          </Text>
+        ) : null}
+
+        <View className="mx-4 my-2 h-px bg-surface-container-high" />
 
         {shouldSearch ? (
-          <View className="mb-8">
+          <View className="gap-2">
             {isSearching ? (
-              <View className="flex-row items-center gap-2 py-2">
+              <View className="flex-row items-center gap-2 px-4 py-3">
                 <ActivityIndicator size="small" color="#00490e" />
-                <Text className="text-xs text-on-surface-variant">
+                <Text className="text-sm text-on-surface-variant">
                   Searching addresses...
                 </Text>
               </View>
             ) : null}
             {searchError ? (
-              <Text className="text-xs text-red-600 mb-2">{searchError}</Text>
+              <Text className="px-4 text-xs text-error" selectable>
+                {searchError}
+              </Text>
             ) : null}
             {!isSearching && !searchError && searchResults.length === 0 ? (
-              <Text className="text-xs text-on-surface-variant mb-2">
+              <Text className="px-4 py-3 text-sm text-on-surface-variant">
                 No matches found.
               </Text>
             ) : null}
-            <View className="gap-2">
-              {searchResults.map((result) => (
-                <SearchResultItem
-                  key={result.id}
-                  title={result.label}
-                  subtitle={result.subtitle}
+            {searchResults.map((result) => (
+              <LocationRow
+                key={result.id}
+                title={result.label}
+                subtitle={result.subtitle || 'Search result'}
+                icon={<MapPin size={21} color="#40493d" />}
+                onPress={() =>
+                  handleSelectAddress(result.label, {
+                    latitude: result.latitude,
+                    longitude: result.longitude,
+                  })
+                }
+              />
+            ))}
+          </View>
+        ) : activeTab === 'recent' ? (
+          <View className="gap-2">
+            {recentLocations.map((location) => (
+              <LocationRow
+                key={location.id}
+                title={location.title}
+                subtitle={location.subtitle}
+                icon={<Clock3 size={21} color="#40493d" fill="#40493d" />}
+                onPress={() =>
+                  handleSelectAddress(location.address, location.coords ?? null)
+                }
+              />
+            ))}
+          </View>
+        ) : (
+          <View className="gap-2">
+            {savedAddresses.length > 0 ? (
+              savedAddresses.map((address) => (
+                <LocationRow
+                  key={address.id}
+                  title={address.label}
+                  subtitle={address.address}
+                  icon={<MapPin size={21} color="#40493d" />}
                   onPress={() =>
-                    handleSelectAddress(result.label, {
-                      latitude: result.latitude,
-                      longitude: result.longitude,
-                    })
+                    handleSelectAddress(address.address, address.coords)
                   }
                 />
-              ))}
-            </View>
-          </View>
-        ) : null}
-
-        {/* Current Location Button */}
-        <TouchableOpacity
-          onPress={handleUseCurrentLocation}
-          disabled={isLocating}
-          className="flex-row items-center gap-4 p-5 bg-surface-container-lowest rounded-2xl mb-2 shadow-sm active:bg-surface-container"
-        >
-          <View className="bg-primary-fixed p-3 rounded-full shadow-sm">
-            {isLocating ? (
-              <ActivityIndicator size="small" color="#00490e" />
+              ))
             ) : (
-              <Navigation size={24} color="#00490e" fill="#00490e" />
+              <Text className="px-4 py-3 text-sm text-on-surface-variant">
+                No saved addresses yet.
+              </Text>
             )}
           </View>
-          <View className="flex-1">
-            <Text className="font-bold text-on-surface font-jakarta-sans">
-              {isLocating ? 'Fetching your location' : 'Use current location'}
-            </Text>
-            <Text className="text-sm text-on-surface-variant">
-              {isLocating
-                ? 'This may take a moment'
-                : 'Using GPS for better accuracy'}
-            </Text>
-          </View>
-          <ChevronRight size={20} color="#bfcaba" />
-        </TouchableOpacity>
-        {locationError ? (
-          <Text className="text-xs text-red-600 mb-8">{locationError}</Text>
-        ) : (
-          <View className="mb-8" />
         )}
-
-        {/* Map Visualization */}
-        <View className="mb-10 h-40 w-full rounded-2xl overflow-hidden relative shadow-sm border border-surface-variant/10">
-          <Image
-            source={{
-              uri: IMAGE_ASSETS.mapVisualization,
-            }}
-            className="w-full h-full opacity-90"
-            contentFit="cover"
-          />
-          <View className="absolute inset-0 bg-black/10" />
-          <View className="absolute bottom-4 left-4 bg-white/90 px-3 py-1.5 rounded-full shadow-sm flex-row items-center gap-2">
-            <View className="w-2 h-2 bg-primary rounded-full" />
-            <Text className="text-[10px] font-bold tracking-wider uppercase text-on-surface">
-              Live Coverage Area
-            </Text>
-          </View>
-        </View>
-
-        {/* Saved Addresses */}
-        <View className="mb-10">
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="font-jakarta-sans font-bold text-lg text-on-surface">
-              Saved Addresses
-            </Text>
-            <TouchableOpacity>
-              <Text className="text-primary text-sm font-bold">View All</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View className="gap-4">
-            {savedAddresses.map((addr) => (
-              <SavedAddressItem
-                key={addr.id}
-                type={addr.type}
-                label={addr.label}
-                address={addr.address}
-                onPress={() => handleSelectAddress(addr.address, addr.coords)}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* Recent Searches */}
-        <View className="mb-8">
-          <Text className="font-jakarta-sans font-bold text-lg text-on-surface mb-4">
-            Recent Searches
-          </Text>
-          <View className="gap-2">
-            {recentSearches.map((search) => (
-              <RecentSearchItem
-                key={search.id}
-                address={search.address}
-                onPress={() => handleSelectAddress(search.address, search.coords)}
-              />
-            ))}
-          </View>
-        </View>
       </ScrollView>
 
-      {/* Footer */}
+      <LinearGradient
+        colors={['rgba(249,249,249,0)', '#f9f9f9']}
+        pointerEvents="none"
+        className="absolute bottom-0 left-0 right-0 h-32"
+      />
+
       <View
-        className="absolute bottom-0 left-0 w-full p-6 bg-white/90 backdrop-blur-xl border-t border-surface-variant/20"
-        style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+        pointerEvents="box-none"
+        className="absolute left-0 right-0 items-center px-6"
+        style={{ bottom: Math.max(insets.bottom, 24) }}
       >
-        <TouchableOpacity 
-          onPress={handleAddNewAddress}
-          className="w-full bg-primary h-14 rounded-full flex-row items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98]"
+        <TouchableOpacity
+          onPress={handleChooseOnMap}
+          className="flex-row items-center gap-2 rounded-full border border-surface-container bg-surface-container-lowest px-6 py-3.5 active:bg-surface-container-low"
+          style={{
+            boxShadow: '0 8px 32px rgba(26, 28, 28, 0.12)',
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Choose on Map"
         >
-          <Plus size={24} color="#ffffff" />
-          <Text className="text-on-primary font-bold text-base">
-            Add New Address
+          <Map size={21} color="#1a1c1c" />
+          <Text className="font-jakarta-sans text-sm font-bold text-on-surface">
+            Choose on Map
           </Text>
         </TouchableOpacity>
       </View>
