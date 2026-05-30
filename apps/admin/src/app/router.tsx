@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LoginPage } from '@/app/pages/auth/LoginPage';
+import { AdminDashboardPage } from '@/app/pages/dashboard/AdminDashboardPage';
 import { RestaurantsPage } from '@/app/pages/restaurants/RestaurantsPage';
 import { OrdersPage } from '@/app/pages/orders/OrdersPage';
 import { PromotionsPage } from '@/app/pages/promotions/PromotionsPage';
@@ -21,7 +22,8 @@ export const router = createBrowserRouter([
         path: '/',
         element: <AdminLayout />,
         children: [
-          { index: true, element: <Navigate to="/restaurants" replace /> },
+          { index: true, element: <Navigate to="/dashboard" replace /> },
+          { path: 'dashboard', element: <AdminDashboardPage /> },
           { path: 'restaurants', element: <RestaurantsPage /> },
           { path: 'orders', element: <OrdersPage /> },
           { path: 'promotions', element: <PromotionsPage /> },
