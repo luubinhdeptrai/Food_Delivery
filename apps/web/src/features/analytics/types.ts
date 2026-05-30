@@ -56,6 +56,7 @@ export interface SlowItem {
 
 export interface Incident {
   id: string;
+  orderId: string;
   timestamp: string;
   title: string;
   detail: string;

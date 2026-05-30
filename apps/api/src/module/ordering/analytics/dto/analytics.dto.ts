@@ -109,8 +109,11 @@ export class SlowItemDto {
 }
 
 export class IncidentDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ description: 'Status log ID' })
   id!: string;
+
+  @ApiProperty({ description: 'Order ID' })
+  orderId!: string;
 
   @ApiProperty({ description: 'ISO8601 timestamp of the transition log row.' })
   timestamp!: string;

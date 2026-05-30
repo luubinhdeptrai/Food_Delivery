@@ -225,6 +225,7 @@ function round(n: number, decimals: number): number {
 
 function toIncidentDto(row: {
   id: string;
+  orderId: string;
   timestamp: Date;
   fromStatus: string | null;
   toStatus: string;
@@ -233,6 +234,7 @@ function toIncidentDto(row: {
 }): IncidentDto {
   return {
     id: row.id,
+    orderId: row.orderId,
     timestamp: row.timestamp.toISOString(),
     title: incidentTitle(row),
     detail: row.note ?? '',
