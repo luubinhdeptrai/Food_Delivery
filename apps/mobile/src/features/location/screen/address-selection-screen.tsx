@@ -108,7 +108,13 @@ function SavedAddressRow({
   return (
     <View
       className="relative overflow-hidden rounded-xl border border-surface-container-low bg-surface-container-lowest"
-      style={{ boxShadow: '0 2px 12px 0 rgba(26,28,28,0.03)' } as any}
+      style={{
+        shadowColor: 'rgba(26,28,28,1)',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 12,
+        elevation: 1,
+      }}
     >
       <TouchableOpacity
         onPress={onPress}
@@ -482,7 +488,12 @@ export function AddressSelectionScreen() {
                     key={item.id}
                     item={item}
                     onPress={() =>
-                      handleSelectAddress(item.address, item.coords, undefined, item.label)
+                      handleSelectAddress(
+                        item.address,
+                        item.coords,
+                        undefined,
+                        item.label,
+                      )
                     }
                     onEdit={() => handleEditSaved(item.id)}
                     onDelete={() => handleDeleteSaved(item.id, item.label)}
@@ -498,7 +509,7 @@ export function AddressSelectionScreen() {
                   No saved places yet
                 </Text>
                 <Text className="text-center font-inter text-sm text-on-surface-variant">
-                  Tap "Add new saved place" to get started
+                  Tap &quot;Add new saved place&quot; to get started
                 </Text>
               </View>
             )}
