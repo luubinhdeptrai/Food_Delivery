@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { SignInScreen, authApi } from '@/src/features/auth';
 import type { SignInFormData } from '@/src/features/auth';
 import { useState } from 'react';
+import { trackMobileEvent } from '@/src/lib/analytics';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -18,12 +19,22 @@ export default function SignInPage() {
       const { error } = await authApi.signIn(data);
 
       if (error) {
+        trackMobileEvent('login_failure', {
+          method: 'email',
+          code: error.code ?? 'AUTH_ERROR',
+          status: error.status ?? 401,
+        });
         Alert.alert('Sign In Failed', error.message || 'Check your credentials and try again.');
         return;
       }
 
+      trackMobileEvent('login_success', { method: 'email' });
       router.replace('/(customer)/(tabs)');
     } catch (err) {
+      trackMobileEvent('login_failure', {
+        method: 'email',
+        code: 'UNEXPECTED_ERROR',
+      });
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       console.error(err);
     } finally {
@@ -39,7 +50,12 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     try {
       await authApi.signInWithGoogle();
+      trackMobileEvent('login_success', { method: 'google' });
     } catch (err) {
+      trackMobileEvent('login_failure', {
+        method: 'google',
+        code: 'OAUTH_ERROR',
+      });
       Alert.alert('Error', 'Google sign-in failed.');
       console.error(err);
     }

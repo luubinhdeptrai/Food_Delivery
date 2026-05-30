@@ -12,10 +12,59 @@ on:
       gh_repository:
         required: true
         type: string
+      image_url:
+        required: false
+        type: string
+        default: ''
       vite_api_base_url:
         required: false
         type: string
         default: ''
+      vite_app_env:
+        required: false
+        type: string
+        default: 'production'
+      vite_app_version:
+        required: false
+        type: string
+        default: ''
+      vite_commit_sha:
+        required: false
+        type: string
+        default: ''
+      vite_grafana_faro_collector_url:
+        required: false
+        type: string
+        default: ''
+      vite_grafana_faro_app_name:
+        required: false
+        type: string
+        default: 'uitfood-web'
+      grafana_faro_sourcemap_endpoint:
+        required: false
+        type: string
+        default: ''
+      grafana_faro_app_id:
+        required: false
+        type: string
+        default: ''
+      grafana_cloud_stack_id:
+        required: false
+        type: string
+        default: ''
+      vite_posthog_key:
+        required: false
+        type: string
+        default: ''
+      vite_posthog_host:
+        required: false
+        type: string
+        default: 'https://app.posthog.com'
+    secrets:
+      POSTHOG_WEB_KEY:
+        required: false
+      GRAFANA_FARO_SOURCEMAP_API_KEY:
+        required: false
 
 permissions:
   contents: read
@@ -45,9 +94,16 @@ jobs:
         env:
           APP: ${{ inputs.app }}
           GH_REPOSITORY: ${{ inputs.gh_repository }}
+          IMAGE_URL_INPUT: ${{ inputs.image_url }}
         run: |
           set -euo pipefail
-          image="ghcr.io/${GH_REPOSITORY,,}-${APP,,}"
+
+          if [ -n "${IMAGE_URL_INPUT}" ]; then
+            image="${IMAGE_URL_INPUT}"
+          else
+            image="ghcr.io/${GH_REPOSITORY,,}-${APP,,}"
+          fi
+
           echo "name=${image}" >> "${GITHUB_OUTPUT}"
 
       - name: Extract metadata
@@ -60,7 +116,7 @@ jobs:
             type=sha,format=short
 
       - name: Build & Push
-        if: inputs.app != 'web'
+        if: inputs.app != 'web' && inputs.app != 'admin'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
@@ -71,8 +127,8 @@ jobs:
           cache-from: type=gha,scope=${{ inputs.app }}
           cache-to: type=gha,mode=max,scope=${{ inputs.app }}
 
-      - name: Build & Push Web
-        if: inputs.app == 'web'
+      - name: Build & Push Static Web App
+        if: inputs.app == 'web' || inputs.app == 'admin'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
@@ -82,5 +138,17 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_API_BASE_URL=${{ inputs.vite_api_base_url }}
+            VITE_APP_ENV=${{ inputs.vite_app_env }}
+            VITE_APP_VERSION=${{ inputs.vite_app_version }}
+            VITE_COMMIT_SHA=${{ inputs.vite_commit_sha || github.sha }}
+            VITE_GRAFANA_FARO_COLLECTOR_URL=${{ inputs.vite_grafana_faro_collector_url }}
+            VITE_GRAFANA_FARO_APP_NAME=${{ inputs.vite_grafana_faro_app_name }}
+            GRAFANA_FARO_SOURCEMAP_ENDPOINT=${{ inputs.grafana_faro_sourcemap_endpoint }}
+            GRAFANA_FARO_APP_ID=${{ inputs.grafana_faro_app_id }}
+            GRAFANA_CLOUD_STACK_ID=${{ inputs.grafana_cloud_stack_id }}
+            VITE_POSTHOG_KEY=${{ secrets.POSTHOG_WEB_KEY || inputs.vite_posthog_key }}
+            VITE_POSTHOG_HOST=${{ inputs.vite_posthog_host }}
+          secrets: |
+            grafana_faro_sourcemap_api_key=${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}
           cache-from: type=gha,scope=${{ inputs.app }}
           cache-to: type=gha,mode=max,scope=${{ inputs.app }}

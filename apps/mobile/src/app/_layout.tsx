@@ -1,7 +1,7 @@
 import '@/src/lib/reanimated-logger';
 import '../global.css';
 import '@/src/lib/nativewind-interop';
-import { AppState, Platform, ActivityIndicator, View } from 'react-native';
+import { AppState, Platform, ActivityIndicator, View, Text } from 'react-native';
 import {
   QueryClient,
   QueryClientProvider,
@@ -9,7 +9,7 @@ import {
   onlineManager,
 } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   getMessaging,
@@ -25,6 +25,18 @@ import {
   useNotificationHandler,
 } from '@/src/features/notification';
 import Toast from 'react-native-toast-message';
+import {
+  captureMobileException,
+  initMobileObservability,
+  Sentry,
+} from '@/src/lib/observability';
+import {
+  identifyMobileUser,
+  MobileAnalyticsProvider,
+  resetMobileAnalyticsIdentity,
+} from '@/src/lib/analytics';
+
+initMobileObservability();
 
 // Register background handler
 if (Platform.OS !== 'web') {
@@ -34,7 +46,8 @@ if (Platform.OS !== 'web') {
     // If the app is in background or closed, we may need to manually trigger a notification
     // for data-only messages. For messages with a 'notification' block, Android handles them automatically.
     // But for reliability across different Android versions/distributions, we check here.
-    const title = remoteMessage.notification?.title || remoteMessage.data?.title;
+    const title =
+      remoteMessage.notification?.title || remoteMessage.data?.title;
     const body = remoteMessage.notification?.body || remoteMessage.data?.body;
 
     if (title || body) {
@@ -51,6 +64,9 @@ if (Platform.OS !== 'web') {
           trigger: null,
         });
       } catch (error) {
+        captureMobileException(error, {
+          source: 'firebase_background_message',
+        });
         console.error(
           '[BackgroundMessage] Failed to schedule notification:',
           error,
@@ -60,15 +76,51 @@ if (Platform.OS !== 'web') {
   });
 }
 
+function MobileErrorFallback() {
+  return (
+    <View className="flex-1 items-center justify-center bg-white px-6">
+      <Text className="text-lg font-semibold text-gray-900">
+        Something went wrong
+      </Text>
+      <Text className="mt-2 text-sm text-gray-500 text-center">
+        Please restart the app.
+      </Text>
+    </View>
+  );
+}
+
 function RootNavigation() {
   const { data: session, isPending } = useSession();
   const segments = useSegments();
   const router = useRouter();
+  const pathname = usePathname();
+  const userId = session?.user?.id;
+
+  useEffect(() => {
+    Sentry.addBreadcrumb({
+      category: 'navigation',
+      message: `Navigated to ${pathname}`,
+      level: 'info',
+    });
+  }, [pathname]);
 
   // Initialize notifications
   useNotificationSocket();
   usePushToken();
   useNotificationHandler();
+
+  useEffect(() => {
+    if (isPending) return;
+
+    if (userId) {
+      identifyMobileUser(userId);
+      Sentry.setUser({ id: userId });
+      return;
+    }
+
+    resetMobileAnalyticsIdentity();
+    Sentry.setUser(null);
+  }, [userId, isPending]);
 
   useEffect(() => {
     if (isPending) return;
@@ -101,7 +153,7 @@ function RootNavigation() {
   );
 }
 
-export default function AppLayout() {
+function AppLayout() {
   // 1. Create the client (stable across renders)
   const [queryClient] = useState(
     () =>
@@ -136,8 +188,14 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <RootNavigation />
-    </QueryClientProvider>
+    <Sentry.ErrorBoundary fallback={<MobileErrorFallback />}>
+      <QueryClientProvider client={queryClient}>
+        <MobileAnalyticsProvider>
+          <RootNavigation />
+        </MobileAnalyticsProvider>
+      </QueryClientProvider>
+    </Sentry.ErrorBoundary>
   );
 }
+
+export default Sentry.wrap(AppLayout);

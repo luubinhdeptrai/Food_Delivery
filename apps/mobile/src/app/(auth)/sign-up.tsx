@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { SignUpScreen, authApi } from '@/src/features/auth';
 import type { SignUpFormData } from '@/src/features/auth';
 import { useState } from 'react';
+import { trackMobileEvent } from '@/src/lib/analytics';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -18,13 +19,23 @@ export default function SignUpPage() {
       const { error } = await authApi.signUp(data);
 
       if (error) {
+        trackMobileEvent('signup_failure', {
+          method: 'email',
+          code: error.code ?? 'SIGNUP_ERROR',
+          status: error.status ?? 400,
+        });
         Alert.alert('Registration Failed', error.message || 'Please check your information and try again.');
         return;
       }
 
+      trackMobileEvent('signup_success', { method: 'email' });
       Alert.alert('Success', 'Account created successfully!');
       router.replace('/(customer)/(tabs)');
     } catch (err) {
+      trackMobileEvent('signup_failure', {
+        method: 'email',
+        code: 'UNEXPECTED_ERROR',
+      });
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       console.error(err);
     } finally {

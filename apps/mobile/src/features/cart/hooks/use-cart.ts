@@ -7,6 +7,7 @@ import {
   removeCartItem,
   clearCart,
 } from '../api/cart-api';
+import { trackMobileEvent } from '@/src/lib/analytics';
 import type {
   AddItemToCartRequest,
   CartItemResponse,
@@ -265,7 +266,11 @@ export function useAddToCart() {
     onError: (_error, _payload, context) => {
       rollbackCart(queryClient, context);
     },
-    onSuccess: (cart) => {
+    onSuccess: (cart, variables) => {
+      trackMobileEvent('cart_item_added', {
+        menu_item_id: variables.menuItemId,
+        quantity: variables.quantity,
+      });
       syncCartFromServer(queryClient, cart);
     },
     onSettled: () => {

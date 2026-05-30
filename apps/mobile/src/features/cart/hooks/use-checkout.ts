@@ -11,6 +11,8 @@ import Toast from 'react-native-toast-message';
 import * as Linking from 'expo-linking';
 import * as Crypto from 'expo-crypto';
 import type { CheckoutSummary, CartItem, CheckoutDto } from '../types';
+import { trackMobileEvent } from '@/src/lib/analytics';
+import { Sentry } from '@/src/lib/observability';
 
 const DISCOUNT_THRESHOLD = 500000; // 500k VND
 const DISCOUNT_PERCENT = 10; // 10%
@@ -54,6 +56,12 @@ export function useCheckout() {
     mutationFn: (data: { dto: CheckoutDto; idempotencyKey?: string }) =>
       checkoutCart(data.dto, data.idempotencyKey),
     onSuccess: (data) => {
+      trackMobileEvent('order_created', {
+        order_id: data.orderId,
+        payment_method: data.paymentMethod,
+        total_amount: summary.total,
+        item_count: cartItems.length,
+      });
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       if (data.paymentMethod === 'vnpay' && data.paymentUrl) {
         Linking.openURL(data.paymentUrl);
@@ -66,6 +74,9 @@ export function useCheckout() {
       router.replace('/(customer)/(tabs)');
     },
     onError: (error: any) => {
+      trackMobileEvent('order_create_failed', {
+        code: 'CHECKOUT_ERROR',
+      });
       Toast.show({
         type: 'error',
         text1: 'Failed to place order',
@@ -97,8 +108,27 @@ export function useCheckout() {
     };
 
     const randomBytes = await Crypto.getRandomBytesAsync(16);
-    const idempotencyKey = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    checkoutMutation.mutate({ dto, idempotencyKey });
+    const idempotencyKey = Array.from(randomBytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    trackMobileEvent('checkout_submitted', {
+      payment_method: dto.paymentMethod,
+      item_count: cartItems.length,
+      total_amount: summary.total,
+    });
+    await Sentry.startSpan(
+      {
+        name: 'checkout.place_order',
+        op: 'ui.action',
+        attributes: {
+          'checkout.payment_method': dto.paymentMethod,
+          'checkout.item_count': cartItems.length,
+        },
+      },
+      async () => {
+        await checkoutMutation.mutateAsync({ dto, idempotencyKey });
+      },
+    );
   };
   const cartItems: CartItem[] =
     cart?.items.map((item) => ({
@@ -136,4 +166,3 @@ export function useCheckout() {
     isPlacingOrder: checkoutMutation.isPending,
   };
 }
-

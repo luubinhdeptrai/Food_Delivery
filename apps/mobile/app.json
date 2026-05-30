@@ -38,6 +38,7 @@
     },
     "plugins": [
       "expo-router",
+      "@sentry/react-native/expo",
       [
         "expo-notifications",
         {
@@ -62,7 +63,8 @@
       "expo-font",
       "expo-image",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "extra": {
       "geocoding": {
@@ -78,7 +80,8 @@
     },
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "buildCacheProvider": "eas"
     }
   }
 }

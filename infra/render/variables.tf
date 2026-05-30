@@ -134,13 +134,27 @@ variable "web_custom_domains" {
 variable "api_health_check_path" {
   description = "Optional API health check path."
   type        = string
-  default     = null
+  default     = "/api/ready"
 }
 
 variable "web_health_check_path" {
   description = "Optional web health check path."
   type        = string
-  default     = null
+  default     = "/healthz"
+}
+
+variable "api_env_vars" {
+  description = "API service environment variables managed by Terraform. Values are sent to Render on plan/apply and stored in Terraform state."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
+variable "web_env_vars" {
+  description = "Web service environment variables managed by Terraform. Values are sent to Render on plan/apply and stored in Terraform state."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
 }
 
 variable "api_env_group_id" {

@@ -5,6 +5,8 @@ on:
     secrets:
       EXPO_TOKEN:
         required: true
+      SENTRY_AUTH_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -23,7 +25,6 @@ jobs:
       - name: Setup Expo
         uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
         with:
-          expo-version: 55.0.30
           eas-version: 18.13.0
           token: ${{ secrets.EXPO_TOKEN }}
 
@@ -35,7 +36,19 @@ jobs:
 
       - name: Package (Local Android Build)
         working-directory: apps/mobile
-        run: eas build --platform android --profile preview --local --non-interactive --output build.apk
+        run: eas build --platform android --profile development --local --non-interactive --output build.apk
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+          EXPO_PUBLIC_APP_ENV: production
+          EXPO_PUBLIC_APP_VERSION: ${{ vars.APP_VERSION || '1.0.0' }}
+          EXPO_PUBLIC_COMMIT_SHA: ${{ github.sha }}
+          EXPO_PUBLIC_SENTRY_ENVIRONMENT: production
+          EXPO_PUBLIC_SENTRY_RELEASE: sha-${{ github.sha }}
+          EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || '0.1' }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_MOBILE_PROJECT }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

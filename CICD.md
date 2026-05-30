@@ -1,6 +1,6 @@
-# Turborepo CI/CD and Render Terraform IaC
+# Turborepo CI/CD and Render Deployment
 
-This document explains how this repository builds, validates, packages, and deploys the UITFood food ordering platform. It covers the GitHub Actions CI/CD workflows, the Turborepo task model, Docker image publication to GitHub Container Registry, Expo mobile packaging, and the Terraform configuration that manages Render infrastructure.
+This document explains how this repository builds, validates, packages, and deploys the UITFood food ordering platform. It covers the GitHub Actions CI/CD workflows, the Turborepo task model, Docker image publication to GitHub Container Registry, Render image deploy hooks, Expo mobile packaging, and the Terraform configuration that manages Render infrastructure.
 
 ## 1. System Overview
 
@@ -19,7 +19,7 @@ The pipeline separates validation, packaging, and deployment:
 
 - Validation runs linting, typechecking, tests, audit checks, and builds.
 - API and Web are packaged as Docker images and pushed to GHCR.
-- Render API and Web services are updated by Terraform by changing the image tag in `runtime_source.image.tag`.
+- Render API and Web services are redeployed by Render deploy hooks with the newly pushed `sha-<short-sha>` image tag.
 - Mobile is packaged with EAS into an Android APK artifact.
 - Render infrastructure shape is managed by Terraform, with HCP Terraform used for remote state and remote runs.
 
@@ -36,11 +36,14 @@ The project intentionally has different sources of truth for different concerns.
 | API Docker image build       | `apps/api/Dockerfile`                                                    |
 | Web Docker image build       | `apps/web/Dockerfile` and `apps/web/nginx.conf`                          |
 | Mobile build profile         | `apps/mobile/eas.json` and root `eas.json`                               |
+| Render image promotion       | Render deploy hooks called by `.github/workflows/cd-render-image.yml`    |
 | Render infrastructure        | `infra/render/*.tf`                                                      |
 | Render runtime secrets       | Render service settings or Render environment group, not Terraform files |
 | Terraform state              | HCP Terraform workspace selected by `infra/render/versions.tf`           |
 
 Do not manage the same Render service with both Terraform and Render Blueprint YAML. Once Terraform owns the Render services, remove the project from active Blueprint management. Running both creates two competing release mechanisms for the same service fields.
+
+Application image promotion is intentionally outside Terraform CD. The API and Web pipelines push GHCR images and then call Render deploy hooks so Render pulls the exact image tag produced by the workflow.
 
 ## 3. Turborepo Configuration
 
@@ -100,22 +103,23 @@ GitHub Actions only loads workflow files directly under `.github/workflows`, so 
 
 ### Pipeline Workflows
 
-| Workflow                  | Trigger                                                               | Purpose                                                                               |
-| ------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `pipeline-main.yml`       | Manual `workflow_dispatch`                                            | Runs the full CI/CD path for API, Web, Mobile, and Render apply when run on `master`. |
-| `pipeline-api.yml`        | Push to `master` touching `apps/api/**`, or manual                    | Validates API, publishes API Docker image, applies the API image tag to Render.       |
-| `pipeline-web.yml`        | Push to `master` touching `apps/web/**`, or manual                    | Validates Web, publishes Web Docker image, applies the Web image tag to Render.       |
-| `pipeline-mobile.yml`     | Push to `master` touching `apps/mobile/**`, or manual                 | Validates Mobile and packages an Android APK with EAS.                                |
-| `pipeline-render-iac.yml` | Push to `master` touching Render IaC workflow/config paths, or manual | Applies or plans Terraform changes in `infra/render`.                                 |
+| Workflow                  | Trigger                                                               | Purpose                                                                                       |
+| ------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `pipeline-main.yml`       | Manual `workflow_dispatch`                                            | Runs the full CI/CD path for API, Web, Mobile, and Render image deploys when run on `master`. |
+| `pipeline-api.yml`        | Push to `master` touching `apps/api/**`, or manual                    | Validates API, publishes API Docker image, and triggers the Render API deploy hook.           |
+| `pipeline-web.yml`        | Push to `master` touching `apps/web/**`, or manual                    | Validates Web, publishes Web Docker image, and triggers the Render Web deploy hook.           |
+| `pipeline-mobile.yml`     | Push to `master` touching `apps/mobile/**`, or manual                 | Validates Mobile and packages an Android APK with EAS.                                        |
+| `pipeline-render-iac.yml` | Push to `master` touching Render IaC workflow/config paths, or manual | Applies or plans Terraform changes in `infra/render`.                                         |
 
 ### Reusable Workflows
 
-| Workflow                | Called by                            | Purpose                                                                                                                   |
-| ----------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `ci-validate.yml`       | `pipeline-main.yml`                  | Full monorepo validation with Turborepo affected tasks, Postgres, Redis, audit, build, migration push, and API E2E tests. |
-| `cd-package-docker.yml` | API, Web, Main pipelines             | Builds and pushes app Docker images to GHCR.                                                                              |
-| `cd-package-mobile.yml` | Mobile, Main pipelines               | Runs an EAS local Android build and uploads the APK artifact.                                                             |
-| `cd-render-iac.yml`     | API, Web, Main, Render IaC pipelines | Runs Terraform fmt, init, validate, plan, or apply for Render infrastructure.                                             |
+| Workflow                | Called by                | Purpose                                                                                                                   |
+| ----------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `ci-validate.yml`       | `pipeline-main.yml`      | Full monorepo validation with Turborepo affected tasks, Postgres, Redis, audit, build, migration push, and API E2E tests. |
+| `cd-package-docker.yml` | API, Web, Main pipelines | Builds and pushes app Docker images to GHCR.                                                                              |
+| `cd-package-mobile.yml` | Mobile, Main pipelines   | Runs an EAS local Android build and uploads the APK artifact.                                                             |
+| `cd-render-image.yml`   | API, Web, Main pipelines | Calls Render deploy hooks for image-backed services with the current commit's GHCR image tag.                             |
+| `cd-render-iac.yml`     | Render IaC pipeline      | Runs Terraform fmt, init, validate, plan, or apply for Render infrastructure.                                             |
 
 ## 6. Main Pipeline
 
@@ -140,14 +144,19 @@ Job order:
    - Passes `vars.VITE_API_BASE_URL` as the Vite build-time API URL.
    - Pushes Web image tags to GHCR.
 
-4. `apply-render-infra`
+4. `deploy-api-render`
    - Needs both Docker publish jobs.
    - Runs only when the workflow ref is `refs/heads/master`.
-   - Calls `cd-render-iac.yml`.
-   - Sets `apply: true`.
-   - Sets `use_github_sha_tag: true`, so both API and Web services use the current commit tag format `sha-<short-sha>`.
+   - Calls `cd-render-image.yml` with `app: api`.
+   - Triggers the Render API deploy hook with `ghcr.io/<owner>/<repo>-api:sha-<short-sha>`.
 
-5. `publish-mobile`
+5. `deploy-web-render`
+   - Needs both Docker publish jobs.
+   - Runs only when the workflow ref is `refs/heads/master`.
+   - Calls `cd-render-image.yml` with `app: web`.
+   - Triggers the Render Web deploy hook with `ghcr.io/<owner>/<repo>-web:sha-<short-sha>`.
+
+6. `publish-mobile`
    - Needs `validate`.
    - Calls `cd-package-mobile.yml`.
    - Uses `EXPO_TOKEN`.
@@ -182,13 +191,13 @@ Publish job:
 - Calls `cd-package-docker.yml` with `app: api`.
 - Publishes `ghcr.io/<owner>/<repo>-api` image tags.
 
-Render apply job:
+Render deploy job:
 
 - Runs only on `refs/heads/master`.
-- Calls `cd-render-iac.yml`.
-- Sets `apply: true`.
-- Sets `api_use_github_sha_tag: true`, so only the API image tag is forced to the current commit SHA tag.
-- The Web image tag is resolved from workflow input, GitHub variable, or existing Terraform state.
+- Calls `cd-render-image.yml`.
+- Uses the `RENDER_API_DEPLOY_HOOK` GitHub secret.
+- Triggers Render with the API image reference `ghcr.io/<owner>/<repo>-api:sha-<short-sha>`.
+- The Web service remains on its previous image tag.
 
 ## 8. Web Pipeline
 
@@ -213,16 +222,17 @@ Validation job:
 Publish job:
 
 - Calls `cd-package-docker.yml` with `app: web`.
-- Passes `VITE_API_BASE_URL` as a Docker build argument.
+- Passes Web Vite build arguments for API base URL, Grafana Faro, and PostHog.
+- Passes the Grafana Faro source-map API key to Docker as a BuildKit secret when configured.
 - Publishes `ghcr.io/<owner>/<repo>-web` image tags.
 
-Render apply job:
+Render deploy job:
 
 - Runs only on `refs/heads/master`.
-- Calls `cd-render-iac.yml`.
-- Sets `apply: true`.
-- Sets `web_use_github_sha_tag: true`, so only the Web image tag is forced to the current commit SHA tag.
-- The API image tag is resolved from workflow input, GitHub variable, or existing Terraform state.
+- Calls `cd-render-image.yml`.
+- Uses the `RENDER_WEB_DEPLOY_HOOK` GitHub secret.
+- Triggers Render with the Web image reference `ghcr.io/<owner>/<repo>-web:sha-<short-sha>`.
+- The API service remains on its previous image tag.
 
 ## 9. Mobile Pipeline
 
@@ -334,14 +344,25 @@ Image name format:
 ghcr.io/<github-owner-lowercase>/<github-repo-lowercase>-<app>
 ```
 
-The Docker packaging workflow and the Render Terraform workflow both derive
+The Docker packaging workflow and the Render image deploy workflow both accept
+an optional explicit image URL. When no explicit URL is provided, they derive
 this value from `github.repository`, lower-case it, and append `-api` or
-`-web`. For this repository, the fallback Terraform defaults expect:
+`-web`. For the current `NDTruongDanh/UITFood` repository, the default workflow
+image refs are:
 
 ```text
 ghcr.io/ndtruongdanh/uitfood-api
 ghcr.io/ndtruongdanh/uitfood-web
 ```
+
+The default image URL configured on each Render image-backed service must match
+the workflow image URL, except for the tag. Render rejects deploy hook requests
+where the image host, repository, or image name differs from the service's
+configured default image URL.
+
+If a Render service is configured to pull a different image repository, update
+the Render service image URL to this workflow image repository. The deploy hook
+can then move the service from one `sha-<short-sha>` tag to the next.
 
 Tag format:
 
@@ -387,7 +408,43 @@ The Web Dockerfile is also a pruned monorepo build:
 
 Because Vite embeds `VITE_*` values at build time, changing `VITE_API_BASE_URL` requires rebuilding and republishing the Web image.
 
-## 13. Render Terraform IaC
+## 13. Render Image Deploy Hooks
+
+File: `.github/workflows/cd-render-image.yml`
+
+This workflow is the app deployment path for Render image-backed services. It
+does not run Terraform and does not mutate Render infrastructure state.
+
+Inputs:
+
+- `app`: app suffix used for the GHCR image name, such as `api` or `web`.
+- `gh_repository`: GitHub repository in `<owner>/<repo>` form.
+- `image_url`: optional explicit image repository, without a tag.
+- `image_tag`: optional explicit image tag.
+
+Required secret:
+
+- `RENDER_DEPLOY_HOOK`: the service deploy hook URL from Render settings.
+
+The API and Web pipelines pass this secret from service-specific GitHub secrets:
+
+```text
+RENDER_API_DEPLOY_HOOK
+RENDER_WEB_DEPLOY_HOOK
+```
+
+Default image resolution:
+
+1. If `image_url` is provided, use it.
+2. Else derive `ghcr.io/<github-owner>/<github-repo>-<app>`.
+3. If `image_tag` is provided, use it.
+4. Else use `sha-<short-sha>` from the current commit.
+
+The workflow calls the Render deploy hook with `imgURL=<image_url>:<image_tag>`.
+For image-backed services, this tells Render to pull and deploy the exact image
+that GitHub Actions just pushed to GHCR.
+
+## 14. Render Terraform IaC
 
 Directory: `infra/render`
 
@@ -407,7 +464,7 @@ The configuration requires:
 - Terraform `>= 1.6.0`
 - Render provider `render-oss/render` version `~> 1.8`
 
-The reusable GitHub workflow currently installs Terraform `1.14.5`.
+The reusable GitHub workflow currently installs Terraform `1.15.4`.
 
 ### HCP Terraform State
 
@@ -526,11 +583,13 @@ The module outputs:
 - Postgres ID.
 - Sensitive internal Postgres connection string.
 
-## 14. Reusable Render Terraform Workflow
+## 15. Reusable Render Terraform Workflow
 
 File: `.github/workflows/cd-render-iac.yml`
 
-This workflow is the single automation entry point for Terraform.
+This workflow is the automation entry point for Terraform infrastructure
+changes. It is no longer used by the API, Web, or Main pipelines for app image
+promotion.
 
 Inputs:
 
@@ -540,8 +599,10 @@ Inputs:
 - `web_use_github_sha_tag`: use the current commit SHA tag for Web only.
 - `api_image_tag`: explicit API image tag.
 - `web_image_tag`: explicit Web image tag.
+- `api_image_url`: optional explicit API image repository, without a tag.
+- `web_image_url`: optional explicit Web image repository, without a tag.
 - `working_directory`: defaults to `infra/render`.
-- `terraform_version`: defaults to `1.14.5`.
+- `terraform_version`: defaults to `1.15.4`.
 
 Required secrets:
 
@@ -590,7 +651,7 @@ Terraform automatically maps `TF_VAR_*` environment variables to matching Terraf
 
 This fallback behavior allows infrastructure-only applies to keep the currently deployed app images instead of accidentally requiring a new image tag.
 
-## 15. End-To-End Release Flow
+## 16. End-To-End Release Flow
 
 ### API Release
 
@@ -605,21 +666,20 @@ master
 sha-<short-sha>
 ```
 
-6. `cd-render-iac.yml` runs with `api_use_github_sha_tag: true`.
-7. Terraform sets `var.api_image_tag` to `sha-<short-sha>`.
-8. Terraform updates the Render API service `runtime_source.image.tag`.
-9. Render deploys the API service with the new container image.
-10. The Web service remains on its previous image tag.
+6. `cd-render-image.yml` runs with `app: api`.
+7. The workflow calls the Render API deploy hook with `imgURL=ghcr.io/<owner>/<repo>-api:sha-<short-sha>`.
+8. Render deploys the API service with the new container image.
+9. The Web service remains on its previous image tag.
 
 ### Web Release
 
 1. A commit lands on `master` under `apps/web/**`.
 2. `pipeline-web.yml` starts.
 3. Web validation runs.
-4. Web Docker image is built with `VITE_API_BASE_URL`.
+4. Web Docker image is built with API, Grafana Faro, and PostHog build configuration.
 5. Web image is pushed to GHCR.
-6. `cd-render-iac.yml` runs with `web_use_github_sha_tag: true`.
-7. Terraform updates the Render Web service image tag.
+6. `cd-render-image.yml` runs with `app: web`.
+7. The workflow calls the Render Web deploy hook with `imgURL=ghcr.io/<owner>/<repo>-web:sha-<short-sha>`.
 8. Render deploys the Web service with the new container image.
 9. The API service remains on its previous image tag.
 
@@ -628,7 +688,7 @@ sha-<short-sha>
 1. A user manually starts `pipeline-main.yml`.
 2. Full monorepo validation runs through `ci-validate.yml`.
 3. API and Web Docker images are published.
-4. If the workflow runs against `master`, Terraform applies both API and Web image tags from the current commit.
+4. If the workflow runs against `master`, Render deploy hooks are triggered for both API and Web images from the current commit.
 5. Mobile EAS local build runs and uploads the APK artifact.
 
 ### Infrastructure Release
@@ -639,7 +699,7 @@ sha-<short-sha>
 4. Image tags are preserved from inputs, repository variables, or existing Terraform state unless explicitly overridden.
 5. Render infrastructure changes are applied.
 
-## 16. First-Time Render Terraform Setup
+## 17. First-Time Render Terraform Setup
 
 Before the automated Render pipeline can safely apply, complete these steps.
 
@@ -731,7 +791,7 @@ Do not apply until the plan shows no unexpected replacement or deletion.
 
 Without imports, Terraform treats the resources as new and may create duplicates.
 
-## 17. Local Operator Commands
+## 18. Local Operator Commands
 
 ### Validate the Monorepo Locally
 
@@ -783,25 +843,24 @@ terraform apply -input=false
 
 Use local apply only when you understand how it interacts with the shared HCP Terraform state. CI should remain the normal production path.
 
-## 18. Rollback Procedure
+## 19. Rollback Procedure
 
-API and Web images are tagged with short Git SHA tags. Rollback is done by applying a previous known-good image tag through Terraform.
+API and Web images are tagged with short Git SHA tags. Rollback is done by
+manually running `cd-render-image.yml` through the API, Web, or Main pipeline
+with an explicit previous known-good image tag, or by using the Render Dashboard
+manual deploy flow for the image-backed service.
 
 Recommended rollback path:
 
 1. Find the previous working tag in GHCR or GitHub Actions logs, for example `sha-1a2b3c4`.
-2. Start `pipeline-render-iac.yml` manually.
-3. Set `apply` to `true`.
-4. Set `api_image_tag` or `web_image_tag` to the previous tag.
-5. Leave the other service tag blank so the workflow preserves it from state or repository variables.
-6. Run the workflow.
-7. Verify the Render service URL and logs.
+2. Start the API or Web pipeline manually after temporarily adding an explicit `image_tag` input, or trigger the Render deploy hook directly with `imgURL=<image-url>:<tag>`.
+3. Verify the Render service URL and logs.
 
 For a full API and Web rollback, provide both image tags.
 
-Do not manually edit Render service image tags in the Dashboard unless it is an emergency. Terraform will later try to reconcile the service back to the tag in configuration or workflow variables.
+Do not remove the old image tag from GHCR until the rollback window has passed. Render needs the referenced image to remain available in the registry.
 
-## 19. Security And Governance
+## 20. Security And Governance
 
 Current safeguards:
 
@@ -809,6 +868,7 @@ Current safeguards:
 - Workflows request minimal default permissions with `contents: read`.
 - Docker publishing jobs explicitly request `packages: write`.
 - `pnpm audit --audit-level high` runs in validation jobs.
+- Render deploy hook URLs are stored as GitHub Actions secrets.
 - Terraform credentials are passed through secrets.
 - Terraform avoids owning application runtime secrets after initial service setup.
 - API Docker image runs as a non-root user.
@@ -820,23 +880,24 @@ Operational rules:
 - Keep `production.tfvars` free of credentials.
 - Prefer Render environment groups for runtime application secrets.
 - Keep GHCR package visibility and Render image pull access aligned.
+- Keep Render deploy hook URLs secret and rotate them if they are exposed.
 - Review Terraform plans before first import or any major service setting change.
-- Do not enable Render deploy hooks for services whose image tags are managed by Terraform.
 
-## 20. Current Caveats And Improvement Opportunities
+## 21. Current Caveats And Improvement Opportunities
 
 These are current behaviors to be aware of:
 
 - `pipeline-main.yml` is manual only. There is no full automatic pipeline for every push or pull request.
 - The API, Web, and Mobile pipelines are path-specific. Root-level changes such as `package.json`, `pnpm-lock.yaml`, `turbo.json`, or shared workflow changes may require manually running the main pipeline unless their workflow path filters are expanded.
 - `ci-validate.yml` requires `TURBO_TOKEN` and `TURBO_TEAM`. If remote caching is optional for the team, make those workflow-call secrets optional.
+- The deploy hook workflow requires each Render service's configured image URL to match the GHCR image URL used by Docker publish and deploy. If the Render image repository differs from `ghcr.io/<owner>/<repo>-<app>`, update the Render service image URL.
 - The Web and Mobile test scripts currently do not run real tests.
 - `pipeline-mobile.yml` uploads an artifact named `mobile-production-build`, but the reusable mobile package workflow builds the `preview` EAS profile.
 - Render Postgres `postgres_ip_allow_list` defaults to `0.0.0.0/0`. Tighten this if external public database access is not required.
 - The API pipeline uses `drizzle-kit push` in CI. For production database changes, prefer an explicit migration strategy through `db:migrate` or a controlled migration job.
-- The Terraform workflow applies automatically on Render IaC pushes to `master`. For stricter production control, change the push path to plan-only and require manual apply.
+- The Terraform workflow applies automatically on Render IaC pushes to `master`. For stricter infrastructure control, change the push path to plan-only and require manual apply.
 
-## 21. Troubleshooting
+## 22. Troubleshooting
 
 ### Terraform Fails Because `TF_CLOUD_ORGANIZATION` Or `TF_WORKSPACE` Is Empty
 
@@ -873,6 +934,17 @@ sha-<short-sha>
 
 Also confirm the Terraform image URL variables match the GHCR repository names produced by `cd-package-docker.yml`.
 
+If the deploy hook fails with:
+
+```text
+deploy hook cannot change the host, project, or image name. Only the digest or tag may be modified
+```
+
+the image repository sent in `imgURL` does not match the image repository
+currently configured on the Render service. Either update the Render service
+image URL to the workflow image repository, or explicitly pass a matching
+`image_url` input from a custom workflow caller.
+
 ### Web Points To The Wrong API URL
 
 `VITE_API_BASE_URL` is baked into the Web image at build time. Update the GitHub repository variable, rerun the Web pipeline, and let Terraform apply the new Web image tag.
@@ -908,7 +980,7 @@ Check:
 - Android credentials and EAS project configuration.
 - Whether the local GitHub runner has enough disk space for local Android builds.
 
-## 22. Reference Notes
+## 23. Reference Notes
 
 This guide follows current tool behavior from the official documentation:
 
