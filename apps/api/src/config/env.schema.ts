@@ -46,6 +46,7 @@ const baseEnvSchema = z.object({
   // ---------------------------------------------------------------------------
   // Redis
   // ---------------------------------------------------------------------------
+  REDIS_URL: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
   REDIS_HOST: z.string().min(1).default('localhost'),
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
 

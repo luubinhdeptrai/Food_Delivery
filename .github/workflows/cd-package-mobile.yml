@@ -25,7 +25,6 @@ jobs:
       - name: Setup Expo
         uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
         with:
-          expo-version: 55.0.30
           eas-version: 18.13.0
           token: ${{ secrets.EXPO_TOKEN }}
 
@@ -37,7 +36,7 @@ jobs:
 
       - name: Package (Local Android Build)
         working-directory: apps/mobile
-        run: eas build --platform android --profile production --local --non-interactive --output build.apk
+        run: eas build --platform android --profile development --local --non-interactive --output build.apk
         env:
           EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
