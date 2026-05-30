@@ -1,0 +1,124 @@
+# Development docker-compose — starts all local services + app dev servers with hot reload.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# First-time setup:
+#   cp .env.example .env
+#   cp apps/api/.env.example apps/api/.env   # then fill in secrets
+#
+# After changing package.json or pnpm-lock.yaml, rebuild and reset volumes:
+#   docker compose -f docker-compose.dev.yml down -v
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# Access:
+#   API   → http://localhost:3000
+#   Web   → http://localhost:5173
+#   Admin → http://localhost:5174
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: food_order_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-food_order}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-foodordersecret}
+      POSTGRES_DB: ${POSTGRES_DB:-food_order_db}
+    ports:
+      - '5432:5432'
+    volumes:
+      - food_order_db:/var/lib/postgresql
+    healthcheck:
+      # $$VAR is expanded by the container shell, not by Compose.
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: food_order_redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - food_order_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    container_name: food_order_api_dev
+    volumes:
+      - .:/app
+      # Named volumes shadow the bind-mount for node_modules so the
+      # Docker-installed packages aren't overwritten by the host directory.
+      - api_nm_root:/app/node_modules
+      - api_nm_app:/app/apps/api/node_modules
+    environment:
+      # Override localhost references so the API reaches the compose services.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-food_order}:${POSTGRES_PASSWORD:-foodordersecret}@postgres:5432/${POSTGRES_DB:-food_order_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Enable polling-based file watching for reliable hot-reload inside Docker
+      # on macOS/Windows (Docker Desktop bind mounts don't emit inotify events).
+      CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    container_name: food_order_web_dev
+    volumes:
+      - .:/app
+      - web_nm_root:/app/node_modules
+      - web_nm_app:/app/apps/web/node_modules
+    # VITE_API_BASE_URL stays at localhost:3000 — the browser talks to the
+    # published host port, not the internal Docker network.
+    ports:
+      - '5173:5173'
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile.dev
+    container_name: food_order_admin_dev
+    volumes:
+      - .:/app
+      - admin_nm_root:/app/node_modules
+      - admin_nm_app:/app/apps/admin/node_modules
+    ports:
+      - '5174:5174'
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  food_order_db:
+    driver: local
+  food_order_redis:
+    driver: local
+  api_nm_root:
+  api_nm_app:
+  web_nm_root:
+  web_nm_app:
+  admin_nm_root:
+  admin_nm_app:

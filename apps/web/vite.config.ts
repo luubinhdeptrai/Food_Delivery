@@ -43,6 +43,12 @@ if (shouldUploadFaroSourcemaps) {
 
 export default defineConfig({
   plugins,
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    watch: { usePolling: true },
+  },
   build: {
     sourcemap: true,
   },
