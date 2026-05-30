@@ -765,8 +765,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "process_runtime_nodejs_memory_heap_used_bytes{service_name=~\"$service\", deployment_environment=~\"$environment\"} or process_resident_memory_bytes{service_name=~\"$service\", deployment_environment=~\"$environment\"}",
-          "legendFormat": "{{service_name}} heap/rss",
+          "expr": "sum by (service_name, deployment_environment) (v8js_memory_heap_used_bytes{service_name=~\"$service\", deployment_environment=~\"$environment\"})",
+          "legendFormat": "{{service_name}} heap used",
           "range": true,
           "refId": "A"
         }
@@ -856,13 +856,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "process_runtime_nodejs_cpu_utilization{service_name=~\"$service\", deployment_environment=~\"$environment\"} or nodejs_performance_event_loop_utilization{service_name=~\"$service\", deployment_environment=~\"$environment\"}",
-          "legendFormat": "{{__name__}}",
+          "expr": "nodejs_eventloop_utilization{service_name=~\"$service\", deployment_environment=~\"$environment\"}",
+          "legendFormat": "{{service_name}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "CPU / Event Loop Utilization",
+      "title": "Event Loop Utilization",
       "type": "timeseries"
     },
     {
