@@ -274,7 +274,7 @@ export function AddressSelectionScreen() {
       <View className="z-10 bg-surface px-4 pb-4 pt-2">
         <View className="relative justify-center">
           <View className="pointer-events-none absolute left-4 z-10">
-            <MapPin size={21} color="#00490e" fill="#00490e" />
+            <MapPin size={21} color="#00490e" />
           </View>
           <TextInput
             ref={searchInputRef}
