@@ -13,6 +13,7 @@ import EditMenuItemPage from '@/app/pages/menu/EditMenuItemPage';
 import { OrdersPage } from '@/app/pages/orders/OrdersPage';
 import { OrderDetailPage } from '@/app/pages/orders/OrderDetailPage';
 import { DeliveryZonesPage } from '@/app/pages/delivery-zones/DeliveryZonesPage';
+import { AnalyticsPage } from '@/app/pages/analytics/AnalyticsPage';
 import { SettingsPage } from '@/app/pages/settings/SettingsPage';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
@@ -105,6 +106,11 @@ export const router = withFaroRouterInstrumentation(createBrowserRouter([
                 path: 'delivery-zones',
                 element: <FaroErrorBoundary fallback={<PageErrorFallback />}><DeliveryZonesPage /></FaroErrorBoundary>,
                 handle: { breadcrumb: 'Delivery Zones' },
+              },
+              {
+                path: 'analytics',
+                element: <FaroErrorBoundary fallback={<PageErrorFallback />}><AnalyticsPage /></FaroErrorBoundary>,
+                handle: { breadcrumb: 'Analytics' },
               },
               {
                 path: 'settings',
