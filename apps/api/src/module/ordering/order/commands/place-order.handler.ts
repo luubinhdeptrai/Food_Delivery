@@ -55,6 +55,7 @@ import {
 } from '@/shared/ports/promotion-application.port';
 import { runObserved } from '@/observability/trace';
 import { recordOrderPlaced } from '@/observability/domain-metrics';
+import { roundToNearest1000 } from '@/shared/validators/vnd-amount.validator';
 
 /**
  * Local projection of a delivery zone — contains only the fields needed for
@@ -775,18 +776,19 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   }
 
   /**
-   * Shipping fee formula: round(baseFee + distanceKm × perKmRate, 1000)
+   * Shipping fee formula: roundToNearest1000(baseFee + distanceKm × perKmRate)
    * Both baseFee and perKmRate are integer VND (multiples of 1000).
    * The raw product contains a float component from distanceKm, so the result
    * is normalised to the nearest 1000 VND to keep all monetary values
    * consistent (no irregular amounts like 19992 or 104993).
+   * Uses the same shared utility as ZonesService so estimate == order fee.
    */
   private calculateShippingFee(
     distanceKm: number,
     zone: DeliveryZoneInfo,
   ): number {
     const raw = zone.baseFee + distanceKm * zone.perKmRate;
-    return Math.round(raw / 1000) * 1000;
+    return roundToNearest1000(raw);
   }
 
   /**

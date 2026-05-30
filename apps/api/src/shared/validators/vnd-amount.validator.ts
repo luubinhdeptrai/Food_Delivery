@@ -83,3 +83,22 @@ export function IsVNDFee(options?: ValidationOptions) {
     });
   };
 }
+
+/**
+ * Rounds a raw VND monetary amount to the nearest 1,000 VND.
+ *
+ * Used wherever a fee is computed as baseFee + distanceKm × perKmRate — the
+ * float multiplication produces sub-VND precision that is meaningless in
+ * Vietnam and creates inconsistencies between the estimate API and order
+ * placement.  Both call-sites must use this function so the amounts are
+ * always identical.
+ *
+ * Examples:
+ *   roundToNearest1000(19992) → 20000
+ *   roundToNearest1000(5000)  → 5000
+ *   roundToNearest1000(4501)  → 5000
+ *   roundToNearest1000(4499)  → 4000
+ */
+export function roundToNearest1000(amount: number): number {
+  return Math.round(amount / 1000) * 1000;
+}

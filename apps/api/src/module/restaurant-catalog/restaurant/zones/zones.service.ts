@@ -9,6 +9,7 @@ import { ZonesRepository } from './zones.repository';
 import { RestaurantService } from '../restaurant.service';
 import { GeoService, type Coordinates } from '@/lib/geo/geo.service';
 import { DeliveryZoneSnapshotUpdatedEvent } from '@/shared/events/delivery-zone-snapshot-updated.event';
+import { roundToNearest1000 } from '@/shared/validators/vnd-amount.validator';
 import type {
   CreateDeliveryZoneDto,
   UpdateDeliveryZoneDto,
@@ -203,8 +204,10 @@ export class ZonesService {
   }
 
   private calculateDeliveryFee(zone: DeliveryZone, distanceKm: number): number {
-    // baseFee and perKmRate are integer VND; product of float×int is rounded.
-    return Math.round(zone.baseFee + distanceKm * zone.perKmRate);
+    // baseFee and perKmRate are integer VND; the product distanceKm × perKmRate
+    // is a float.  Round to the nearest 1 000 VND to match PlaceOrderHandler
+    // and to prevent amounts like 19 992 from reaching the customer.
+    return roundToNearest1000(zone.baseFee + distanceKm * zone.perKmRate);
   }
 
   private calculateEstimatedMinutes(
@@ -228,7 +231,10 @@ export class ZonesService {
     zone: DeliveryZone,
   ): DeliveryEstimateResponseDto {
     const deliveryFee = this.calculateDeliveryFee(zone, distanceKm);
-    const distanceFee = Math.round(distanceKm * zone.perKmRate);
+    // Round to nearest 1 000 VND (same rule as calculateDeliveryFee / PlaceOrderHandler).
+    // Because baseFee is always a multiple of 1 000, this guarantees:
+    //   deliveryFee === baseFee + distanceFee  (breakdown is always internally consistent).
+    const distanceFee = roundToNearest1000(distanceKm * zone.perKmRate);
     // Use the same safeSpeed guard as calculateEstimatedMinutes.
     const safeSpeed = Math.max(zone.avgSpeedKmh, 1);
     const travelTimeMinutes = Math.ceil((distanceKm / safeSpeed) * 60);
@@ -236,7 +242,7 @@ export class ZonesService {
 
     const breakdown: DeliveryFeeBreakdownDto = {
       baseFee: zone.baseFee,
-      distanceFee: Math.round(distanceFee),
+      distanceFee,
       prepTimeMinutes: zone.prepTimeMinutes,
       travelTimeMinutes,
       bufferMinutes: zone.bufferMinutes,
@@ -247,8 +253,8 @@ export class ZonesService {
       // Round to 2 dp for display — sub-metre precision is meaningless for delivery.
       distanceKm: Math.round(distanceKm * 100) / 100,
       zone: { id: zone.id, name: zone.name, radiusKm: zone.radiusKm },
-      // Round to whole VND — fractional currency units are not used in Vietnam.
-      deliveryFee: Math.round(deliveryFee),
+      // deliveryFee is already a multiple of 1 000 from calculateDeliveryFee.
+      deliveryFee,
       // Already an integer from Math.ceil in calculateEstimatedMinutes.
       estimatedMinutes,
       breakdown,
