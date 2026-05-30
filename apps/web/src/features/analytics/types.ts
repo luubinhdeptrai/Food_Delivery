@@ -71,6 +71,12 @@ export interface AnalyticsBundle {
   refundRateSeries: RefundRatePoint[];
   slowItems: SlowItem[];
   incidents: Incident[];
+  /** Sum of totalAmount for all orders in the window (integer VND) */
+  totalRevenue: number;
+  /** Average order value in the window (integer VND) */
+  avgOrderValue: number;
+  /** Total orders created in the window */
+  orderCount: number;
 }
 
 export interface OperationalAnalyticsResponse {

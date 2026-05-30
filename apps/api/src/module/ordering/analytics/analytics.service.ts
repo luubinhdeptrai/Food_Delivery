@@ -149,6 +149,9 @@ function buildBundle(
       avgPrepSeconds: s.avgPrepSeconds,
     })),
     incidents: agg.incidents.map<IncidentDto>(toIncidentDto),
+    totalRevenue: agg.totalRevenue,
+    avgOrderValue: agg.avgOrderValue,
+    orderCount: agg.orderCount,
   };
 }
 

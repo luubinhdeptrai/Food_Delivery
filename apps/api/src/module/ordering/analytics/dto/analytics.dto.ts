@@ -149,6 +149,15 @@ export class AnalyticsBundleDto {
 
   @ApiProperty({ type: [IncidentDto] })
   incidents!: IncidentDto[];
+
+  @ApiProperty({ description: 'Sum of totalAmount for all orders in the window (integer VND).' })
+  totalRevenue!: number;
+
+  @ApiProperty({ description: 'Average order value for the window (integer VND, 0 when no orders).' })
+  avgOrderValue!: number;
+
+  @ApiProperty({ description: 'Total number of orders created in the window.' })
+  orderCount!: number;
 }
 
 export class AnalyticsResponseDto {
