@@ -44,9 +44,10 @@ import { SubmitReviewCommand } from './submit-review.command';
  */
 @Injectable()
 @CommandHandler(SubmitReviewCommand)
-export class SubmitReviewHandler
-  implements ICommandHandler<SubmitReviewCommand, Review>
-{
+export class SubmitReviewHandler implements ICommandHandler<
+  SubmitReviewCommand,
+  Review
+> {
   private readonly logger = new Logger(SubmitReviewHandler.name);
 
   constructor(

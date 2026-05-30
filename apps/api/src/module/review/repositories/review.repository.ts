@@ -48,10 +48,7 @@ export class ReviewRepository {
       .select()
       .from(reviews)
       .where(
-        and(
-          eq(reviews.orderId, orderId),
-          eq(reviews.customerId, customerId),
-        ),
+        and(eq(reviews.orderId, orderId), eq(reviews.customerId, customerId)),
       )
       .limit(1);
     return rows[0] ?? null;

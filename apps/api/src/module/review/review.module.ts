@@ -18,11 +18,7 @@ import { ReviewService } from './services/review.service';
 @Module({
   imports: [DatabaseModule, CqrsModule],
   controllers: [ReviewController],
-  providers: [
-    ReviewService,
-    ReviewRepository,
-    SubmitReviewHandler,
-  ],
+  providers: [ReviewService, ReviewRepository, SubmitReviewHandler],
   exports: [],
 })
 export class ReviewModule {}

@@ -78,7 +78,7 @@ export class SubmitReviewDto {
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(5)
-  @IsIn(ALLOWED_REVIEW_TAGS as unknown as string[], { each: true })
+  @IsIn(ALLOWED_REVIEW_TAGS, { each: true })
   tags?: string[];
 }
 

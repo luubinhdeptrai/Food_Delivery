@@ -27,7 +27,11 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { AllowAnonymous, Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import {
+  AllowAnonymous,
+  Session,
+  type UserSession,
+} from '@thallesp/nestjs-better-auth';
 import { hasRole } from '@/module/auth/role.util';
 import {
   PublicReviewListResponseDto,
@@ -68,7 +72,10 @@ export class ReviewController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Submit a review for a delivered order (UC-22)' })
-  @ApiCreatedResponse({ description: 'Review created', type: ReviewResponseDto })
+  @ApiCreatedResponse({
+    description: 'Review created',
+    type: ReviewResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'MSG-RATE-01 — validation failure' })
   @ApiUnauthorizedResponse({ description: 'Not authenticated' })
   @ApiForbiddenResponse({ description: 'Wrong role (not a customer)' })
@@ -101,7 +108,10 @@ export class ReviewController {
   @ApiOperation({
     summary: 'List visible reviews for a restaurant (public, paginated)',
   })
-  @ApiOkResponse({ description: 'Paginated reviews', type: PublicReviewListResponseDto })
+  @ApiOkResponse({
+    description: 'Paginated reviews',
+    type: PublicReviewListResponseDto,
+  })
   @ApiParam({ name: 'restaurantId', format: 'uuid' })
   async getRestaurantReviews(
     @Param('restaurantId', ParseUUIDPipe) restaurantId: string,
