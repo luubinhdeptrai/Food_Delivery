@@ -5,8 +5,8 @@ import {
   type AnalyticsWindowAggregates,
 } from './analytics.repository';
 import type { CancellationReason } from '../order/order.schema';
+import { computeWindows, ANALYTICS_RANGES } from '@/shared/analytics-windows';
 import {
-  ANALYTICS_RANGES,
   type AnalyticsRange,
   type AnalyticsBundleDto,
   type FailureSegmentDto,
@@ -68,54 +68,6 @@ export class AnalyticsService {
       current: buildBundle(currentAgg, baselineAgg),
       baseline: buildBundle(baselineAgg, baselineAgg),
     };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Window math
-// ---------------------------------------------------------------------------
-
-function startOfDayUtc(d: Date): Date {
-  const out = new Date(d);
-  out.setUTCHours(0, 0, 0, 0);
-  return out;
-}
-
-function addDays(d: Date, n: number): Date {
-  const out = new Date(d);
-  out.setUTCDate(out.getUTCDate() + n);
-  return out;
-}
-
-interface Window {
-  start: Date;
-  end: Date;
-}
-
-function computeWindows(
-  range: AnalyticsRange,
-  now: Date,
-): { current: Window; baseline: Window } {
-  const todayStart = startOfDayUtc(now);
-
-  switch (range) {
-    case 'today': {
-      const current = { start: todayStart, end: now };
-      const baseline = { start: addDays(todayStart, -7), end: todayStart };
-      return { current, baseline };
-    }
-    case 'yesterday': {
-      const yesterdayStart = addDays(todayStart, -1);
-      const current = { start: yesterdayStart, end: todayStart };
-      const baseline = { start: addDays(todayStart, -8), end: yesterdayStart };
-      return { current, baseline };
-    }
-    case '7d': {
-      const sevenDaysAgo = addDays(todayStart, -7);
-      const current = { start: sevenDaysAgo, end: now };
-      const baseline = { start: addDays(todayStart, -14), end: sevenDaysAgo };
-      return { current, baseline };
-    }
   }
 }
 

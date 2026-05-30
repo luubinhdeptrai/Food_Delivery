@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import type { ChangeEvent, DragEvent, MouseEvent } from 'react';
 import { useForm, useFormContext, FormProvider, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { LocateFixed, MapPin, Store, Search } from 'lucide-react';
+import { LocateFixed, MapPin, Store, Search, Image as ImageIcon, CloudUpload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMyRestaurant, useUpdateRestaurant } from '@/features/restaurant/hooks/useRestaurants';
+import { restaurantApi } from '@/features/restaurant/api/restaurant.api';
+import { useImageUpload } from '@/features/menu/hooks/useImageUpload';
 import {
   updateRestaurantFormSchema,
   type UpdateRestaurantFormValues,
@@ -99,6 +102,10 @@ export function StoreTab() {
   const { mutateAsync: updateRestaurant } = useUpdateRestaurant();
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [pendingImageMeta, setPendingImageMeta] = useState<any | null>(null);
+
+  const { upload: uploadImage, isUploading, uploadError } = useImageUpload('restaurants');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const methods = useForm<UpdateRestaurantFormValues>({
     resolver: zodResolver(updateRestaurantFormSchema),
@@ -121,6 +128,7 @@ export function StoreTab() {
         cuisineType: restaurant.cuisineType ?? undefined,
         latitude: restaurant.latitude ?? undefined,
         longitude: restaurant.longitude ?? undefined,
+        coverImageUrl: restaurant.coverImageUrl ?? undefined,
       });
     }
   }, [restaurant, reset]);
@@ -129,6 +137,12 @@ export function StoreTab() {
     if (!restaurant) return;
     try {
       await updateRestaurant({ id: restaurant.id, data });
+      
+      if (pendingImageMeta) {
+        await restaurantApi.attachCoverImage(restaurant.id, pendingImageMeta);
+        setPendingImageMeta(null);
+      }
+
       reset(data); // Reset form to new values
       setSavedAt(Date.now());
       setTimeout(() => setSavedAt(null), 2500);
@@ -160,6 +174,40 @@ export function StoreTab() {
       setIsGeocoding(false);
     }
   };
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith('image/') || !restaurant) return;
+
+    const imageMeta = await uploadImage(file);
+    if (!imageMeta) return;
+
+    // Defer backend attachment until "Save Changes" is clicked
+    setPendingImageMeta(imageMeta);
+
+    methods.setValue('coverImageUrl', imageMeta.secureUrl, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) void handleFile(file);
+    event.target.value = '';
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file) void handleFile(file);
+  };
+
+  const clearImage = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    methods.setValue('coverImageUrl', '', { shouldDirty: true, shouldValidate: true });
+  };
+
+  const currentCoverUrl = methods.watch('coverImageUrl');
 
   if (isLoading) {
     return <div className="text-on-surface-variant animate-pulse p-6">Loading store data...</div>;
@@ -255,6 +303,75 @@ export function StoreTab() {
               <input type="hidden" step="any" {...register('longitude', { valueAsNumber: true })} />
             </div>
           </form>
+        </section>
+
+        {/* Cover Photo Picker */}
+        <section className="bg-surface-container-lowest rounded-3xl p-6 md:p-8">
+          <div className="mb-6 flex justify-between items-center border-b border-outline-variant/15 pb-4">
+            <h3 className="font-headline text-lg font-bold text-on-surface flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-primary" />
+              Cover Photo
+            </h3>
+          </div>
+          
+          <p className="text-sm text-on-surface-variant mb-6">
+            Upload a high-quality image to represent your restaurant to customers.
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handleInputChange}
+          />
+
+          <div
+            onClick={() => !isUploading && fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={(event) => event.preventDefault()}
+            className={`relative aspect-video lg:aspect-[21/9] rounded-2xl overflow-hidden border-2 border-dashed transition-colors ${
+              isUploading
+                ? 'border-primary/50 bg-primary/5 cursor-wait'
+                : 'border-outline-variant/30 hover:border-primary/50 cursor-pointer group bg-surface-container'
+            }`}
+          >
+            {currentCoverUrl ? (
+              <>
+                <img
+                  src={currentCoverUrl}
+                  alt="Cover"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={clearImage}
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors shadow-lg"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                <div className="w-16 h-16 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-md mb-4 text-primary group-hover:scale-110 transition-transform">
+                  {isUploading ? (
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  ) : (
+                    <CloudUpload className="h-8 w-8" />
+                  )}
+                </div>
+                <p className="font-bold text-on-surface">
+                  {isUploading ? 'Uploading...' : 'Upload Cover Photo'}
+                </p>
+                <p className="text-sm text-on-surface-variant mt-1">
+                  {isUploading ? 'Please wait' : 'Click or drag a JPG/PNG. Max 5 MB'}
+                </p>
+              </div>
+            )}
+          </div>
+          {uploadError && (
+            <p className="text-xs text-error mt-2">{uploadError}</p>
+          )}
         </section>
 
         {/* Location Picker */}

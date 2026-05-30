@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   type TooltipProps,
 } from 'recharts';
-import { HOURLY_LOAD } from '../mockData';
+import type { HourlyLoadPoint } from '../api/platformAnalytics.api';
 
 function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
@@ -25,12 +25,21 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
   );
 }
 
-export function PlatformLoadChart() {
+function formatHour(iso: string): string {
+  try { return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }); }
+  catch { return iso; }
+}
+
+interface Props { data: HourlyLoadPoint[] }
+
+export function PlatformLoadChart({ data }: Props) {
+  const chartData = data.map((p) => ({ ...p, hour: formatHour(p.hour), revenue: Math.round(p.revenue / 1_000_000) }));
+
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={HOURLY_LOAD}
+          data={chartData}
           margin={{ top: 4, right: 4, left: -24, bottom: 0 }}
         >
           <defs>
