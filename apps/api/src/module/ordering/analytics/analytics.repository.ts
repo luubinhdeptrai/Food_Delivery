@@ -509,7 +509,7 @@ export class AnalyticsRepository {
       timestamp: new Date(r.timestamp),
       fromStatus: r.fromStatus,
       toStatus: r.toStatus,
-      cancellationReason: r.cancellationReason as CancellationReason | null,
+      cancellationReason: r.cancellationReason,
       note: r.note,
     }));
   }
