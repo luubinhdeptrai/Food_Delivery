@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Utensils,
   Map,
+  BarChart3,
   Settings,
   CircleHelp,
   LogOut,
@@ -26,6 +27,7 @@ const navItems = [
   { title: 'Orders', url: '/orders', icon: ClipboardList },
   { title: 'Menu', url: '/menu', icon: Utensils },
   { title: 'Delivery Zones', url: '/delivery-zones', icon: Map },
+  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 

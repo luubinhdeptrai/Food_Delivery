@@ -16,6 +16,7 @@ import { PaymentModule } from './module/payment/payment.module';
 import { NotificationModule } from './module/notification/notification.module';
 import { ImageModule } from './module/image/image.module';
 import { PromotionModule } from './module/promotion/promotion.module';
+import { AdminAnalyticsModule } from './module/admin-analytics/admin-analytics.module';
 import { ReviewModule } from './module/review/review.module';
 import { validate } from './config/env.schema';
 import { vnpayConfig } from './config/vnpay.config';
@@ -34,6 +35,7 @@ import { ObservabilityInterceptor } from './observability/observability.intercep
     ScheduleModule.forRoot(),
     RestaurantCatalogModule,
     PromotionModule,
+    AdminAnalyticsModule,
     OrderingModule,
     PaymentModule,
     NotificationModule,
