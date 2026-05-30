@@ -56,8 +56,16 @@ export class AnalyticsService {
     const { current, baseline } = computeWindows(range, now);
 
     const [currentAgg, baselineAgg] = await Promise.all([
-      this.repo.aggregateWindow(snapshot.restaurantId, current.start, current.end),
-      this.repo.aggregateWindow(snapshot.restaurantId, baseline.start, baseline.end),
+      this.repo.aggregateWindow(
+        snapshot.restaurantId,
+        current.start,
+        current.end,
+      ),
+      this.repo.aggregateWindow(
+        snapshot.restaurantId,
+        baseline.start,
+        baseline.end,
+      ),
     ]);
 
     return {
@@ -112,7 +120,8 @@ function buildOperationalState(
   baseline: AnalyticsWindowAggregates,
 ): OperationalStateDto {
   const delta =
-    agg.avgTimeToAcceptSeconds !== null && baseline.avgTimeToAcceptSeconds !== null
+    agg.avgTimeToAcceptSeconds !== null &&
+    baseline.avgTimeToAcceptSeconds !== null
       ? agg.avgTimeToAcceptSeconds - baseline.avgTimeToAcceptSeconds
       : 0;
 
@@ -151,7 +160,11 @@ function buildKitchenKpi(
         baseline.avgTimeToReadySeconds,
       ),
       percentKpi('Refund Rate', agg.refundRate, baseline.refundRate),
-      percentKpi('Auto-Cancel Rate', agg.autoCancelRate, baseline.autoCancelRate),
+      percentKpi(
+        'Auto-Cancel Rate',
+        agg.autoCancelRate,
+        baseline.autoCancelRate,
+      ),
     ],
   };
 }
@@ -223,9 +236,10 @@ function toIncidentDto(row: {
     timestamp: row.timestamp.toISOString(),
     title: incidentTitle(row),
     detail: row.note ?? '',
-    state: row.toStatus === 'cancelled' || row.toStatus === 'refunded'
-      ? 'resolved'
-      : 'pending',
+    state:
+      row.toStatus === 'cancelled' || row.toStatus === 'refunded'
+        ? 'resolved'
+        : 'pending',
   };
 }
 

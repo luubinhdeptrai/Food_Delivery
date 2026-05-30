@@ -10,10 +10,7 @@ import {
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import { hasRole } from '@/module/auth/role.util';
 import { AnalyticsService } from './analytics.service';
-import {
-  AnalyticsQueryDto,
-  AnalyticsResponseDto,
-} from './dto/analytics.dto';
+import { AnalyticsQueryDto, AnalyticsResponseDto } from './dto/analytics.dto';
 
 /**
  * GET /restaurant/analytics/operational
@@ -31,7 +28,7 @@ export class AnalyticsController {
 
   @Get('operational')
   @ApiOperation({
-    summary: 'Operational analytics bundle for the caller\'s restaurant',
+    summary: "Operational analytics bundle for the caller's restaurant",
   })
   @ApiOkResponse({
     type: AnalyticsResponseDto,

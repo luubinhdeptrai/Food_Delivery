@@ -76,20 +76,20 @@ export class AdminAnalyticsRepository {
 
     const rows = await this.db
       .select({
-        gmv:            sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`,
-        orderCount:     count(),
+        gmv: sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`,
+        orderCount: count(),
         deliveredCount: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} = 'delivered')::int`,
-        failedCount:    sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('cancelled', 'refunded'))::int`,
+        failedCount: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('cancelled', 'refunded'))::int`,
       })
       .from(schema.orders)
       .where(windowFilter);
 
     const r = rows[0];
     return {
-      gmv:            Number(r?.gmv ?? 0),
-      orderCount:     Number(r?.orderCount ?? 0),
+      gmv: Number(r?.gmv ?? 0),
+      orderCount: Number(r?.orderCount ?? 0),
       deliveredCount: r?.deliveredCount ?? 0,
-      failedCount:    r?.failedCount ?? 0,
+      failedCount: r?.failedCount ?? 0,
     };
   }
 
@@ -100,7 +100,7 @@ export class AdminAnalyticsRepository {
   async getRestaurantCounts(): Promise<RestaurantCounts> {
     const rows = await this.db
       .select({
-        online:  sql<number>`COUNT(*) FILTER (WHERE ${schema.restaurants.isApproved} = true  AND ${schema.restaurants.isOpen} = true)::int`,
+        online: sql<number>`COUNT(*) FILTER (WHERE ${schema.restaurants.isApproved} = true  AND ${schema.restaurants.isOpen} = true)::int`,
         offline: sql<number>`COUNT(*) FILTER (WHERE ${schema.restaurants.isApproved} = true  AND ${schema.restaurants.isOpen} = false)::int`,
         pending: sql<number>`COUNT(*) FILTER (WHERE ${schema.restaurants.isApproved} = false)::int`,
       })
@@ -108,7 +108,7 @@ export class AdminAnalyticsRepository {
 
     const r = rows[0];
     return {
-      online:  r?.online  ?? 0,
+      online: r?.online ?? 0,
       offline: r?.offline ?? 0,
       pending: r?.pending ?? 0,
     };
@@ -121,18 +121,28 @@ export class AdminAnalyticsRepository {
   async getHourlyLoad(start: Date, end: Date): Promise<HourlyPoint[]> {
     const rows = await this.db
       .select({
-        hour:    sql<string>`date_trunc('hour', ${schema.orders.createdAt})`.as('hour'),
-        orders:  count().as('orders'),
-        revenue: sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`.as('revenue'),
+        hour: sql<string>`date_trunc('hour', ${schema.orders.createdAt})`.as(
+          'hour',
+        ),
+        orders: count().as('orders'),
+        revenue:
+          sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`.as(
+            'revenue',
+          ),
       })
       .from(schema.orders)
-      .where(and(gte(schema.orders.createdAt, start), lt(schema.orders.createdAt, end)))
+      .where(
+        and(
+          gte(schema.orders.createdAt, start),
+          lt(schema.orders.createdAt, end),
+        ),
+      )
       .groupBy(sql`hour`)
       .orderBy(asc(sql`hour`));
 
     return rows.map((r) => ({
-      hour:    new Date(r.hour),
-      orders:  Number(r.orders),
+      hour: new Date(r.hour),
+      orders: Number(r.orders),
       revenue: Number(r.revenue),
     }));
   }
@@ -141,13 +151,17 @@ export class AdminAnalyticsRepository {
   // Top 5 earners by GMV, excluding cancelled/refunded orders
   // ---------------------------------------------------------------------------
 
-  async getTopEarners(start: Date, end: Date, limit = 5): Promise<TopEarnerRow[]> {
+  async getTopEarners(
+    start: Date,
+    end: Date,
+    limit = 5,
+  ): Promise<TopEarnerRow[]> {
     const rows = await this.db
       .select({
-        restaurantId:   schema.orders.restaurantId,
+        restaurantId: schema.orders.restaurantId,
         restaurantName: schema.orders.restaurantName,
-        gmv:            sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`,
-        orderCount:     count(),
+        gmv: sql<number>`COALESCE(SUM(${schema.orders.totalAmount}), 0)::bigint`,
+        orderCount: count(),
       })
       .from(schema.orders)
       .where(
@@ -162,10 +176,10 @@ export class AdminAnalyticsRepository {
       .limit(limit);
 
     return rows.map((r) => ({
-      restaurantId:   r.restaurantId,
+      restaurantId: r.restaurantId,
       restaurantName: r.restaurantName,
-      gmv:            Number(r.gmv),
-      orderCount:     Number(r.orderCount),
+      gmv: Number(r.gmv),
+      orderCount: Number(r.orderCount),
     }));
   }
 
@@ -174,21 +188,33 @@ export class AdminAnalyticsRepository {
   // Minimum 5 orders in window to be included.
   // ---------------------------------------------------------------------------
 
-  async getBottlenecks(start: Date, end: Date, limit = 5): Promise<BottleneckRow[]> {
-    const lConf  = alias(schema.orderStatusLogs, 'l_conf');
+  async getBottlenecks(
+    start: Date,
+    end: Date,
+    limit = 5,
+  ): Promise<BottleneckRow[]> {
+    const lConf = alias(schema.orderStatusLogs, 'l_conf');
     const lReady = alias(schema.orderStatusLogs, 'l_ready');
 
     // CTE 1: cancel rate per restaurant
     const orderStats = this.db.$with('order_stats').as(
       this.db
         .select({
-          restaurantId:   schema.orders.restaurantId,
+          restaurantId: schema.orders.restaurantId,
           restaurantName: schema.orders.restaurantName,
-          total:  count().as('total'),
-          failed: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('cancelled', 'refunded'))::int`.as('failed'),
+          total: count().as('total'),
+          failed:
+            sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('cancelled', 'refunded'))::int`.as(
+              'failed',
+            ),
         })
         .from(schema.orders)
-        .where(and(gte(schema.orders.createdAt, start), lt(schema.orders.createdAt, end)))
+        .where(
+          and(
+            gte(schema.orders.createdAt, start),
+            lt(schema.orders.createdAt, end),
+          ),
+        )
         .groupBy(schema.orders.restaurantId, schema.orders.restaurantName),
     );
 
@@ -196,27 +222,50 @@ export class AdminAnalyticsRepository {
     const prepLatency = this.db.$with('prep_latency').as(
       this.db
         .select({
-          restaurantId:   schema.orders.restaurantId,
-          avgPrepSeconds: sql<number>`AVG(EXTRACT(EPOCH FROM (${lReady.createdAt} - ${lConf.createdAt})))::float8`.as('avg_prep_seconds'),
+          restaurantId: schema.orders.restaurantId,
+          avgPrepSeconds:
+            sql<number>`AVG(EXTRACT(EPOCH FROM (${lReady.createdAt} - ${lConf.createdAt})))::float8`.as(
+              'avg_prep_seconds',
+            ),
         })
         .from(schema.orders)
-        .innerJoin(lConf,  and(eq(lConf.orderId,  schema.orders.id), eq(lConf.toStatus,  'confirmed')))
-        .innerJoin(lReady, and(eq(lReady.orderId, schema.orders.id), eq(lReady.toStatus, 'ready_for_pickup')))
-        .where(and(gte(schema.orders.createdAt, start), lt(schema.orders.createdAt, end)))
+        .innerJoin(
+          lConf,
+          and(
+            eq(lConf.orderId, schema.orders.id),
+            eq(lConf.toStatus, 'confirmed'),
+          ),
+        )
+        .innerJoin(
+          lReady,
+          and(
+            eq(lReady.orderId, schema.orders.id),
+            eq(lReady.toStatus, 'ready_for_pickup'),
+          ),
+        )
+        .where(
+          and(
+            gte(schema.orders.createdAt, start),
+            lt(schema.orders.createdAt, end),
+          ),
+        )
         .groupBy(schema.orders.restaurantId),
     );
 
     const rows = await this.db
       .with(orderStats, prepLatency)
       .select({
-        restaurantId:   orderStats.restaurantId,
+        restaurantId: orderStats.restaurantId,
         restaurantName: orderStats.restaurantName,
-        total:          orderStats.total,
-        failed:         orderStats.failed,
+        total: orderStats.total,
+        failed: orderStats.failed,
         avgPrepSeconds: prepLatency.avgPrepSeconds,
       })
       .from(orderStats)
-      .leftJoin(prepLatency, eq(prepLatency.restaurantId, orderStats.restaurantId))
+      .leftJoin(
+        prepLatency,
+        eq(prepLatency.restaurantId, orderStats.restaurantId),
+      )
       .where(
         and(
           // Require minimum volume before calling something a bottleneck
@@ -228,19 +277,26 @@ export class AdminAnalyticsRepository {
           )`,
         ),
       )
-      .orderBy(desc(sql`${orderStats.failed}::float / NULLIF(${orderStats.total}, 0)`))
+      .orderBy(
+        desc(sql`${orderStats.failed}::float / NULLIF(${orderStats.total}, 0)`),
+      )
       .limit(limit);
 
     return rows.map((r) => {
-      const cancelRate    = Number(r.total) > 0 ? Number(r.failed) / Number(r.total) : 0;
-      const avgPrepMinutes = r.avgPrepSeconds != null ? Math.round(Number(r.avgPrepSeconds) / 60) : null;
-      const primaryIssue: BottleneckRow['primaryIssue'] = cancelRate > 0.05 ? 'high-cancel' : 'slow-prep';
+      const cancelRate =
+        Number(r.total) > 0 ? Number(r.failed) / Number(r.total) : 0;
+      const avgPrepMinutes =
+        r.avgPrepSeconds != null
+          ? Math.round(Number(r.avgPrepSeconds) / 60)
+          : null;
+      const primaryIssue: BottleneckRow['primaryIssue'] =
+        cancelRate > 0.05 ? 'high-cancel' : 'slow-prep';
       return {
-        restaurantId:   r.restaurantId,
+        restaurantId: r.restaurantId,
         restaurantName: r.restaurantName,
         cancelRate,
         avgPrepMinutes,
-        orderCount:     Number(r.total),
+        orderCount: Number(r.total),
         primaryIssue,
       };
     });
@@ -250,10 +306,16 @@ export class AdminAnalyticsRepository {
   // Orders grouped by district (from deliveryAddress JSONB)
   // ---------------------------------------------------------------------------
 
-  async getOrdersByDistrict(start: Date, end: Date, limit = 15): Promise<DistrictRow[]> {
+  async getOrdersByDistrict(
+    start: Date,
+    end: Date,
+    limit = 15,
+  ): Promise<DistrictRow[]> {
     const rows = await this.db
       .select({
-        district:   sql<string>`${schema.orders.deliveryAddress}->>'district'`.as('district'),
+        district: sql<string>`${schema.orders.deliveryAddress}->>'district'`.as(
+          'district',
+        ),
         orderCount: count().as('order_count'),
       })
       .from(schema.orders)
@@ -270,7 +332,7 @@ export class AdminAnalyticsRepository {
       .limit(limit);
 
     return rows.map((r) => ({
-      district:   r.district,
+      district: r.district,
       orderCount: Number(r.orderCount),
     }));
   }

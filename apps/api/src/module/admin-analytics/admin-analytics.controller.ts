@@ -23,7 +23,8 @@ export class AdminAnalyticsController {
 
   @Get('platform')
   @ApiOperation({
-    summary: 'Platform analytics bundle for the admin Mission Control dashboard',
+    summary:
+      'Platform analytics bundle for the admin Mission Control dashboard',
     description:
       'Returns platform-wide GMV, revenue, restaurant counts, hourly load, ' +
       'top earners, bottleneck watchlist, and order district distribution for the requested window.',

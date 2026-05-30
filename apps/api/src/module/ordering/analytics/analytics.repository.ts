@@ -48,7 +48,11 @@ export interface AnalyticsWindowAggregates {
   /** Hourly refund rate (0..1) */
   refundRateSeries: Array<{ hour: Date; rate: number }>;
   /** Slowest-to-prep menu items by avg confirmed → ready latency */
-  slowItems: Array<{ menuItemId: string; name: string; avgPrepSeconds: number }>;
+  slowItems: Array<{
+    menuItemId: string;
+    name: string;
+    avgPrepSeconds: number;
+  }>;
   /** System-triggered transitions in window (auto-cancels, timeouts, etc.) */
   incidents: Array<{
     id: string;
@@ -151,7 +155,9 @@ export class AnalyticsRepository {
         // 1. avg time-to-accept
         this.db
           .select({
-            avg: sql<number | null>`EXTRACT(EPOCH FROM AVG(${schema.orderStatusLogs.createdAt} - ${schema.orders.createdAt}))`,
+            avg: sql<
+              number | null
+            >`EXTRACT(EPOCH FROM AVG(${schema.orderStatusLogs.createdAt} - ${schema.orders.createdAt}))`,
           })
           .from(schema.orders)
           .innerJoin(
@@ -166,7 +172,9 @@ export class AnalyticsRepository {
         // 2. avg time-to-ready
         this.db
           .select({
-            avg: sql<number | null>`EXTRACT(EPOCH FROM AVG(${schema.orderStatusLogs.createdAt} - ${schema.orders.createdAt}))`,
+            avg: sql<
+              number | null
+            >`EXTRACT(EPOCH FROM AVG(${schema.orderStatusLogs.createdAt} - ${schema.orders.createdAt}))`,
           })
           .from(schema.orders)
           .innerJoin(
@@ -356,10 +364,8 @@ export class AnalyticsRepository {
         hour: sql<string>`date_trunc('hour', ${schema.orders.createdAt})`.as(
           'hour',
         ),
-        refunded:
-          sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} = 'refunded')::int`,
-        terminal:
-          sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('delivered', 'refunded'))::int`,
+        refunded: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} = 'refunded')::int`,
+        terminal: sql<number>`COUNT(*) FILTER (WHERE ${schema.orders.status} IN ('delivered', 'refunded'))::int`,
       })
       .from(schema.orders)
       .where(
@@ -386,7 +392,9 @@ export class AnalyticsRepository {
     restaurantId: string,
     start: Date,
     end: Date,
-  ): Promise<Array<{ menuItemId: string; name: string; avgPrepSeconds: number }>> {
+  ): Promise<
+    Array<{ menuItemId: string; name: string; avgPrepSeconds: number }>
+  > {
     const lConf = alias(schema.orderStatusLogs, 'l_conf');
     const lReady = alias(schema.orderStatusLogs, 'l_ready');
 
@@ -402,7 +410,10 @@ export class AnalyticsRepository {
         .from(schema.orders)
         .innerJoin(
           lConf,
-          and(eq(lConf.orderId, schema.orders.id), eq(lConf.toStatus, 'confirmed')),
+          and(
+            eq(lConf.orderId, schema.orders.id),
+            eq(lConf.toStatus, 'confirmed'),
+          ),
         )
         .innerJoin(
           lReady,
@@ -425,8 +436,9 @@ export class AnalyticsRepository {
       .select({
         menuItemId: schema.orderItems.menuItemId,
         name: schema.orderItems.itemName,
-        avgSeconds:
-          sql<number>`AVG(${prepLatency.seconds})::float8`.as('avg_seconds'),
+        avgSeconds: sql<number>`AVG(${prepLatency.seconds})::float8`.as(
+          'avg_seconds',
+        ),
       })
       .from(prepLatency)
       .innerJoin(
@@ -545,8 +557,9 @@ export class AnalyticsRepository {
           sql<number>`FLOOR(EXTRACT(EPOCH FROM (${acceptLatency.createdAt} - ${start.toISOString()}::timestamptz)) * 1000 / ${sliceMs})::int`.as(
             'slice',
           ),
-        avgSeconds:
-          sql<number>`AVG(${acceptLatency.seconds})::float8`.as('avg_seconds'),
+        avgSeconds: sql<number>`AVG(${acceptLatency.seconds})::float8`.as(
+          'avg_seconds',
+        ),
       })
       .from(acceptLatency)
       .groupBy(sql`slice`)

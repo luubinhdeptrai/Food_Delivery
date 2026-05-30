@@ -28,21 +28,21 @@ export function computeWindows(
   switch (range) {
     case 'today': {
       return {
-        current:  { start: todayStart,           end: now },
+        current: { start: todayStart, end: now },
         baseline: { start: addDays(todayStart, -7), end: todayStart },
       };
     }
     case 'yesterday': {
       const yd = addDays(todayStart, -1);
       return {
-        current:  { start: yd,                    end: todayStart },
+        current: { start: yd, end: todayStart },
         baseline: { start: addDays(todayStart, -8), end: yd },
       };
     }
     case '7d': {
       const ago7 = addDays(todayStart, -7);
       return {
-        current:  { start: ago7,                   end: now },
+        current: { start: ago7, end: now },
         baseline: { start: addDays(todayStart, -14), end: ago7 },
       };
     }

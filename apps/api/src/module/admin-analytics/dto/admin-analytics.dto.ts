@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional } from 'class-validator';
-import { ANALYTICS_RANGES, type AnalyticsRange } from '@/shared/analytics-windows';
+import {
+  ANALYTICS_RANGES,
+  type AnalyticsRange,
+} from '@/shared/analytics-windows';
 
 // ---------------------------------------------------------------------------
 // Query
@@ -24,7 +27,10 @@ export class PlatformKpisDto {
   @ApiProperty({ description: 'Platform commission — gmv × 0.15 (VND).' })
   revenue!: number;
 
-  @ApiPropertyOptional({ description: '% change in GMV vs the prior equivalent window. null when no prior data.' })
+  @ApiPropertyOptional({
+    description:
+      '% change in GMV vs the prior equivalent window. null when no prior data.',
+  })
   gmvDelta!: number | null;
 
   @ApiProperty({ description: 'Total orders created in window.' })
@@ -36,13 +42,20 @@ export class PlatformKpisDto {
   @ApiProperty({ description: 'Orders cancelled or refunded.' })
   failedCount!: number;
 
-  @ApiProperty({ description: 'deliveredCount / (deliveredCount + failedCount). 1 when no failures.' })
+  @ApiProperty({
+    description:
+      'deliveredCount / (deliveredCount + failedCount). 1 when no failures.',
+  })
   successRate!: number;
 
-  @ApiProperty({ description: 'Restaurants with is_approved=true and is_open=true.' })
+  @ApiProperty({
+    description: 'Restaurants with is_approved=true and is_open=true.',
+  })
   restaurantsOnline!: number;
 
-  @ApiProperty({ description: 'Restaurants with is_approved=true and is_open=false.' })
+  @ApiProperty({
+    description: 'Restaurants with is_approved=true and is_open=false.',
+  })
   restaurantsOffline!: number;
 
   @ApiProperty({ description: 'Restaurants with is_approved=false.' })
@@ -67,7 +80,9 @@ export class TopEarnerDto {
   @ApiProperty()
   restaurantName!: string;
 
-  @ApiProperty({ description: 'GMV excluding cancelled/refunded orders (VND).' })
+  @ApiProperty({
+    description: 'GMV excluding cancelled/refunded orders (VND).',
+  })
   gmv!: number;
 
   @ApiProperty()
@@ -84,7 +99,10 @@ export class BottleneckDto {
   @ApiProperty({ description: 'cancelled+refunded / total. 0..1.' })
   cancelRate!: number;
 
-  @ApiPropertyOptional({ description: 'Average minutes from confirmed to ready_for_pickup. null when no confirmed orders.' })
+  @ApiPropertyOptional({
+    description:
+      'Average minutes from confirmed to ready_for_pickup. null when no confirmed orders.',
+  })
   avgPrepMinutes!: number | null;
 
   @ApiProperty({ description: 'Total orders in window for this restaurant.' })
@@ -106,7 +124,9 @@ export class PlatformAnalyticsResponseDto {
   @ApiProperty({ enum: ANALYTICS_RANGES })
   range!: AnalyticsRange;
 
-  @ApiProperty({ description: 'ISO8601 timestamp when the bundle was computed.' })
+  @ApiProperty({
+    description: 'ISO8601 timestamp when the bundle was computed.',
+  })
   generatedAt!: string;
 
   @ApiProperty({ description: 'ISO8601 start of the window (inclusive).' })

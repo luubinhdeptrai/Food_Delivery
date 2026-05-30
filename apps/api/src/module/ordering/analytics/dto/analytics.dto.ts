@@ -150,10 +150,16 @@ export class AnalyticsBundleDto {
   @ApiProperty({ type: [IncidentDto] })
   incidents!: IncidentDto[];
 
-  @ApiProperty({ description: 'Sum of totalAmount for all orders in the window (integer VND).' })
+  @ApiProperty({
+    description:
+      'Sum of totalAmount for all orders in the window (integer VND).',
+  })
   totalRevenue!: number;
 
-  @ApiProperty({ description: 'Average order value for the window (integer VND, 0 when no orders).' })
+  @ApiProperty({
+    description:
+      'Average order value for the window (integer VND, 0 when no orders).',
+  })
   avgOrderValue!: number;
 
   @ApiProperty({ description: 'Total number of orders created in the window.' })
@@ -164,7 +170,9 @@ export class AnalyticsResponseDto {
   @ApiProperty({ enum: ANALYTICS_RANGES })
   range!: AnalyticsRange;
 
-  @ApiProperty({ description: 'ISO8601 timestamp when the bundle was computed.' })
+  @ApiProperty({
+    description: 'ISO8601 timestamp when the bundle was computed.',
+  })
   generatedAt!: string;
 
   @ApiProperty({
@@ -172,7 +180,9 @@ export class AnalyticsResponseDto {
   })
   windowStart!: string;
 
-  @ApiProperty({ description: 'ISO8601 end of the current window (exclusive).' })
+  @ApiProperty({
+    description: 'ISO8601 end of the current window (exclusive).',
+  })
   windowEnd!: string;
 
   @ApiProperty({ type: AnalyticsBundleDto })
