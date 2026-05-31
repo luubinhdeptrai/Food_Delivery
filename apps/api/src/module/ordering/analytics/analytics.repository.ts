@@ -56,6 +56,7 @@ export interface AnalyticsWindowAggregates {
   /** System-triggered transitions in window (auto-cancels, timeouts, etc.) */
   incidents: Array<{
     id: string;
+    orderId: string;
     timestamp: Date;
     fromStatus: string | null;
     toStatus: string;
@@ -468,6 +469,7 @@ export class AnalyticsRepository {
   ): Promise<
     Array<{
       id: string;
+      orderId: string;
       timestamp: Date;
       fromStatus: string | null;
       toStatus: string;
@@ -478,6 +480,7 @@ export class AnalyticsRepository {
     const rows = await this.db
       .select({
         id: schema.orderStatusLogs.id,
+        orderId: schema.orderStatusLogs.orderId,
         timestamp: schema.orderStatusLogs.createdAt,
         fromStatus: schema.orderStatusLogs.fromStatus,
         toStatus: schema.orderStatusLogs.toStatus,
@@ -495,7 +498,10 @@ export class AnalyticsRepository {
           gte(schema.orderStatusLogs.createdAt, start),
           lt(schema.orderStatusLogs.createdAt, end),
           or(
-            eq(schema.orderStatusLogs.triggeredByRole, 'system'),
+            and(
+              eq(schema.orderStatusLogs.triggeredByRole, 'system'),
+              isNotNull(schema.orderStatusLogs.fromStatus),
+            ),
             eq(schema.orderStatusLogs.toStatus, 'cancelled'),
             eq(schema.orderStatusLogs.toStatus, 'refunded'),
           ),
@@ -506,6 +512,7 @@ export class AnalyticsRepository {
 
     return rows.map((r) => ({
       id: r.id,
+      orderId: r.orderId,
       timestamp: new Date(r.timestamp),
       fromStatus: r.fromStatus,
       toStatus: r.toStatus,

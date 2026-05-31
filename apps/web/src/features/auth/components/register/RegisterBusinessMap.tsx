@@ -1,8 +1,8 @@
-import { useMemo, useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { MapPin, LocateFixed, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { RestaurantFormValues } from '@/features/restaurant/schemas/restaurant.schema';
@@ -19,6 +19,7 @@ const DEFAULT_CENTER = { lat: 10.762622, lng: 106.660172 }; // Ho Chi Minh City
 
 import { useWatch } from 'react-hook-form';
 
+
 function LocationMarker() {
   const { setValue } = useFormContext<RestaurantFormValues>();
   const map = useMap();
@@ -26,55 +27,24 @@ function LocationMarker() {
   const lat = useWatch<RestaurantFormValues, 'latitude'>({ name: 'latitude' });
   const lng = useWatch<RestaurantFormValues, 'longitude'>({ name: 'longitude' });
 
-  // Derive position directly from form values — no state needed
-  const position =
-    lat !== undefined && lng !== undefined
-      ? new L.LatLng(lat, lng)
-      : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
+  const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const position = hasValidCoords
+    ? new L.LatLng(lat!, lng!)
+    : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
 
-  // Side effect only: seed defaults and fly the map when coords change significantly
   useEffect(() => {
-    if (lat === undefined || lng === undefined) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       setValue('latitude', DEFAULT_CENTER.lat);
       setValue('longitude', DEFAULT_CENTER.lng);
       return;
     }
-    const newPos = new L.LatLng(lat, lng);
+    const newPos = new L.LatLng(lat!, lng!);
     if (map.getCenter().distanceTo(newPos) > 500) {
       map.flyTo(newPos, 15);
     }
   }, [lat, lng, map, setValue]);
 
-  useMapEvents({
-    click(e: { latlng: L.LatLng }) {
-      setValue('latitude', e.latlng.lat, { shouldValidate: true, shouldDirty: true });
-      setValue('longitude', e.latlng.lng, { shouldValidate: true, shouldDirty: true });
-    },
-  });
-
-  const markerRef = useRef<L.Marker>(null);
-  const eventHandlers = useMemo(
-    () => ({
-      dragend() {
-        const marker = markerRef.current;
-        if (marker != null) {
-          const latlng = marker.getLatLng();
-          setValue('latitude', latlng.lat, { shouldValidate: true, shouldDirty: true });
-          setValue('longitude', latlng.lng, { shouldValidate: true, shouldDirty: true });
-        }
-      },
-    }),
-    [setValue],
-  );
-
-  return (
-    <Marker
-      draggable={true}
-      eventHandlers={eventHandlers}
-      position={position}
-      ref={markerRef}
-    />
-  );
+  return <Marker draggable={false} position={position} />;
 }
 
 function LocateControl() {

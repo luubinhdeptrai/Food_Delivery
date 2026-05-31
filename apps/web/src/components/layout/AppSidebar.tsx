@@ -9,6 +9,7 @@ import {
   Settings,
   CircleHelp,
   LogOut,
+  Tag,
 } from 'lucide-react';
 
 import {
@@ -28,6 +29,7 @@ const navItems = [
   { title: 'Menu', url: '/menu', icon: Utensils },
   { title: 'Delivery Zones', url: '/delivery-zones', icon: Map },
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
+  { title: 'Promotions', url: '/promotions', icon: Tag },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 

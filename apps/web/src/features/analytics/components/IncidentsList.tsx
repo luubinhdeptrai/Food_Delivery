@@ -1,4 +1,5 @@
 import type { Incident } from '@/features/analytics/types';
+import { Link } from 'react-router-dom';
 
 function formatTimestamp(iso: string): string {
   try {
@@ -65,12 +66,12 @@ export function IncidentsList({ incidents }: { incidents: Incident[] }) {
                 Resolved
               </span>
             ) : (
-              <button
-                type="button"
+              <Link
+                to={`/orders/${incident.orderId}`}
                 className="px-4 py-2 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-primary/90 transition-colors shadow-sm shrink-0"
               >
                 Investigate
-              </button>
+              </Link>
             )}
           </li>
         ))}

@@ -15,9 +15,9 @@ export function TimeToAcceptHistogram({ buckets }: { buckets: number[] }) {
       </div>
 
       <div className="relative h-64 flex items-end justify-between gap-2 px-1">
-        {/* Target band — kitchen aims for sub-3-minute accept */}
-        <div className="absolute top-[28%] left-0 right-0 border-t-2 border-dashed border-secondary-container/80 z-10 flex justify-end items-center">
-          <span className="-mt-3 mr-2 bg-surface-container-lowest border border-outline-variant px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-on-secondary-container">
+        {/* Target line — kitchen aims for sub-3-minute accept */}
+        <div className="absolute top-0 bottom-0 left-[60%] border-l-2 border-dashed border-secondary-container/80 z-10 pointer-events-none flex justify-center">
+          <span className="absolute top-2 -translate-x-1/2 bg-surface-container-lowest border border-outline-variant px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-on-secondary-container whitespace-nowrap shadow-sm">
             Target · 3m
           </span>
         </div>

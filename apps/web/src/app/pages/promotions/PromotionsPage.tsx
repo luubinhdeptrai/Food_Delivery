@@ -259,7 +259,7 @@ function PromotionCard({ promotion: p }: { promotion: Promotion }) {
                 {p.scope === 'platform' ? 'Platform' : 'Restaurant'}
               </Badge>
             </div>
-            <Link to={`/promotions/${p.id}`} className="hover:underline">
+            <Link to={`/promotions/${p.id}/edit`} className="hover:underline">
               <h3 className="text-base font-semibold text-on-surface mt-2">
                 {p.name}
               </h3>
@@ -356,25 +356,22 @@ function PromotionCard({ promotion: p }: { promotion: Promotion }) {
                     Edit
                   </Link>
                 </DropdownMenuItem>
-                {p.trigger === 'coupon_code' && (
-                  <DropdownMenuItem asChild>
-                    <Link to={`/promotions/${p.id}`}>
-                      <Ticket className="mr-2 h-4 w-4" />
-                      View coupons
-                    </Link>
-                  </DropdownMenuItem>
-                )}
                 {p.status !== 'cancelled' && (
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
+                    disabled={cancel.isPending}
                     onClick={() => {
-                      if (confirm(`Cancel "${p.name}"? This cannot be undone.`)) {
+                      if (
+                        window.confirm(
+                          `Delete "${p.name}"? This cancels the promotion and cannot be undone.`,
+                        )
+                      ) {
                         cancel.mutate(p.id);
                       }
                     }}
                   >
                     <X className="mr-2 h-4 w-4" />
-                    Cancel promotion
+                    Delete promotion
                   </DropdownMenuItem>
                 )}
               </DropdownMenuGroup>
@@ -424,7 +421,9 @@ function SummaryCard({ icon, label, value, tone }: SummaryCardProps) {
     violet: 'bg-violet-50 border-violet-200',
   };
   return (
-    <div className={`rounded-xl border p-4 flex items-center gap-3 ${bg[tone]}`}>
+    <div
+      className={`rounded-xl border p-4 flex items-center gap-3 ${bg[tone]}`}
+    >
       <div className="shrink-0">{icon}</div>
       <div className="min-w-0">
         <p className="text-2xl font-bold text-on-surface truncate">{value}</p>

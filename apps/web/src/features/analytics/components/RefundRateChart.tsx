@@ -5,10 +5,17 @@ const H = 200;
 const PAD_X = 0;
 const PAD_Y = 12;
 
-function formatHourLabel(iso: string): string {
+function formatHourLabel(iso: string, includeDate: boolean): string {
   try {
     const d = new Date(iso);
-    return `${String(d.getHours()).padStart(2, '0')}:00`;
+    const h = d.getHours();
+    const suffix = h >= 12 ? 'pm' : 'am';
+    const display = h % 12 === 0 ? 12 : h % 12;
+    const time = `${display}${suffix}`;
+    if (includeDate) {
+      return `${d.getMonth() + 1}/${d.getDate()} ${time}`;
+    }
+    return time;
   } catch {
     return iso;
   }
@@ -96,7 +103,7 @@ export function RefundRateChart({ series }: { series: RefundRatePoint[] }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {points.map((p, i) => (
+          {points.length <= 48 && points.map((p, i) => (
             <circle
               key={i}
               cx={p.x}
@@ -116,10 +123,29 @@ export function RefundRateChart({ series }: { series: RefundRatePoint[] }) {
         </span>
       </div>
 
-      <div className="flex justify-between mt-2 text-[11px] font-mono text-on-surface-variant">
-        {points.map((p, i) => (
-          <span key={i}>{formatHourLabel(p.hour)}</span>
-        ))}
+      <div className="relative h-6 mt-3 text-[11px] font-mono text-on-surface-variant">
+        {points.map((p, i) => {
+          const step = Math.max(1, Math.floor(points.length / 6));
+          const isFirst = i === 0;
+          const isLast = i === points.length - 1;
+          const includeDate = points.length > 24;
+          
+          if (!isFirst && !isLast) {
+            if (i % step !== 0) return null;
+            // Prevent overlapping with the last label if it's too close
+            if (points.length - 1 - i < step * 0.65) return null;
+          }
+          
+          return (
+            <span
+              key={i}
+              className={`absolute top-0 whitespace-nowrap ${isFirst ? 'left-0' : isLast ? 'right-0' : '-translate-x-1/2'}`}
+              style={!isFirst && !isLast ? { left: `${(p.x / W) * 100}%` } : undefined}
+            >
+              {formatHourLabel(p.hour, includeDate)}
+            </span>
+          );
+        })}
       </div>
     </section>
   );

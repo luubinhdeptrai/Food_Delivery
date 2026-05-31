@@ -19,6 +19,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import { RequireRestaurantAccess } from '@/components/auth/RequireRestaurantAccess';
 import { RootRedirect } from '@/components/auth/RootRedirect';
+import { PromotionsPage } from '@/app/pages/promotions/PromotionsPage';
+import { PromotionFormPage } from '@/app/pages/promotions/PromotionFormPage';
 
 function PageErrorFallback() {
   return (
@@ -111,6 +113,23 @@ export const router = withFaroRouterInstrumentation(createBrowserRouter([
                 path: 'analytics',
                 element: <FaroErrorBoundary fallback={<PageErrorFallback />}><AnalyticsPage /></FaroErrorBoundary>,
                 handle: { breadcrumb: 'Analytics' },
+              },
+              {
+                path: 'promotions',
+                handle: { breadcrumb: 'Promotions' },
+                children: [
+                  { index: true, element: <FaroErrorBoundary fallback={<PageErrorFallback />}><PromotionsPage /></FaroErrorBoundary> },
+                  {
+                    path: 'new',
+                    element: <FaroErrorBoundary fallback={<PageErrorFallback />}><PromotionFormPage /></FaroErrorBoundary>,
+                    handle: { breadcrumb: 'New Promotion' },
+                  },
+                  {
+                    path: ':id/edit',
+                    element: <FaroErrorBoundary fallback={<PageErrorFallback />}><PromotionFormPage /></FaroErrorBoundary>,
+                    handle: { breadcrumb: 'Edit Promotion' },
+                  },
+                ],
               },
               {
                 path: 'settings',

@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ChangeEvent, DragEvent, MouseEvent } from 'react';
 import { useForm, useFormContext, FormProvider, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LocateFixed, MapPin, Store, Search, Image as ImageIcon, CloudUpload, X, Loader2 } from 'lucide-react';
@@ -24,50 +24,24 @@ function LocationMarker() {
   const lat = useWatch<UpdateRestaurantFormValues, 'latitude'>({ name: 'latitude' });
   const lng = useWatch<UpdateRestaurantFormValues, 'longitude'>({ name: 'longitude' });
 
-  // Derive position directly from form values — no state needed
-  const position =
-    lat !== undefined && lng !== undefined
-      ? new L.LatLng(lat, lng)
-      : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
+  const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const position = hasValidCoords
+    ? new L.LatLng(lat!, lng!)
+    : new L.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
 
-  // Side effect only: seed defaults and fly the map when coords change significantly
   useEffect(() => {
-    if (lat === undefined || lng === undefined) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       setValue('latitude', DEFAULT_CENTER.lat);
       setValue('longitude', DEFAULT_CENTER.lng);
       return;
     }
-    const newPos = new L.LatLng(lat, lng);
+    const newPos = new L.LatLng(lat!, lng!);
     if (map.getCenter().distanceTo(newPos) > 500) {
       map.flyTo(newPos, 15);
     }
   }, [lat, lng, map, setValue]);
 
-  useMapEvents({
-    click(e: { latlng: L.LatLng }) {
-      setValue('latitude', e.latlng.lat, { shouldValidate: true, shouldDirty: true });
-      setValue('longitude', e.latlng.lng, { shouldValidate: true, shouldDirty: true });
-    },
-  });
-
-  const markerRef = useRef<L.Marker>(null);
-  const eventHandlers = useMemo(
-    () => ({
-      dragend() {
-        const marker = markerRef.current;
-        if (marker != null) {
-          const latlng = marker.getLatLng();
-          setValue('latitude', latlng.lat, { shouldValidate: true, shouldDirty: true });
-          setValue('longitude', latlng.lng, { shouldValidate: true, shouldDirty: true });
-        }
-      },
-    }),
-    [setValue],
-  );
-
-  return (
-    <Marker draggable={true} eventHandlers={eventHandlers} position={position} ref={markerRef} />
-  );
+  return <Marker draggable={false} position={position} />;
 }
 
 function LocateControl() {
@@ -164,7 +138,7 @@ export function StoreTab() {
         methods.setValue('latitude', lat, { shouldValidate: true, shouldDirty: true });
         methods.setValue('longitude', lng, { shouldValidate: true, shouldDirty: true });
       } else {
-        alert('Could not locate this address. Please refine your search or drag the pin manually.');
+        alert('Could not locate this address. Please refine your search and try again.');
       }
     } catch (error) {
       console.error('Geocoding error:', error);
@@ -383,7 +357,7 @@ export function StoreTab() {
           </div>
           
           <p className="text-sm text-on-surface-variant mb-6">
-            Drag the pin or click on the map to set your exact restaurant location. This is used for delivery estimates and coverage zones.
+            Type your address above and click <span className="font-medium">Locate on Map</span> to pin your exact restaurant location. This is used for delivery estimates and coverage zones.
           </p>
 
           <div className="relative aspect-video lg:aspect-[21/9] bg-surface-container rounded-2xl overflow-hidden shadow-sm border border-outline-variant/10 z-0">

@@ -1,12 +1,16 @@
 import type { HourlyDensityPoint } from '@/features/analytics/types';
 
-function formatHourLabel(iso: string): string {
+function formatHourLabel(iso: string, includeDate: boolean = false): string {
   try {
     const d = new Date(iso);
     const h = d.getHours();
     const suffix = h >= 12 ? 'pm' : 'am';
     const display = h % 12 === 0 ? 12 : h % 12;
-    return `${display}${suffix}`;
+    const time = `${display}${suffix}`;
+    if (includeDate) {
+      return `${d.getMonth() + 1}/${d.getDate()} ${time}`;
+    }
+    return time;
   } catch {
     return iso;
   }
@@ -91,16 +95,16 @@ export function HourlyDensityChart({
           <span>0</span>
         </div>
 
-        <div className="ml-10 h-[calc(100%-1.5rem)] border-l border-b border-outline-variant/40 relative">
-          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+        <div className="ml-10 h-[calc(100%-1.5rem)] border-l border-b border-outline-variant/40 relative overflow-x-auto overflow-y-hidden custom-scrollbar">
+          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none min-w-[800px]">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="w-full border-t border-outline-variant/15" />
             ))}
           </div>
 
-          <div className="absolute inset-0 flex items-end justify-around px-2">
+          <div className="absolute inset-0 flex items-end justify-around px-2 min-w-[800px]" style={{ minWidth: `${Math.max(merged.length * 16, 800)}px` }}>
             {merged.map((point) => (
-              <div key={point.hour} className="group flex items-end gap-1 h-full">
+              <div key={point.hour} className="group flex items-end gap-1 h-full shrink-0">
                 <div
                   className="w-3 sm:w-4 bg-primary rounded-t-sm transition-all group-hover:brightness-110"
                   style={{ height: `${(point.current / max) * 100}%` }}
@@ -118,10 +122,17 @@ export function HourlyDensityChart({
           </div>
         </div>
 
-        <div className="ml-10 mt-2 flex justify-around text-[11px] font-mono text-on-surface-variant uppercase">
-          {merged.map((p) => (
-            <span key={p.hour}>{p.hour}</span>
-          ))}
+        <div className="ml-10 mt-2 flex justify-around text-[11px] font-mono text-on-surface-variant uppercase overflow-hidden relative">
+          <div className="flex justify-around w-full" style={{ minWidth: `${Math.max(merged.length * 16, 800)}px` }}>
+            {merged.map((p, i) => {
+              const step = Math.max(1, Math.floor(merged.length / 8));
+              return (
+                <span key={p.hour} className={i % step !== 0 && i !== merged.length - 1 ? 'invisible' : ''}>
+                  {p.hour}
+                </span>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
