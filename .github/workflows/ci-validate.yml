@@ -15,6 +15,10 @@ jobs:
   validate:
     name: Validate (Check, Scan, Test, Build)
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
     services:
       postgres:
         image: postgres:18
@@ -85,9 +89,6 @@ jobs:
       - name: Unit Test
         run: pnpm turbo run test --affected --cache-dir=".turbo"
         env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
-          REDIS_URL: redis://localhost:6379
-          NODE_ENV: test
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
@@ -108,16 +109,10 @@ jobs:
 
       - name: Setup Database (Migrate)
         run: pnpm --filter=api run db:push
-        env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
-          NODE_ENV: test
 
       - name: Test (E2E)
         run: pnpm turbo run test:e2e --filter=api --cache-dir=".turbo" -- --detectOpenHandles --forceExit
         env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
-          REDIS_URL: redis://localhost:6379
-          NODE_ENV: test
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}

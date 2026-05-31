@@ -18,6 +18,10 @@ jobs:
   validate:
     name: Validate API
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
     services:
       postgres:
         image: postgres:18
@@ -57,21 +61,20 @@ jobs:
             ${{ runner.os }}-turbo-api-
             ${{ runner.os }}-turbo-
 
-      - name: Check (Lint)
-        run: pnpm --filter=api run lint
-
-      - name: Check (Typecheck)
-        run: pnpm --filter=api run typecheck
+      - name: Check (Lint & Typecheck)
+        run: pnpm turbo run lint typecheck --filter=api --cache-dir=".turbo"
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Security Scan (Audit)
         run: pnpm audit --audit-level high
 
       - name: Unit Test
-        run: pnpm --filter=api run test
+        run: pnpm turbo run test --filter=api --cache-dir=".turbo"
         env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
-          REDIS_URL: redis://localhost:6379
-          NODE_ENV: test
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
@@ -83,20 +86,17 @@ jobs:
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
 
       - name: Build
-        run: pnpm --filter=api run build
+        run: pnpm turbo run build --filter=api --cache-dir=".turbo"
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Setup Database (Migrate)
         run: pnpm --filter=api run db:push
-        env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
-          NODE_ENV: test
 
       - name: Test (E2E)
         run: pnpm --filter=api run test:e2e
         env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/food_order_db
-          REDIS_URL: redis://localhost:6379
-          NODE_ENV: test
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
