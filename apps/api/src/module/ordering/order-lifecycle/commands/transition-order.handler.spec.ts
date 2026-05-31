@@ -28,9 +28,14 @@ import {
 import { TransitionOrderHandler } from './transition-order.handler';
 import { TransitionOrderCommand } from './transition-order.command';
 import type { Order } from '../../order/order.schema';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import * as schema from '@/drizzle/schema';
+import type { OrderRepository } from '../repositories/order.repository';
+import type { OrderLifecycleService } from '../services/order-lifecycle.service';
+import type { RestaurantSnapshotRepository } from '../../acl/repositories/restaurant-snapshot.repository';
+import type { EventBus } from '@nestjs/cqrs';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Mocked<T> = { [K in keyof T]: any };
+type Mocked<T> = { [K in keyof T]: jest.Mock };
 
 function makeOrder(overrides: Partial<Order> = {}): Order {
   return {
@@ -63,8 +68,7 @@ function makeOrder(overrides: Partial<Order> = {}): Order {
  * `txResult` and an `insert().values()` no-op.
  */
 function makeMockDb(opts: { txResult: Order[] }): {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: any;
+  db: { transaction: jest.Mock };
   updateSet: jest.Mock;
   insertValues: jest.Mock;
 } {
@@ -98,12 +102,11 @@ describe('TransitionOrderHandler', () => {
 
   function buildHandler(db: unknown): TransitionOrderHandler {
     return new TransitionOrderHandler(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      db as any,
-      orderRepo as any,
-      lifecycle as any,
-      snapshotRepo as any,
-      eventBus as any,
+      db as NodePgDatabase<typeof schema>,
+      orderRepo as unknown as OrderRepository,
+      lifecycle as unknown as OrderLifecycleService,
+      snapshotRepo as unknown as RestaurantSnapshotRepository,
+      eventBus as unknown as EventBus,
     );
   }
 
@@ -201,7 +204,7 @@ describe('TransitionOrderHandler', () => {
     const updated = { ...order, status: 'confirmed', version: 4 };
     orderRepo.findById.mockResolvedValue(order);
     const { db, updateSet, insertValues } = makeMockDb({
-      txResult: [updated as Order],
+      txResult: [updated],
     });
     const handler = buildHandler(db);
 
@@ -223,13 +226,14 @@ describe('TransitionOrderHandler', () => {
       }),
     );
     expect(eventBus.publish).toHaveBeenCalledTimes(1);
-    const event = eventBus.publish.mock.calls[0][0];
-    expect(event).toMatchObject({
-      orderId: 'ord-1',
-      fromStatus: 'pending',
-      toStatus: 'confirmed',
-      triggeredByRole: 'restaurant',
-    });
+    expect(eventBus.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderId: 'ord-1',
+        fromStatus: 'pending',
+        toStatus: 'confirmed',
+        triggeredByRole: 'restaurant',
+      }),
+    );
   });
 
   it('§10 T-08 publishes OrderReadyForPickupEvent when snapshot present', async () => {
@@ -240,7 +244,7 @@ describe('TransitionOrderHandler', () => {
       name: 'Sunset Bistro',
       address: '123 Main',
     });
-    const { db } = makeMockDb({ txResult: [updated as Order] });
+    const { db } = makeMockDb({ txResult: [updated] });
     const handler = buildHandler(db);
 
     await handler.execute(
@@ -261,7 +265,7 @@ describe('TransitionOrderHandler', () => {
     orderRepo.findById.mockResolvedValue(order);
     snapshotRepo.findById.mockResolvedValue(null);
     const { db } = makeMockDb({
-      txResult: [{ ...order, status: 'ready_for_pickup' } as Order],
+      txResult: [{ ...order, status: 'ready_for_pickup' }],
     });
     const handler = buildHandler(db);
 
@@ -283,7 +287,7 @@ describe('TransitionOrderHandler', () => {
     const order = makeOrder({ status: 'paid', paymentMethod: 'vnpay' });
     orderRepo.findById.mockResolvedValue(order);
     const { db } = makeMockDb({
-      txResult: [{ ...order, status: 'cancelled' } as Order],
+      txResult: [{ ...order, status: 'cancelled' }],
     });
     const handler = buildHandler(db);
 
@@ -304,9 +308,7 @@ describe('TransitionOrderHandler', () => {
     const order = makeOrder({ status: 'ready_for_pickup' });
     orderRepo.findById.mockResolvedValue(order);
     const { db, updateSet } = makeMockDb({
-      txResult: [
-        { ...order, status: 'picked_up', shipperId: 'shp-1' } as Order,
-      ],
+      txResult: [{ ...order, status: 'picked_up', shipperId: 'shp-1' }],
     });
     const handler = buildHandler(db);
 

@@ -218,7 +218,7 @@ describe('ProcessIpnHandler', () => {
   // -------------------------------------------------------------------------
   describe('payment success (responsePaid=true)', () => {
     it('returns RspCode 00 on successful payment', async () => {
-      const { handler, vnpayService, txnRepo, eventBus } = buildHandler();
+      const { handler, vnpayService, txnRepo } = buildHandler();
       (vnpayService.verifyIpn as jest.Mock).mockReturnValue(
         makeSuccessVerification(),
       );
@@ -263,8 +263,9 @@ describe('ProcessIpnHandler', () => {
 
       await handler.execute(makeCommand());
 
-      const published = (eventBus.publish as jest.Mock).mock
-        .calls[0][0] as PaymentConfirmedEvent;
+      const published = (
+        (eventBus.publish as jest.Mock).mock.calls[0] as [PaymentConfirmedEvent]
+      )[0];
       expect(published.orderId).toBe('order-99');
       expect(published.paidAmount).toBe(150000);
     });

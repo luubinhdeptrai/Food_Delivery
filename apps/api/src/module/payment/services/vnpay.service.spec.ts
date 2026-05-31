@@ -23,8 +23,7 @@ function buildService(): VNPayService {
     url: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
     returnUrl: 'https://soli.app/payment/return',
     sessionTimeoutSeconds: 1800,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any);
+  });
   svc.onModuleInit();
   return svc;
 }

@@ -6,11 +6,7 @@
  * 12 transitions (T-01..T-12). Any change to TRANSITIONS must be intentional and
  * accompanied by an audit-trail update; these tests catch silent edits.
  */
-import {
-  TRANSITIONS,
-  ALLOWED_TRANSITIONS,
-  type TransitionRule,
-} from './transitions';
+import { TRANSITIONS, ALLOWED_TRANSITIONS } from './transitions';
 import type { OrderStatus } from '../../order/order.schema';
 
 describe('TRANSITIONS map', () => {
@@ -52,7 +48,7 @@ describe('TRANSITIONS map', () => {
     ];
 
     it.each(adminMustBePresentOn)('%s includes admin', (key) => {
-      const rule = TRANSITIONS[key] as TransitionRule;
+      const rule = TRANSITIONS[key];
       expect(rule.allowedRoles).toContain('admin');
     });
 
@@ -110,7 +106,7 @@ describe('TRANSITIONS map', () => {
     it('no other transition triggers shipper dispatch', () => {
       for (const [key, rule] of Object.entries(TRANSITIONS)) {
         if (key !== 'preparing→ready_for_pickup') {
-          expect(rule!.triggersReadyForPickup).toBeFalsy();
+          expect(rule.triggersReadyForPickup).toBeFalsy();
         }
       }
     });
@@ -152,7 +148,7 @@ describe('ALLOWED_TRANSITIONS', () => {
       [OrderStatus, OrderStatus[]]
     >) {
       for (const to of toList) {
-        const key = `${from}→${to}` as keyof typeof TRANSITIONS;
+        const key = `${from}→${to}`;
         expect(TRANSITIONS[key]).toBeDefined();
       }
     }
@@ -160,7 +156,7 @@ describe('ALLOWED_TRANSITIONS', () => {
 
   it('every TRANSITIONS key is reflected in ALLOWED_TRANSITIONS', () => {
     for (const key of Object.keys(TRANSITIONS)) {
-      const [from, to] = key.split('→') as [OrderStatus, OrderStatus];
+      const [from, to] = key.split('→');
       expect(ALLOWED_TRANSITIONS[from]).toContain(to);
     }
   });

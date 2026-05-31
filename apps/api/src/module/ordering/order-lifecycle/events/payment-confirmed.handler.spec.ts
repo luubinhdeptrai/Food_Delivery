@@ -73,7 +73,9 @@ describe('PaymentConfirmedEventHandler', () => {
       await handler.handle(makeEvent());
 
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
-      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0];
+      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0] as [
+        TransitionOrderCommand,
+      ];
       expect(cmd).toBeInstanceOf(TransitionOrderCommand);
       expect(cmd.orderId).toBe('order-1');
       expect(cmd.toStatus).toBe('paid');
@@ -140,7 +142,9 @@ describe('PaymentConfirmedEventHandler', () => {
 
       await handler.handle(makeEvent());
 
-      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0];
+      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0] as [
+        TransitionOrderCommand,
+      ];
       expect(cmd.actorId).toBeNull();
     });
   });

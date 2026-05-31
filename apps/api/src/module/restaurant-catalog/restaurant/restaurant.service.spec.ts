@@ -23,10 +23,15 @@ import {
 } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
 import { RestaurantUpdatedEvent } from '@/shared/events/restaurant-updated.event';
+import type { Restaurant } from './restaurant.schema';
+import { RestaurantRepository } from './restaurant.repository';
+import { EventBus } from '@nestjs/cqrs';
+import { ImageService } from '@/module/image/image.service';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import * as schema from '@/drizzle/schema';
+import type { CreateRestaurantDto } from './dto/restaurant.dto';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-function makeRestaurant(overrides: Partial<any> = {}): any {
+function makeRestaurant(overrides: Partial<Restaurant> = {}): Restaurant {
   return {
     id: 'rest-1',
     ownerId: 'owner-1',
@@ -38,7 +43,7 @@ function makeRestaurant(overrides: Partial<any> = {}): any {
     longitude: 106.6,
     cuisineType: 'Vietnamese',
     ...overrides,
-  };
+  } as unknown as Restaurant;
 }
 
 function buildService(opts?: {
@@ -67,10 +72,10 @@ function buildService(opts?: {
   const dbUpdate = jest.fn().mockReturnValue({ set: dbSet });
   const db = { update: dbUpdate };
   const service = new RestaurantService(
-    repo as any,
-    eventBus as any,
-    imageService as any,
-    db as any,
+    repo as unknown as RestaurantRepository,
+    eventBus as unknown as EventBus,
+    imageService as unknown as ImageService,
+    db as unknown as NodePgDatabase<typeof schema>,
   );
   return { service, repo, eventBus, imageService, dbWhere, dbSet, dbUpdate };
 }
@@ -133,11 +138,11 @@ describe('RestaurantService', () => {
       const { service, repo, eventBus } = buildService();
       const r = makeRestaurant();
       repo.create.mockResolvedValue(r);
-      await service.create('owner-1', {} as any);
+      await service.create('owner-1', {} as unknown as CreateRestaurantDto);
       expect(eventBus.publish).toHaveBeenCalledTimes(1);
-      expect(eventBus.publish.mock.calls[0][0]).toBeInstanceOf(
-        RestaurantUpdatedEvent,
-      );
+      expect(
+        (eventBus.publish.mock.calls[0] as [RestaurantUpdatedEvent])[0],
+      ).toBeInstanceOf(RestaurantUpdatedEvent);
     });
   });
 
@@ -146,7 +151,7 @@ describe('RestaurantService', () => {
       const { service, repo } = buildService();
       repo.findById.mockResolvedValue(makeRestaurant({ ownerId: 'owner-1' }));
       await expect(
-        service.update('rest-1', 'someone-else', false, {} as any),
+        service.update('rest-1', 'someone-else', false, {}),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
@@ -157,7 +162,7 @@ describe('RestaurantService', () => {
       repo.update.mockResolvedValue({ ...r, name: 'New' });
       const result = await service.update('rest-1', 'admin-x', true, {
         name: 'New',
-      } as any);
+      });
       expect(result.name).toBe('New');
     });
 
@@ -166,7 +171,7 @@ describe('RestaurantService', () => {
       repo.findById.mockResolvedValue(makeRestaurant());
       repo.update.mockResolvedValue(undefined);
       await expect(
-        service.update('rest-1', 'owner-1', false, {} as any),
+        service.update('rest-1', 'owner-1', false, {}),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
@@ -177,7 +182,9 @@ describe('RestaurantService', () => {
       repo.findById.mockResolvedValue(makeRestaurant());
       repo.remove.mockResolvedValue(undefined);
       await service.remove('rest-1');
-      const event = eventBus.publish.mock.calls[0][0] as RestaurantUpdatedEvent;
+      const event = (
+        eventBus.publish.mock.calls[0] as [RestaurantUpdatedEvent]
+      )[0];
       expect(event.isOpen).toBe(false);
       expect(event.isApproved).toBe(false);
     });

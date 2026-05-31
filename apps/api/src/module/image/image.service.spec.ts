@@ -15,7 +15,7 @@ function makeImage(overrides: Partial<Image> = {}): Image {
     height: 600,
     createdAt: new Date(),
     ...overrides,
-  } as unknown as Image;
+  };
 }
 
 function buildService() {
@@ -49,7 +49,10 @@ describe('ImageService', () => {
 
       await service.findAll(0, undefined);
 
-      const [, limit] = (repo.findAll as jest.Mock).mock.calls[0];
+      const [, limit] = (repo.findAll as jest.Mock).mock.calls[0] as [
+        number,
+        number,
+      ];
       expect(limit).toBe(20);
     });
 
@@ -58,7 +61,10 @@ describe('ImageService', () => {
 
       await service.findAll(0, 9999);
 
-      const [, limit] = (repo.findAll as jest.Mock).mock.calls[0];
+      const [, limit] = (repo.findAll as jest.Mock).mock.calls[0] as [
+        number,
+        number,
+      ];
       expect(limit).toBe(100);
     });
 
@@ -67,7 +73,10 @@ describe('ImageService', () => {
 
       await service.findAll(0, 0);
 
-      const [, limit] = (repo.findAll as jest.Mock).mock.calls[0];
+      const [, limit] = (repo.findAll as jest.Mock).mock.calls[0] as [
+        number,
+        number,
+      ];
       expect(limit).toBe(1);
     });
 
@@ -76,7 +85,10 @@ describe('ImageService', () => {
 
       await service.findAll(-5, 10);
 
-      const [offset] = (repo.findAll as jest.Mock).mock.calls[0];
+      const [offset] = (repo.findAll as jest.Mock).mock.calls[0] as [
+        number,
+        number,
+      ];
       expect(offset).toBe(0);
     });
 
@@ -85,7 +97,10 @@ describe('ImageService', () => {
 
       await service.findAll(40, 20);
 
-      const [offset] = (repo.findAll as jest.Mock).mock.calls[0];
+      const [offset] = (repo.findAll as jest.Mock).mock.calls[0] as [
+        number,
+        number,
+      ];
       expect(offset).toBe(40);
     });
 
@@ -94,7 +109,10 @@ describe('ImageService', () => {
 
       await service.findAll(undefined, 10);
 
-      const [offset] = (repo.findAll as jest.Mock).mock.calls[0];
+      const [offset] = (repo.findAll as jest.Mock).mock.calls[0] as [
+        number,
+        number,
+      ];
       expect(offset).toBe(0);
     });
 

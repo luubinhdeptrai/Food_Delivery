@@ -25,6 +25,7 @@ import type { Order, DeliveryAddress } from '../order.schema';
 import type { Cart, CartItem } from '../../cart/cart.types';
 import type { OrderingMenuItemSnapshot } from '../../acl/schemas/menu-item-snapshot.schema';
 import type { OrderingRestaurantSnapshot } from '../../acl/schemas/restaurant-snapshot.schema';
+import type { OrderPlacedEvent } from '@/shared/events/order-placed.event';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,17 +38,19 @@ const deliveryAddress: DeliveryAddress = {
   street: '1 Nguyen Hue',
   district: 'D1',
   city: 'HCM',
-} as unknown as DeliveryAddress;
+};
 
 function makeCartItem(overrides: Partial<CartItem> = {}): CartItem {
   return {
+    cartItemId: 'item-uuid-1',
+    modifierFingerprint: '',
     menuItemId: 'menu-1',
     itemName: 'Pho Bo',
-    basePrice: 85000,
+    unitPrice: 85000,
     quantity: 1,
     selectedModifiers: [],
     ...overrides,
-  } as unknown as CartItem;
+  };
 }
 
 function makeCart(items: CartItem[] = [makeCartItem()]): Cart {
@@ -74,7 +77,7 @@ function makeRestaurantSnapshot(
     ownerId: 'owner-1',
     lastSyncedAt: new Date(),
     ...overrides,
-  } as unknown as OrderingRestaurantSnapshot;
+  };
 }
 
 function makeMenuItemSnapshot(
@@ -242,7 +245,7 @@ function buildHandler({
     redis as never,
     eventBus as never,
     geo as never,
-    paymentPort as never,
+    paymentPort,
     promotionPort as never,
   );
 
@@ -295,7 +298,7 @@ describe('PlaceOrderHandler', () => {
   describe('idempotency check', () => {
     it('returns cached order when idempotency key has already been processed', async () => {
       const cachedOrder = makePersistedOrder({ id: 'order-cached-1' });
-      const { handler, redis, db } = buildHandler({
+      const { handler, redis } = buildHandler({
         redisGetResult: 'order-cached-1',
         persistedOrder: cachedOrder,
       });
@@ -446,7 +449,7 @@ describe('PlaceOrderHandler', () => {
   // -------------------------------------------------------------------------
   describe('items total guard', () => {
     it('throws UnprocessableEntityException when all items have zero price', async () => {
-      const zeroCart = makeCart([makeCartItem({ basePrice: 0 })]);
+      const zeroCart = makeCart([makeCartItem({ unitPrice: 0 })]);
       const zeroSnapshot = makeMenuItemSnapshot({ price: 0 });
       const { handler } = buildHandler({
         cart: zeroCart,
@@ -473,9 +476,7 @@ describe('PlaceOrderHandler', () => {
       });
 
       // Provide one zone with 1 km radius but geo returns 5 km distance
-      (
-        deliveryZoneSnapshotRepo.findActiveByRestaurantId as jest.Mock
-      ).mockResolvedValue([
+      deliveryZoneSnapshotRepo.findActiveByRestaurantId.mockResolvedValue([
         {
           zoneId: 'zone-1',
           radiusKm: 1,
@@ -486,11 +487,11 @@ describe('PlaceOrderHandler', () => {
           bufferMinutes: 5,
         },
       ]);
-      (geo.calculateDistanceKm as jest.Mock).mockReturnValue(5);
+      geo.calculateDistanceKm.mockReturnValue(5);
 
       const commandWithCoords = new PlaceOrderCommand(
         CUSTOMER_ID,
-        { ...deliveryAddress, latitude: 10.9, longitude: 106.9 } as never,
+        { ...deliveryAddress, latitude: 10.9, longitude: 106.9 },
         'cod',
       );
 
@@ -520,7 +521,7 @@ describe('PlaceOrderHandler', () => {
       await handler.execute(makeCommand());
 
       expect(eventBus.publish).toHaveBeenCalledTimes(1);
-      const [event] = (eventBus.publish as jest.Mock).mock.calls[0];
+      const [event] = eventBus.publish.mock.calls[0] as [OrderPlacedEvent];
       expect(event.orderId).toBe('order-uuid-1');
     });
 
@@ -548,7 +549,7 @@ describe('PlaceOrderHandler', () => {
     it('returns order with paymentUrl attached', async () => {
       const order = makePersistedOrder({ paymentMethod: 'vnpay' });
       const { handler, paymentPort } = buildHandler({ persistedOrder: order });
-      (paymentPort.initiateVNPayPayment as jest.Mock).mockResolvedValue({
+      paymentPort.initiateVNPayPayment.mockResolvedValue({
         paymentUrl: 'https://vnpay.vn/pay?token=xyz',
       });
 
@@ -565,7 +566,7 @@ describe('PlaceOrderHandler', () => {
     it('still returns order when VNPay URL generation fails (resilient)', async () => {
       const order = makePersistedOrder({ paymentMethod: 'vnpay' });
       const { handler, paymentPort } = buildHandler({ persistedOrder: order });
-      (paymentPort.initiateVNPayPayment as jest.Mock).mockRejectedValue(
+      paymentPort.initiateVNPayPayment.mockRejectedValue(
         new Error('VNPay gateway timeout'),
       );
 
@@ -588,7 +589,7 @@ describe('PlaceOrderHandler', () => {
   describe('promotion reservation', () => {
     it('confirms reservation after order is persisted', async () => {
       const { handler, promotionPort } = buildHandler();
-      (promotionPort.computeAndReserveDiscount as jest.Mock).mockResolvedValue({
+      promotionPort.computeAndReserveDiscount.mockResolvedValue({
         reserved: true,
         discountAmount: 10000,
         usageId: 'usage-1',
@@ -603,13 +604,13 @@ describe('PlaceOrderHandler', () => {
 
     it('rolls back promotion reservation when DB transaction fails', async () => {
       const { handler, promotionPort, db } = buildHandler();
-      (promotionPort.computeAndReserveDiscount as jest.Mock).mockResolvedValue({
+      promotionPort.computeAndReserveDiscount.mockResolvedValue({
         reserved: true,
         discountAmount: 10000,
         usageId: 'usage-1',
       });
       // Make the DB transaction throw
-      (db.transaction as jest.Mock).mockRejectedValue(new Error('DB failure'));
+      db.transaction.mockRejectedValue(new Error('DB failure'));
 
       await expect(handler.execute(makeCommand())).rejects.toThrow();
 
@@ -618,11 +619,11 @@ describe('PlaceOrderHandler', () => {
 
     it('does not call rollbackReservations when no promotion was reserved', async () => {
       const { handler, promotionPort, db } = buildHandler();
-      (promotionPort.computeAndReserveDiscount as jest.Mock).mockResolvedValue({
+      promotionPort.computeAndReserveDiscount.mockResolvedValue({
         reserved: false,
         discountAmount: 0,
       });
-      (db.transaction as jest.Mock).mockRejectedValue(new Error('DB failure'));
+      db.transaction.mockRejectedValue(new Error('DB failure'));
 
       await expect(handler.execute(makeCommand())).rejects.toThrow();
 
@@ -640,7 +641,7 @@ describe('PlaceOrderHandler', () => {
         'duplicate key value violates unique constraint "orders_cart_id_unique"',
       );
       (uniqueError as Error & { code?: string }).code = '23505';
-      (db.transaction as jest.Mock).mockRejectedValue(uniqueError);
+      db.transaction.mockRejectedValue(uniqueError);
 
       await expect(handler.execute(makeCommand())).rejects.toThrow();
     });
@@ -653,10 +654,10 @@ describe('PlaceOrderHandler', () => {
     it('saves idempotency key to Redis before clearing the cart', async () => {
       const { handler, redis, cartRepo } = buildHandler();
       const callOrder: string[] = [];
-      (redis.setWithExpiry as jest.Mock).mockImplementation(async () => {
+      redis.setWithExpiry.mockImplementation(() => {
         callOrder.push('setWithExpiry');
       });
-      (cartRepo.delete as jest.Mock).mockImplementation(async () => {
+      cartRepo.delete.mockImplementation(() => {
         callOrder.push('cartDelete');
       });
 

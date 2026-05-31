@@ -214,7 +214,8 @@ describe('OrderCancelledAfterPaymentHandler', () => {
 
       await handler.handle(makeEvent());
 
-      const [, , , extras] = (txnRepo.updateStatus as jest.Mock).mock.calls[0];
+      const [, , , extras] = (txnRepo.updateStatus as jest.Mock).mock
+        .calls[0] as [string, string, string, { refundInitiatedAt: Date }];
       expect(extras.refundInitiatedAt).toBeInstanceOf(Date);
     });
   });

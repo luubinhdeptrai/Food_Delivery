@@ -236,7 +236,8 @@ describe('PromotionService', () => {
           makePreviewParams({ couponCode: 'save10' }),
         );
 
-        const [code] = (couponRepo.findActiveByCode as jest.Mock).mock.calls[0];
+        const [code] = (couponRepo.findActiveByCode as jest.Mock).mock
+          .calls[0] as [string];
         expect(code).toBe('SAVE10');
       });
     });
@@ -318,12 +319,12 @@ describe('PromotionService', () => {
       ).mockResolvedValue([makePromotion()]);
       const callOrder: string[] = [];
       (promotionRepo.atomicIncrementUses as jest.Mock).mockImplementation(
-        async () => {
+        () => {
           callOrder.push('increment');
           return true;
         },
       );
-      (usageRepo.create as jest.Mock).mockImplementation(async () => {
+      (usageRepo.create as jest.Mock).mockImplementation(() => {
         callOrder.push('create');
         return makeUsage();
       });

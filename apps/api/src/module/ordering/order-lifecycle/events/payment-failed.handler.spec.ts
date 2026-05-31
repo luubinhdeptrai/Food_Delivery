@@ -41,7 +41,9 @@ describe('PaymentFailedEventHandler', () => {
       await handler.handle(makeEvent());
 
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
-      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0];
+      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0] as [
+        TransitionOrderCommand,
+      ];
       expect(cmd).toBeInstanceOf(TransitionOrderCommand);
       expect(cmd.toStatus).toBe('cancelled');
       expect(cmd.actorRole).toBe('system');
@@ -53,7 +55,9 @@ describe('PaymentFailedEventHandler', () => {
 
       await handler.handle(makeEvent({ reason }));
 
-      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0];
+      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0] as [
+        TransitionOrderCommand,
+      ];
       expect(cmd.note).toBe(reason);
     });
 
@@ -62,7 +66,9 @@ describe('PaymentFailedEventHandler', () => {
 
       await handler.handle(makeEvent({ orderId: 'order-abc' }));
 
-      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0];
+      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0] as [
+        TransitionOrderCommand,
+      ];
       expect(cmd.orderId).toBe('order-abc');
     });
 
@@ -71,7 +77,9 @@ describe('PaymentFailedEventHandler', () => {
 
       await handler.handle(makeEvent());
 
-      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0];
+      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0] as [
+        TransitionOrderCommand,
+      ];
       expect(cmd.actorId).toBeNull();
     });
 

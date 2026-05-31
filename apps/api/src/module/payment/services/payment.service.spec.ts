@@ -82,7 +82,7 @@ describe('PaymentService', () => {
     it('creates a PaymentTransaction before building the VNPay URL', async () => {
       const { service, txnRepo, vnpayService } = buildService();
       const createOrder: string[] = [];
-      (txnRepo.create as jest.Mock).mockImplementation(async () => {
+      (txnRepo.create as jest.Mock).mockImplementation(() => {
         createOrder.push('create');
         return makeTxn();
       });
@@ -100,7 +100,7 @@ describe('PaymentService', () => {
       const { service, txnRepo } = buildService();
       let capturedData: Record<string, unknown> = {};
       (txnRepo.create as jest.Mock).mockImplementation(
-        async (data: Record<string, unknown>) => {
+        (data: Record<string, unknown>) => {
           capturedData = data;
           return makeTxn();
         },
@@ -176,7 +176,7 @@ describe('PaymentService', () => {
       const before = Date.now();
       let capturedExpiresAt: Date | null = null;
       (txnRepo.create as jest.Mock).mockImplementation(
-        async (data: { expiresAt: Date }) => {
+        (data: { expiresAt: Date }) => {
           capturedExpiresAt = data.expiresAt;
           return makeTxn();
         },

@@ -49,7 +49,7 @@ describe('hasRole', () => {
     });
 
     it('returns false when role does not match', () => {
-      expect(hasRole('customer', 'admin')).toBe(true === false);
+      expect(hasRole('customer', 'admin')).toBe(false);
       expect(hasRole('customer', 'admin')).toBe(false);
     });
   });

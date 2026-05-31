@@ -99,7 +99,9 @@ describe('OrderTimeoutTask', () => {
 
       await task.handleExpiredOrders();
 
-      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0];
+      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0] as [
+        TransitionOrderCommand,
+      ];
       expect(typeof cmd.note).toBe('string');
       expect(cmd.note.length).toBeGreaterThan(0);
     });
@@ -112,7 +114,9 @@ describe('OrderTimeoutTask', () => {
 
       await task.handleExpiredOrders();
 
-      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0];
+      const [cmd] = (commandBus.execute as jest.Mock).mock.calls[0] as [
+        TransitionOrderCommand,
+      ];
       expect(cmd).toBeInstanceOf(TransitionOrderCommand);
     });
 

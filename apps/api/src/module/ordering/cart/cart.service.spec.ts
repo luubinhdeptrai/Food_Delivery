@@ -26,13 +26,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CartService } from './cart.service';
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { CartRedisRepository } from './cart.redis-repository';
+import type { MenuItemSnapshotRepository } from '../acl/repositories/menu-item-snapshot.repository';
+import type { AppSettingsService } from '../common/app-settings.service';
 
 function buildService(opts?: {
-  cartRepo?: any;
-  snapshotRepo?: any;
-  appSettings?: any;
+  cartRepo?: {
+    findByCustomerId: jest.Mock;
+    save: jest.Mock;
+    delete: jest.Mock;
+  };
+  snapshotRepo?: { findById: jest.Mock };
+  appSettings?: { getNumber: jest.Mock };
 }) {
   const cartRepo = opts?.cartRepo ?? {
     findByCustomerId: jest.fn().mockResolvedValue(null),
@@ -47,9 +52,9 @@ function buildService(opts?: {
   };
   return {
     service: new CartService(
-      cartRepo as any,
-      snapshotRepo as any,
-      appSettings as any,
+      cartRepo as unknown as CartRedisRepository,
+      snapshotRepo as unknown as MenuItemSnapshotRepository,
+      appSettings as unknown as AppSettingsService,
     ),
     cartRepo,
     snapshotRepo,
@@ -77,7 +82,7 @@ describe('CartService', () => {
   describe('addItem — first add', () => {
     it('creates new cart with stable cartId and single item', async () => {
       const { service, cartRepo } = buildService();
-      const cart = await service.addItem('cust-1', baseAddDto as any);
+      const cart = await service.addItem('cust-1', baseAddDto);
       expect(cart.customerId).toBe('cust-1');
       expect(cart.restaurantId).toBe('rest-1');
       expect(cart.items).toHaveLength(1);
@@ -108,7 +113,7 @@ describe('CartService', () => {
         service.addItem('cust-1', {
           ...baseAddDto,
           restaurantId: 'rest-2',
-        } as any),
+        }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
   });
@@ -142,7 +147,7 @@ describe('CartService', () => {
       };
       const { service } = buildService({ cartRepo });
       await expect(
-        service.addItem('cust-1', { ...baseAddDto, quantity: 10 } as any),
+        service.addItem('cust-1', { ...baseAddDto, quantity: 10 }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -154,13 +159,13 @@ describe('CartService', () => {
         service.addItem('cust-1', {
           ...baseAddDto,
           selectedModifiers: [{ groupId: 'g', optionId: 'o' }],
-        } as any),
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('allows add when snapshot missing and no modifiers sent', async () => {
       const { service } = buildService();
-      const cart = await service.addItem('cust-1', baseAddDto as any);
+      const cart = await service.addItem('cust-1', baseAddDto);
       expect(cart.items).toHaveLength(1);
     });
 
@@ -175,7 +180,7 @@ describe('CartService', () => {
       };
       const { service } = buildService({ snapshotRepo });
       await expect(
-        service.addItem('cust-1', baseAddDto as any),
+        service.addItem('cust-1', baseAddDto),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -190,7 +195,7 @@ describe('CartService', () => {
       };
       const { service } = buildService({ snapshotRepo });
       await expect(
-        service.addItem('cust-1', baseAddDto as any),
+        service.addItem('cust-1', baseAddDto),
       ).rejects.toBeInstanceOf(ConflictException);
     });
   });
@@ -231,7 +236,7 @@ describe('CartService', () => {
         findById: jest.fn().mockResolvedValue(snapshotWithRequiredGroup),
       };
       const { service } = buildService({ snapshotRepo });
-      const cart = await service.addItem('cust-1', baseAddDto as any);
+      const cart = await service.addItem('cust-1', baseAddDto);
       expect(cart.items[0].selectedModifiers).toEqual([
         expect.objectContaining({
           groupId: 'g1',
@@ -259,7 +264,7 @@ describe('CartService', () => {
       const snapshotRepo = { findById: jest.fn().mockResolvedValue(noDefault) };
       const { service } = buildService({ snapshotRepo });
       await expect(
-        service.addItem('cust-1', baseAddDto as any),
+        service.addItem('cust-1', baseAddDto),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -287,7 +292,7 @@ describe('CartService', () => {
         service.addItem('cust-1', {
           ...baseAddDto,
           selectedModifiers: [{ groupId: 'g1', optionId: 'opt-S' }],
-        } as any),
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -319,7 +324,7 @@ describe('CartService', () => {
     it('throws NotFound when no cart exists', async () => {
       const { service } = buildService();
       await expect(
-        service.updateItemQuantity('cust-1', 'line-1', { quantity: 3 } as any),
+        service.updateItemQuantity('cust-1', 'line-1', { quantity: 3 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -331,7 +336,7 @@ describe('CartService', () => {
       };
       const { service } = buildService({ cartRepo });
       await expect(
-        service.updateItemQuantity('cust-1', 'unknown', { quantity: 3 } as any),
+        service.updateItemQuantity('cust-1', 'unknown', { quantity: 3 }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -344,7 +349,7 @@ describe('CartService', () => {
       const { service } = buildService({ cartRepo });
       const result = await service.updateItemQuantity('cust-1', 'line-1', {
         quantity: 0,
-      } as any);
+      });
       expect(result).toBeNull();
       expect(cartRepo.delete).toHaveBeenCalledWith('cust-1');
     });
@@ -359,7 +364,7 @@ describe('CartService', () => {
       const { service } = buildService({ cartRepo });
       const result = await service.updateItemQuantity('cust-1', 'line-1', {
         quantity: 5,
-      } as any);
+      });
       expect(result?.items[0].quantity).toBe(5);
     });
   });

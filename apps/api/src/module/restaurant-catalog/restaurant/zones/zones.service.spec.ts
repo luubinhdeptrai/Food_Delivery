@@ -29,9 +29,11 @@
 
 import { UnprocessableEntityException } from '@nestjs/common';
 import { ZonesService } from './zones.service';
-import type { DeliveryZone } from '../restaurant.schema';
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { ZonesRepository } from './zones.repository';
+import { RestaurantService } from '../restaurant.service';
+import { GeoService } from '@/lib/geo/geo.service';
+import { EventBus } from '@nestjs/cqrs';
+import type { DeliveryZone, Restaurant } from '../restaurant.schema';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -52,10 +54,10 @@ function makeZone(overrides: Partial<DeliveryZone> = {}): DeliveryZone {
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
-  } as unknown as DeliveryZone;
+  };
 }
 
-function makeRestaurant(overrides: Partial<any> = {}): any {
+function makeRestaurant(overrides: Partial<Restaurant> = {}): Restaurant {
   return {
     id: 'rest-1',
     ownerId: 'owner-1',
@@ -65,11 +67,11 @@ function makeRestaurant(overrides: Partial<any> = {}): any {
     latitude: 10.776,
     longitude: 106.701,
     ...overrides,
-  };
+  } as unknown as Restaurant;
 }
 
 function buildService(opts?: {
-  restaurant?: any;
+  restaurant?: Restaurant;
   zones?: DeliveryZone[];
   distanceKm?: number;
 }) {
@@ -99,10 +101,10 @@ function buildService(opts?: {
   };
 
   const service = new ZonesService(
-    repo as any,
-    restaurantService as any,
-    geo as any,
-    eventBus as any,
+    repo as unknown as ZonesRepository,
+    restaurantService as unknown as RestaurantService,
+    geo as unknown as GeoService,
+    eventBus as unknown as EventBus,
   );
 
   return { service, repo, restaurantService, geo };

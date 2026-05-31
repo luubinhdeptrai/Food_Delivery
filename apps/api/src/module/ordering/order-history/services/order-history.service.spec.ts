@@ -2,7 +2,6 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { OrderHistoryService } from './order-history.service';
 import { OrderHistoryRepository } from '../repositories/order-history.repository';
 import { RestaurantSnapshotRepository } from '../../acl/repositories/restaurant-snapshot.repository';
-import { DB_CONNECTION } from '@/drizzle/drizzle.constants';
 import type {
   Order,
   OrderItem,
@@ -52,7 +51,7 @@ function makeListRow(overrides: Partial<Order> = {}): OrderListRow {
     ...makeOrder(overrides),
     itemCount: 2,
     firstItemName: 'Pho Bo',
-  } as unknown as OrderListRow;
+  };
 }
 
 function makeItem(): OrderItem {
@@ -66,7 +65,7 @@ function makeItem(): OrderItem {
     quantity: 1,
     subtotal: 85000,
     modifiers: [],
-  } as unknown as OrderItem;
+  };
 }
 
 function makeStatusLog(): OrderStatusLog {
@@ -105,7 +104,7 @@ function makeSnapshot(
     ownerId: 'owner-1',
     lastSyncedAt: new Date(),
     ...overrides,
-  } as unknown as OrderingRestaurantSnapshot;
+  };
 }
 
 // Chainable Drizzle mock for `db.select().from().where().limit()` -> reviews check

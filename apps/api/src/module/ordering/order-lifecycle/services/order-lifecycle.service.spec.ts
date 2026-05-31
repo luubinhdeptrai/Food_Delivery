@@ -8,6 +8,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { OrderLifecycleService } from './order-lifecycle.service';
 import type { Order } from '../../order/order.schema';
+import type { RestaurantSnapshotRepository } from '../../acl/repositories/restaurant-snapshot.repository';
 
 function makeOrder(overrides: Partial<Order> = {}): Order {
   return {
@@ -39,8 +40,7 @@ describe('OrderLifecycleService.assertOwnership', () => {
     findByRestaurantIdAndOwnerId: jest.fn(),
   };
   const service = new OrderLifecycleService(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    snapshotRepo as any,
+    snapshotRepo as unknown as RestaurantSnapshotRepository,
   );
 
   beforeEach(() => {
