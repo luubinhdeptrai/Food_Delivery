@@ -75,11 +75,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: ${{ inputs.terraform_version }}
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
@@ -163,6 +161,9 @@ jobs:
       - name: Validate
         run: terraform validate -no-color
 
+      - name: Plan
+        run: terraform plan -input=false -no-color -out=tfplan
+
       - name: Apply
         if: inputs.apply
-        run: terraform apply -input=false -auto-approve
+        run: terraform apply -input=false -auto-approve tfplan
