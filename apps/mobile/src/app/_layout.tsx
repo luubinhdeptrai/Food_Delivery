@@ -1,7 +1,7 @@
 import '@/src/lib/reanimated-logger';
 import '../global.css';
 import '@/src/lib/nativewind-interop';
-import { AppState, Platform, ActivityIndicator, View, Text } from 'react-native';
+import { AppState, Platform, ActivityIndicator, View } from 'react-native';
 import {
   QueryClient,
   QueryClientProvider,
@@ -9,14 +9,8 @@ import {
   onlineManager,
 } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
-import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  getMessaging,
-  setBackgroundMessageHandler,
-} from '@react-native-firebase/messaging';
-import * as Notifications from 'expo-notifications';
-
 import { useSession } from '@/src/lib/auth-client';
 import { LocationInitializer } from '@/src/features/location';
 import {
@@ -25,11 +19,7 @@ import {
   useNotificationHandler,
 } from '@/src/features/notification';
 import Toast from 'react-native-toast-message';
-import {
-  captureMobileException,
-  initMobileObservability,
-  Sentry,
-} from '@/src/lib/observability';
+import { initMobileObservability, Sentry } from '@/src/lib/observability';
 import {
   identifyMobileUser,
   MobileAnalyticsProvider,
@@ -38,71 +28,11 @@ import {
 
 initMobileObservability();
 
-// Register background handler
-if (Platform.OS !== 'web') {
-  setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
-    console.log('[BackgroundMessage] Received:', remoteMessage);
-
-    // If the app is in background or closed, we may need to manually trigger a notification
-    // for data-only messages. For messages with a 'notification' block, Android handles them automatically.
-    // But for reliability across different Android versions/distributions, we check here.
-    const title =
-      remoteMessage.notification?.title || remoteMessage.data?.title;
-    const body = remoteMessage.notification?.body || remoteMessage.data?.body;
-
-    if (title || body) {
-      try {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: (title || 'UIT Food Notification') as string,
-            body: (body || 'Open the app to see details') as string,
-            data: remoteMessage.data,
-            sound: true,
-            priority: Notifications.AndroidNotificationPriority.HIGH,
-            color: '#0d631b',
-          },
-          trigger: null,
-        });
-      } catch (error) {
-        captureMobileException(error, {
-          source: 'firebase_background_message',
-        });
-        console.error(
-          '[BackgroundMessage] Failed to schedule notification:',
-          error,
-        );
-      }
-    }
-  });
-}
-
-function MobileErrorFallback() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white px-6">
-      <Text className="text-lg font-semibold text-gray-900">
-        Something went wrong
-      </Text>
-      <Text className="mt-2 text-sm text-gray-500 text-center">
-        Please restart the app.
-      </Text>
-    </View>
-  );
-}
-
 function RootNavigation() {
   const { data: session, isPending } = useSession();
   const segments = useSegments();
   const router = useRouter();
-  const pathname = usePathname();
   const userId = session?.user?.id;
-
-  useEffect(() => {
-    Sentry.addBreadcrumb({
-      category: 'navigation',
-      message: `Navigated to ${pathname}`,
-      level: 'info',
-    });
-  }, [pathname]);
 
   // Initialize notifications
   useNotificationSocket();
@@ -188,13 +118,11 @@ function AppLayout() {
   }, []);
 
   return (
-    <Sentry.ErrorBoundary fallback={<MobileErrorFallback />}>
-      <QueryClientProvider client={queryClient}>
-        <MobileAnalyticsProvider>
-          <RootNavigation />
-        </MobileAnalyticsProvider>
-      </QueryClientProvider>
-    </Sentry.ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <MobileAnalyticsProvider>
+        <RootNavigation />
+      </MobileAnalyticsProvider>
+    </QueryClientProvider>
   );
 }
 
