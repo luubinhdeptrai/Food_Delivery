@@ -1,10 +1,20 @@
-import { Injectable, Inject, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { REDIS_CLIENT } from './redis.constants.js';
 
+// Ping every 4 minutes to keep the free Redis instance alive
+const KEEP_ALIVE_INTERVAL_MS = 4 * 60 * 1000;
+
 @Injectable()
-export class RedisService implements OnModuleDestroy {
+export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
+  private keepAliveTimer: NodeJS.Timeout | null = null;
 
   constructor(@Inject(REDIS_CLIENT) private readonly client: Redis) {}
 
@@ -162,7 +172,21 @@ export class RedisService implements OnModuleDestroy {
     return this.client.ping();
   }
 
+  onModuleInit(): void {
+    this.keepAliveTimer = setInterval(() => {
+      this.client
+        .ping()
+        .then(() => this.logger.debug('Redis keep-alive ping sent'))
+        .catch((err: Error) =>
+          this.logger.warn('Redis keep-alive ping failed', err.message),
+        );
+    }, KEEP_ALIVE_INTERVAL_MS);
+  }
+
   async onModuleDestroy(): Promise<void> {
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+    }
     await this.client.quit();
     this.logger.log('Redis connection closed gracefully');
   }
